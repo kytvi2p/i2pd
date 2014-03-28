@@ -1,0 +1,3 @@
+# Set this per your needs (see i2pd(1) for available options)
+
+#DAEMON_ARGS="--host=1.1.1.1 --port=4321 --ircdest=irc.postman.i2p"

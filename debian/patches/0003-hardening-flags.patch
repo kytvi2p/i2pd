@@ -1,0 +1,28 @@
+From: Kill Your TV <killyourtv@i2pmail.org>
+Date: Wed, 18 Jun 2014 23:38:25 +0000
+Subject: hardening flags
+
+Enable hardening flags (https://wiki.debian.org/Hardening)
+
+---
+ Makefile.linux | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Makefile.linux b/Makefile.linux
+index 37987c8..fcab001 100644
+--- a/Makefile.linux
++++ b/Makefile.linux
+@@ -1,5 +1,5 @@
+ CC = g++
+-CFLAGS = -g -Wall
++CFLAGS = -g -Wall $(shell dpkg-buildflags --get CXXFLAGS)
+ CXXVER := $(shell ${CC} -dumpversion)
+ 
+ ifeq ($(shell expr match ${CXXVER} "4\.[0-9][0-9]"),4) # >= 4.10
+@@ -15,5 +15,5 @@ endif
+ 
+ include filelist.mk
+ INCFLAGS =
+-LDFLAGS = -lcryptopp -lboost_system -lboost_date_time -lboost_filesystem -lboost_regex -lboost_program_options -lpthread
++LDFLAGS = -lcryptopp -lboost_system -lboost_date_time -lboost_filesystem -lboost_regex -lboost_program_options -lpthread $(shell dpkg-buildflags --get LDFLAGS)
+ LIBS =

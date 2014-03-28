@@ -1,13 +1,13 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: i2pd
-Source: https://github.com/PrivacySolutions
+Source: https://github.com/orignal/i2pd
 
 Files: *
-Copyright: 2013-2014 PrivacySolutions <press@privacysolutions.no>
+Copyright: 2013-2014 orignal
 License: GPL-2.0+
 
 Files: debian/*
-Copyright: 2014 hagen <hagen@i2pmail.org>
+Copyright: 2013-2014 Kill Your TV <killyourtv@i2pmail.org>
 License: GPL-2.0+
 
 License: GPL-2.0+

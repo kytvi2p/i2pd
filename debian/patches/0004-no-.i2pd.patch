@@ -1,0 +1,24 @@
+From: Kill Your TV <killyourtv@i2pmail.org>
+Date: Tue, 14 Oct 2014 07:35:51 +0000
+Subject: no .i2pd
+
+Let's not store the profile data in .i2pd within /var/lib/i2pd but directly in
+/var/lib/i2pd.
+
+---
+ util.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/util.cpp b/util.cpp
+index abbee79..452741b 100644
+--- a/util.cpp
++++ b/util.cpp
+@@ -188,7 +188,7 @@ namespace filesystem
+ 		return pathRet / "i2pd";
+ #else
+ 		// Unix
+-		return pathRet / ".i2pd";
++		return pathRet / "./";
+ #endif
+ #endif
+ 	}

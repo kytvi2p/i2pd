@@ -1,0 +1,28 @@
+From: Kill Your TV <killyourtv@i2pmail.org>
+Date: Wed, 18 Jun 2014 23:18:25 +0000
+Subject: no aes
+
+We cannot use the build-time detection to enable AES. I build all of my
+packages on an AMD64 system and this means that AES would be enabled for, e.g.,
+the Raspberry Pi. This will fail fantastically.
+
+No, we'll just disable it.
+
+---
+ Makefile.linux | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/Makefile.linux b/Makefile.linux
+index 77bb2c6..37987c8 100644
+--- a/Makefile.linux
++++ b/Makefile.linux
+@@ -17,9 +17,3 @@ include filelist.mk
+ INCFLAGS =
+ LDFLAGS = -lcryptopp -lboost_system -lboost_date_time -lboost_filesystem -lboost_regex -lboost_program_options -lpthread
+ LIBS =
+-
+-#check if AES-NI is supported by CPU
+-ifneq ($(shell grep -c aes /proc/cpuinfo),0)
+-	CPU_FLAGS = -maes -DAESNI
+-endif
+-

@@ -1,22 +1,45 @@
 Source: i2pd
 Section: net
-Priority: extra
-Maintainer: hagen <hagen@i2pmail.org>
-Build-Depends: debhelper (>= 8.0.0), dpkg-dev (>= 1.16.1~),
- cmake (>= 2.8), gcc (>= 4.6) | clang (>= 3.3),
- libboost-regex-dev,
- libboost-system-dev (>= 1.46),
- libboost-date-time-dev,
- libboost-filesystem-dev,
- libboost-program-options-dev,
- libcrypto++-dev
-Standards-Version: 3.9.3
-Homepage: https://github.com/PrivacySolutions/i2pd
-Vcs-Git: git://github.com/PrivacySolutions/i2pd.git
-Vcs-Browser: https://github.com/PrivacySolutions/i2pd.git
+Priority: optional
+Maintainer: Kill Your TV <killyourtv@i2pmail.org>
+Build-Depends: debhelper (>= 9.0.0),
+ ,dh-systemd
+ ,libboost-dev
+ ,libboost-filesystem-dev
+ ,libboost-program-options-dev
+ ,libboost-regex-dev
+ ,libcrypto++-dev
+ ,libboost-date-time-dev
+ ,lsb-base (>= 3.0-6)
+Standards-Version: 3.9.6
+Homepage: https://privacysolutions.no/
+#Vcs-Git: git://git.debian.org/collab-maint/i2pd.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/i2pd.git;a=summary
 
 Package: i2pd
 Architecture: any
+Pre-Depends: adduser
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: i2p router written in C++
- Mainly runs on linux, but also supports OSX, BSD and Windows
+Recommends: privoxy
+Suggests: tor
+Description: load-balanced unspoofable packet switching network - C++ port
+ I2P is an anonymizing network, offering a simple layer that identity-sensitive
+ applications can use to securely communicate. All data is wrapped with several
+ layers of encryption, and the network is both distributed and dynamic, with no
+ trusted parties.
+ .
+ This package contains the port of the I2P router to C++. Unless willing
+ to test and report problems, you should install the 'i2p' package instead.
+
+Package: i2pd-dbg
+Architecture: any
+Priority: extra
+Section: debug
+Depends: ${shlibs:Depends}, ${misc:Depends}, i2pd (= ${binary:Version})
+Description: i2pd debugging symbols
+ I2P is an anonymizing network, offering a simple layer that identity-sensitive
+ applications can use to securely communicate. All data is wrapped with several
+ layers of encryption, and the network is both distributed and dynamic, with no
+ trusted parties.
+ .
+ This package contains symbols required for debugging.

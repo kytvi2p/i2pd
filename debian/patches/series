@@ -1,1 +1,4 @@
-rename-binary.patch
+0001-no-aes.patch
+0002-fix-pidfile-location.patch
+0003-hardening-flags.patch
+0004-no-.i2pd.patch
