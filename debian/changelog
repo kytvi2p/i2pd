@@ -1,3 +1,13 @@
+i2pd (0.0.0~git20141014.r931-1) unstable; urgency=medium
+
+  [ orignal ]
+  * donn't calculate routing keys for routers anymore
+
+  [ Kill Your TV ]
+  * New upstream git snapshot
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 14 Oct 2014 14:48:29 +0000
+
 i2pd (0.0.0~git20141014.r930-1) unstable; urgency=medium
 
   * Git snapshot
