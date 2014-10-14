@@ -1,3 +1,16 @@
+i2pd (0.0.0~git20141014.r934-1) unstable; urgency=medium
+
+  [ orignal ]
+  * don't send delivery status is no tags
+  * tags confirmed
+  * unconfirmed tags
+
+  [ Kill Your TV ]
+  * Set Restart=on-abnormal in the i2pd systemd unit file
+  * New upstream git snapshot
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 14 Oct 2014 19:18:02 +0000
+
 i2pd (0.0.0~git20141014.r931-1) unstable; urgency=medium
 
   [ orignal ]

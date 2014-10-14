@@ -5,6 +5,7 @@ After=network.target
 [Service]
 Type=forking
 EnvironmentFile=/etc/default/i2pd
+Restart=on-abnormal
 PIDFile=/run/i2pd/i2pd.pid
 User=i2pd
 ExecStart=/usr/sbin/i2pd $DAEMON_ARGS --daemon=1 --log=1
