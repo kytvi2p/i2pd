@@ -45,6 +45,9 @@ namespace garlic
 
 	GarlicRoutingSession::~GarlicRoutingSession	()
 	{	
+		for (auto it: m_UnconfirmedTagsMsgs)	
+			delete it.second;
+		 m_UnconfirmedTagsMsgs.clear ();
 		delete[] m_SessionTags;
 	}
 	
@@ -55,10 +58,19 @@ namespace garlic
 			for (int i = 0; i < m_NumTags; i++)
 				m_Rnd.GenerateBlock (m_SessionTags[i], 32);
 			m_TagsCreationTime = i2p::util::GetSecondsSinceEpoch ();
-			SetAcknowledged (false);
+			m_IsAcknowledged = false;
 		}
 	}
 	
+	void GarlicRoutingSession::TagsConfirmed (uint32_t msgID) 
+	{ 
+		auto it = m_UnconfirmedTagsMsgs.find (msgID);	
+		if (it != m_UnconfirmedTagsMsgs.end ())
+		{
+		}
+		m_IsAcknowledged = true; 
+	}
+
 	I2NPMessage * GarlicRoutingSession::WrapSingleMessage (I2NPMessage * msg)
 	{
 		I2NPMessage * m = NewI2NPMessage ();
@@ -169,7 +181,7 @@ namespace garlic
 
 		if (m_Owner)
 		{	
-			if (m_NextTag < 0) // new session
+			if (m_NumTags > 0 && m_NextTag < 0) // new session
 			{
 				// clove is DeliveryStatus 
 				size += CreateDeliveryStatusClove (payload + size, msgID);
@@ -459,7 +471,7 @@ namespace garlic
 			auto it = m_CreatedSessions.find (msgID);
 			if (it != m_CreatedSessions.end ())			
 			{
-				it->second->SetAcknowledged (true);
+				it->second->TagsConfirmed (msgID);
 				m_CreatedSessions.erase (it);
 				LogPrint ("Garlic message ", msgID, " acknowledged");
 			}	
