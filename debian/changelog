@@ -1,3 +1,14 @@
+i2pd (0.0.0~git20141014.r936-1) unstable; urgency=medium
+
+  [ orignal ]
+  * try closest floodfills sequentially
+  * proper date formatting
+
+  [ Kill Your TV ]
+  * New upstream git snapshot
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Wed, 15 Oct 2014 07:59:40 +0000
+
 i2pd (0.0.0~git20141014.r934-1) unstable; urgency=medium
 
   [ orignal ]
