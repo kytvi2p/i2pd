@@ -1,3 +1,13 @@
+i2pd (0.0.0~git20141015.r944-1) unstable; urgency=medium
+
+  [ orignal ]
+  * create/delete stream per destination only
+
+  [ Kill Your TV ]
+  * New upstream git snapshot
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Wed, 15 Oct 2014 23:38:06 +0000
+
 i2pd (0.0.0~git20141015.r943-1) unstable; urgency=medium
 
   [ orignal ]
