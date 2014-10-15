@@ -145,9 +145,11 @@ namespace stream
 		
 	I2PClientTunnel::I2PClientTunnel (boost::asio::io_service& service, const std::string& destination, 
 		int port, StreamingDestination * localDestination): 
-		I2PTunnel (service, localDestination ? localDestination : GetSharedLocalDestination ()), 
+		I2PTunnel (service, localDestination ? localDestination : 
+			CreateNewLocalDestination (false, i2p::data::SIGNING_KEY_TYPE_ECDSA_SHA256_P256)), 
 		m_Acceptor (service, boost::asio::ip::tcp::endpoint (boost::asio::ip::tcp::v4(), port)),
-		m_Destination (destination), m_DestinationIdentHash (nullptr), m_RemoteLeaseSet (nullptr)
+		m_Timer (service), m_Destination (destination), m_DestinationIdentHash (nullptr), 
+		m_RemoteLeaseSet (nullptr)
 	{
 	}	
 
@@ -161,12 +163,7 @@ namespace stream
 		i2p::data::IdentHash identHash;
 		if (i2p::data::netdb.GetAddressBook ().GetIdentHash (m_Destination, identHash))
 			m_DestinationIdentHash = new i2p::data::IdentHash (identHash);	
-		if (m_DestinationIdentHash)
-		{
-			i2p::data::netdb.Subscribe (*m_DestinationIdentHash, GetLocalDestination ()->GetTunnelPool ());
-			m_RemoteLeaseSet = GetLocalDestination ()->FindLeaseSet (*m_DestinationIdentHash);
-		}	
-		else
+		if (!m_DestinationIdentHash)
 			LogPrint ("I2PTunnel unknown destination ", m_Destination);
 		m_Acceptor.listen ();
 		Accept ();
@@ -175,6 +172,7 @@ namespace stream
 	void I2PClientTunnel::Stop ()
 	{
 		m_Acceptor.close();
+		m_Timer.cancel ();
 		ClearConnections ();
 		m_DestinationIdentHash = nullptr;
 	}
@@ -190,37 +188,65 @@ namespace stream
 	{
 		if (!ecode)
 		{
-			if (!m_RemoteLeaseSet)
+			if (!m_DestinationIdentHash)
 			{
-				// try to get it
-				if (m_DestinationIdentHash)
-					m_RemoteLeaseSet = GetLocalDestination ()->FindLeaseSet (*m_DestinationIdentHash);
+				i2p::data::IdentHash identHash;
+				if (i2p::data::netdb.GetAddressBook ().GetIdentHash (m_Destination, identHash))
+					m_DestinationIdentHash = new i2p::data::IdentHash (identHash);
+			}	
+			if (m_DestinationIdentHash)
+			{
+				// try to get a LeaseSet
+				m_RemoteLeaseSet = GetLocalDestination ()->FindLeaseSet (*m_DestinationIdentHash);
+				if (m_RemoteLeaseSet && m_RemoteLeaseSet->HasNonExpiredLeases ())
+					CreateConnection (socket);
 				else
 				{
-					i2p::data::IdentHash identHash;
-					if (i2p::data::netdb.GetAddressBook ().GetIdentHash (m_Destination, identHash))
-					{
-						m_DestinationIdentHash = new i2p::data::IdentHash (identHash);
-						i2p::data::netdb.Subscribe (*m_DestinationIdentHash, GetLocalDestination ()->GetTunnelPool ());
-					}
+					i2p::data::netdb.RequestDestination (*m_DestinationIdentHash, true, GetLocalDestination ()->GetTunnelPool ());
+					m_Timer.expires_from_now (boost::posix_time::seconds (I2P_TUNNEL_DESTINATION_REQUEST_TIMEOUT));
+					m_Timer.async_wait (boost::bind (&I2PClientTunnel::HandleDestinationRequestTimer,
+						this, boost::asio::placeholders::error, socket));
 				}
-			}
-
-			if (m_RemoteLeaseSet) // leaseSet found
-			{	
-				LogPrint ("New I2PTunnel connection");
-				auto connection = new I2PTunnelConnection (this, socket, m_RemoteLeaseSet);
-				AddConnection (connection);
-			}
+			}	
 			else
 			{
-				LogPrint ("LeaseSet for I2PTunnel destination not found");
+				LogPrint ("Remote destination ", m_Destination, " not found");
 				delete socket;
 			}	
+				
 			Accept ();
 		}
 		else
 			delete socket;
+	}
+
+	void I2PClientTunnel::HandleDestinationRequestTimer (const boost::system::error_code& ecode, boost::asio::ip::tcp::socket * socket)
+	{
+		if (ecode != boost::asio::error::operation_aborted)
+		{
+			if (m_DestinationIdentHash)
+			{
+				m_RemoteLeaseSet = GetLocalDestination ()->FindLeaseSet (*m_DestinationIdentHash);
+				CreateConnection (socket);
+				return;
+			}
+		}
+		delete socket;	
+	}
+
+	void I2PClientTunnel::CreateConnection (boost::asio::ip::tcp::socket * socket)
+	{
+		if (m_RemoteLeaseSet) // leaseSet found
+		{	
+			LogPrint ("New I2PTunnel connection");
+			auto connection = new I2PTunnelConnection (this, socket, m_RemoteLeaseSet);
+			AddConnection (connection);
+		}
+		else
+		{
+			LogPrint ("LeaseSet for I2PTunnel destination not found");
+			delete socket;
+		}	
 	}
 
 	I2PServerTunnel::I2PServerTunnel (boost::asio::io_service& service, const std::string& address, int port, 
