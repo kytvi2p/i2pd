@@ -1,3 +1,15 @@
+i2pd (0.0.0~git20141015.r943-1) unstable; urgency=medium
+
+  [ orignal ]
+  * use constants instead magic numbers
+  * use ECDSA P256 for client I2P tunnels
+  * fixed race condition
+
+  [ Kill Your TV ]
+  * New upstream git snapshot
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Wed, 15 Oct 2014 21:53:45 +0000
+
 i2pd (0.0.0~git20141015.r940-1) unstable; urgency=medium
 
   [ orignal ]
