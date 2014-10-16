@@ -1,7 +1,8 @@
-i2pd (0.0.0~git20141016.r947-1) unstable; urgency=medium
+i2pd (0.0.0~git20141016.r948-1) unstable; urgency=medium
 
   [ orignal ]
   * use local destination function through ClientContext
+  * introduced ClientDestination
 
   [ Kill Your TV ]
   * New upstream git snapshot
