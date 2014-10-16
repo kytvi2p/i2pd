@@ -1,3 +1,14 @@
+i2pd (0.0.0~git20141016.r948-1) unstable; urgency=medium
+
+  [ orignal ]
+  * use local destination function through ClientContext
+  * introduced ClientDestination
+
+  [ Kill Your TV ]
+  * New upstream git snapshot
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 16 Oct 2014 15:10:05 +0000
+
 i2pd (0.0.0~git20141015.r946-1~deb7u+1) stable; urgency=medium
 
   * Backport to Wheezy
