@@ -2,7 +2,7 @@
 # -*- makefile -*-
 
 %:
-	dh $@ --parallel --with systemd
+	dh $@ --parallel
 
 override_dh_auto_clean:
 	rm -f i2pd
