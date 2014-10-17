@@ -1,4 +1,4 @@
-.TH I2PD "1" "October 2014"
+.TH I2PD "1" "October 17, 2014"
 
 .SH NAME
 i2pd \- Load-balanced unspoofable packet switching network
@@ -15,7 +15,7 @@ communicate. All data is wrapped with several layers of encryption, and the
 network is both distributed and dynamic, with no trusted parties.
 
 .PP
-Any configuration options should be added to \fI/etc/default/i2pd\fR.
+Any of the configuration options below can be used in the \fBDAEMON_ARGS\fR variable in \fI/etc/default/i2pd\fR.
 .BR
 .TP
 \fB\-\-host=\fR
@@ -27,15 +27,18 @@ The external port to listen on
 \fB\-\-httpport=\fR
 The HTTP port to listen on
 .TP
-\fB\-\-log=\fR
+\fB\-\-log=\fR[\fI1\fR|\fI0\fR]
 .br
 Enable of disable logging to a file. \fI1\fR for yes, \fI0\fR for no. (default: \fI0\fR, off)
 .TP
-\fB\-\-daemon=\fR
+\fB\-\-daemon=\fR[\fI1\fR|\fI0\fR]
 Enable or disable daemon mode. Daeon mode is enabled with \fI1\fR  and disabled with \fI0\fR. (default: \fI0\fR, off)
 .TP
-\fB\-\-unreachable=\fR
-\fI1\fR if router is declared as unreachable and works through introducers.
+\fB\-\-service=\fR[\fI1\fR|\fI0\fR]
+If enabled, system folders (\fB/var/run/i2pd.pid\fR, \fB/var/log/i2pd.log\fR, \fB/var/lib/i2pd\fR) will be used. If off, \fB$HOME/.i2pd\fR will be used instead. (default: \fI0\fR, off).
+.TP
+\fB\-\-unreachable=\fR[\fI1\fR|\fI0\fR]
+\fI1\fR if router is declared as unreachable and works through introducers. (default: \fI0\fR, off)
 .TP
 \fB\-\-httpproxyport=\fR
 The local port for the HTTP Proxy to listen on (default: \fI4446\fR)
@@ -68,13 +71,19 @@ Port of SAM bridge. Usually \fI7656\fR. SAM will not be enabled if this is not s
 .PP
 /etc/default/i2pd
 .RS 4
-i2p daemon configuration file
+i2pd configuration file (when running as a system service)
 
 .RE
 .PP
 /var/lib/i2pd/
 .RS 4
-i2pd profile directory
+i2pd profile directory (when running as a system service, see \fB\-\-service=\fR above)
+
+.RE
+.PP
+$HOME/.i2pd
+.RS 4
+i2pd profile directory (when running as a normal user)
 .SH AUTHOR
 This manual page was written by kytv <killyourtv@i2pmail.org> for the Debian system (but may be used by others).
 .BR
