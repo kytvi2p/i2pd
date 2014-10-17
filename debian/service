@@ -8,7 +8,9 @@ EnvironmentFile=/etc/default/i2pd
 Restart=on-abnormal
 PIDFile=/run/i2pd/i2pd.pid
 User=i2pd
-ExecStart=/usr/sbin/i2pd $DAEMON_ARGS --daemon=1 --log=1
+ExecStartPre=/bin/touch /var/run/i2pd.pid
+ExecStartPre=/bin/chown i2pd:i2pd /var/run/i2pd.pid
+ExecStart=/usr/sbin/i2pd $DAEMON_ARGS --daemon=1 --log=1 --service=1
 
 [Install]
 WantedBy=multi-user.target

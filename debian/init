@@ -17,7 +17,7 @@ DESC="I2P router daemon"
 NAME="i2pd"
 DAEMON="/usr/sbin/i2pd"
 DAEMON_ARGS=""
-PIDFILE="/run/i2pd/$NAME.pid"
+PIDFILE="/run//$NAME.pid"
 USER="i2pd"
 
 [ -x $DAEMON ] || exit 0
@@ -30,14 +30,16 @@ if [ ! -d $(dirname $PIDFILE) ]; then
     mkdir -p $(dirname $PIDFILE)
 fi
 
-chown ${USER}:${USER} $(dirname $PIDFILE)
+#chown ${USER}:${USER} $(dirname $PIDFILE)
 
 do_start()
 {
   start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --chuid "$USER" --test > /dev/null \
     || return 1
+  touch $PIDFILE
+  chown ${USER}:${USER} $PIDFILE
   start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --chuid "$USER" -- \
-    --daemon=1 --log=1 $DAEMON_ARGS || return 2
+    --service=1 --daemon=1 --log=1 $DAEMON_ARGS || return 2
 }
 
 do_stop()
