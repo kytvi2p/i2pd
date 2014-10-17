@@ -14,3 +14,9 @@ override_dh_install:
 
 override_dh_strip:
 	dh_strip --dbg-package=i2pd-dbg
+
+override_dh_installchangelogs:
+	# upstream changelog should be recreated using git2cl
+	# whenever the upstream source is pulled from git
+	dh_installchangelogs debian/upstream.changelog
+	dh_installchangelogs

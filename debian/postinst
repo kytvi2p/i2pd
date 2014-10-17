@@ -18,10 +18,12 @@ case "$1" in
         adduser --system --quiet --group --home $I2PDHOME $I2PDSYSUSER > /dev/null 2>&1
     fi
 
-    #[ -d /var/log/i2pd ] || mkdir -m0750 /var/log/i2pd
+    if [ ! -f /var/log/i2pd.log ]; then
+       touch /var/log/i2pd.log
+       chown -f ${I2PDSYSUSER}:adm /var/log/i2pd.log
+    fi
     [ -d $I2PDHOME ] || mkdir -m0750 $I2PDHOME
     chown -f -R $I2PDSYSUSER:${I2PDSYSUSER} ${I2PDHOME}
-
 
 ;;
 abort-upgrade|abort-remove|abort-deconfigure)

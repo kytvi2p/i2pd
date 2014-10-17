@@ -1,0 +1,3786 @@
+2014-10-17  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp: fixed typo
+
+2014-10-17  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp, HTTPServer.cpp, version.h: show version
+
+2014-10-17  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: attach creation time to individual tag
+
+2014-10-17  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp, Daemon.h, DaemonLinux.cpp, README.md, util.cpp: use
+	system folders if run as service
+
+2014-10-16  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: delete expired unconfirmed tags
+
+2014-10-16  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp: re-request expired lesaseset
+
+2014-10-16  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: send new tags in advance
+
+2014-10-16  orignal <i2porignal@yandex.ru>
+
+	* Destination.h, SAM.cpp, SAM.h: don't send session create reply
+	until destination is ready
+
+2014-10-16  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h: introduced ClientDestination
+
+2014-10-16  orignal <i2porignal@yandex.ru>
+
+	* ClientContext.cpp, ClientContext.h, HTTPServer.cpp,
+	I2PTunnel.cpp, I2PTunnel.h, SAM.cpp, SAM.h, SOCKS.cpp: use local
+	destination function through ClientContext
+
+2014-10-15  orignal <i2porignal@yandex.ru>
+
+	* ClientContext.cpp, ClientContext.h, Daemon.cpp: moved start/stop
+	client services from Daemon to ClientContext
+
+2014-10-15  orignal <i2porignal@yandex.ru>
+
+	* ClientContext.cpp, ClientContext.h, Daemon.cpp, Destination.cpp,
+	Destination.h, HTTPServer.cpp, I2PTunnel.cpp, SAM.cpp, SOCKS.cpp,
+	Win32/i2pd.vcxproj, build/CMakeLists.txt,
+	build/autotools/Makefile.in, filelist.mk: introduced ClientContext
+
+2014-10-15  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, HTTPServer.cpp, I2PTunnel.cpp,
+	SAM.cpp, SOCKS.cpp: create/delete stream per destination only
+
+2014-10-15  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp: fixed race condition
+
+2014-10-15  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, I2PTunnel.cpp: use ECDSA P256 for
+	client I2P tunnels
+
+2014-10-15  orignal <i2porignal@yandex.ru>
+
+	* Signature.h: use constants instead magic numbers
+
+2014-10-15  orignal <i2porignal@yandex.ru>
+
+	* I2PTunnel.cpp: fixed typo
+
+2014-10-15  orignal <i2porignal@yandex.ru>
+
+	* I2PTunnel.cpp: check for non-expired leases
+
+2014-10-15  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, I2PTunnel.cpp, I2PTunnel.h, NetDb.cpp, NetDb.h,
+	SOCKS.cpp: don't use netDb subcriptions anymore
+
+2014-10-15  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Streaming.cpp: delete stream in destination's
+	thread
+
+2014-10-14  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp: proper date formatting
+
+2014-10-14  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, I2PTunnel.cpp, Identity.cpp, NetDb.cpp: try
+	closest floodfills sequentially
+
+2014-10-14  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: unconfirmed tags
+
+2014-10-14  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: tags confirmed
+
+2014-10-14  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp: don't send delivery status is no tags
+
+2014-10-14  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, Identity.cpp, Identity.h, NetDb.cpp, NetDb.h,
+	RouterInfo.cpp, RouterInfo.h: donn't calculate routing keys for
+	routers anymore
+
+2014-10-13  orignal <i2porignal@yandex.ru>
+
+	* RouterInfo.cpp: don't use router's routing key for XOR metric
+
+2014-10-13  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, Garlic.cpp, Garlic.h,
+	LeaseSet.cpp, LeaseSet.h, NetDb.cpp, NetDb.h, RouterContext.cpp,
+	RouterContext.h: separate requsted and unsolicited LeaseSets
+
+2014-10-13  orignal <i2porignal@yandex.ru>
+
+	* Destination.h, HTTPServer.cpp, Streaming.cpp, Streaming.h: added
+	some statistics
+
+2014-10-13  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp: fixed race condition
+
+2014-10-13  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h: fixed race condition
+
+2014-10-13  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, SAM.cpp, Tunnel.cpp, Tunnel.h,
+	TunnelPool.cpp, TunnelPool.h: resuse instance of local destination
+	upon restart
+
+2014-10-12  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, HTTPServer.cpp, I2PTunnel.cpp,
+	SAM.cpp, SAM.h, Streaming.cpp: remote LeaseSets per local
+	destination
+
+2014-10-11  orignal <i2porignal@yandex.ru>
+
+	* Destination.h, Garlic.h, Identity.h, RouterContext.h: moved
+	HandleI2NPMessage to GarlicDestination level
+
+2014-10-11  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, Garlic.cpp, I2NPProtocol.cpp,
+	I2NPProtocol.h, Identity.h, RouterContext.cpp, RouterContext.h: 
+	handle I2NP message per destination
+
+2014-10-11  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, HTTPServer.cpp, TunnelPool.cpp: 
+	show streams per local destination
+
+2014-10-11  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp, TunnelPool.cpp, TunnelPool.h: detach tunnles from poll
+
+2014-10-11  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h, TunnelPool.cpp, TunnelPool.h: fixed race
+	condition
+
+2014-10-10  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp: fixed race condition
+
+2014-10-10  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp: don't send plain ACK if outgoing message has been
+	sent
+
+2014-10-10  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: send Ack with 200 ms delay
+
+2014-10-09  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h: fixed race condition
+
+2014-10-09  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, Streaming.h: always call receive handler from a
+	streaming thread
+
+2014-10-09  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: connection reset event from stream
+
+2014-10-09  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h: separate thread per local
+	destination
+
+2014-10-08  orignal <i2porignal@yandex.ru>
+
+	* I2PTunnel.cpp: delete closed I2P tunnel connection
+
+2014-10-08  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp: delete HTTP connection if closed
+
+2014-10-08  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, Garlic.cpp, Garlic.h,
+	I2NPProtocol.cpp, TunnelPool.cpp: moved garlic decryption to
+	streaming thread
+
+2014-10-08  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Garlic.cpp, Garlic.h, Identity.h, NetDb.cpp,
+	Streaming.cpp, Streaming.h: moved local LeaseSet update from Stream
+	to RoutingSession
+
+2014-10-08  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp, Garlic.cpp, Garlic.h, I2NPProtocol.cpp: exclude garlic
+	thread
+
+2014-10-07  orignal <i2porignal@yandex.ru>
+
+	* I2NPProtocol.cpp: drop DeliveryStatus if not from tunnel
+
+2014-10-07  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, TunnelPool.cpp: DeliveryStatus per garlic
+	destination
+
+2014-10-07  orignal <i2porignal@yandex.ru>
+
+	* Destination.h, Garlic.cpp, Garlic.h, RouterContext.h,
+	Streaming.cpp: take LeaseSet from GarlicDestination
+
+2014-10-07  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, Garlic.cpp, Garlic.h, NetDb.cpp,
+	Streaming.cpp: AES/ElGamal session tags per local destination
+
+2014-10-07  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h: rollback
+
+2014-10-07  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h: gzip/gunzip per destination
+
+2014-10-07  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, Streaming.cpp: create data message
+	inside detination
+
+2014-10-07  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h: find SAM session only once
+
+2014-10-07  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Streaming.cpp, Streaming.h: pass destination by
+	reference
+
+2014-10-07  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, Streaming.cpp, Streaming.h,
+	Tunnel.cpp, Tunnel.h: moved current outbound tunnel to destination
+
+2014-10-07  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp: use make_shared
+
+2014-10-06  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: multiple AES keys per local destination
+
+2014-10-06  orignal <i2porignal@yandex.ru>
+
+	* Destination.h, Garlic.cpp, Garlic.h, I2NPProtocol.cpp,
+	I2NPProtocol.h, NetDb.cpp, RouterContext.h, Streaming.h,
+	Tunnel.cpp, Tunnel.h, TunnelPool.cpp, TunnelPool.h: AES/ElGamal tags
+	per local destination
+
+2014-10-06  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: introuduce GarlicDestination
+
+2014-10-06  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, Garlic.cpp, Identity.h,
+	RouterContext.h, TunnelPool.h: find local destination by tunnel
+	garlic came from
+
+2014-10-06  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h, TunnelPool.cpp: fixed race condition
+
+2014-10-05  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, NetDb.h, SAM.cpp, SAM.h: fixed race condition
+
+2014-10-05  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp: pritnout incomign SAM connection
+
+2014-10-05  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp: fixed race condition
+
+2014-10-05  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h: fixed race condition
+
+2014-10-05  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp, Destination.cpp, Destination.h, Garlic.cpp,
+	HTTPServer.cpp, I2PTunnel.cpp, SAM.cpp, SOCKS.cpp, Streaming.cpp,
+	Streaming.h, Win32/i2pd.vcxproj, build/CMakeLists.txt,
+	build/autotools/Makefile.in, filelist.mk: split Streaming to stream
+	and destination
+
+2014-10-04  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp: fixed race condition
+
+2014-10-04  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, Streaming.cpp: fixed race condition
+
+2014-10-03  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, Streaming.h: operation_aborted error code for stream
+
+2014-10-03  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: fixed race condition
+
+2014-10-03  orignal <i2porignal@yandex.ru>
+
+	* I2PTunnel.cpp: use own pool for request of destination of new I2P
+	client tunnel
+
+2014-10-03  orignal <i2porignal@yandex.ru>
+
+	* LeaseSet.h, SAM.cpp, SAM.h: NAMING LOOKUP for .b32 addresses
+
+2014-10-03  orignal <i2porignal@yandex.ru>
+
+	* AddressBook.cpp, AddressBook.h, HTTPProxy.cpp, HTTPServer.cpp,
+	I2PTunnel.cpp, NetDb.h: parse address in AddressBook
+
+2014-10-03  orignal <i2porignal@yandex.ru>
+
+	* TunnelPool.cpp, TunnelPool.h: fixed race condition
+
+2014-10-03  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp: extract last parameter
+
+2014-10-02  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h: handle NAMING LOOKUP
+
+2014-10-02  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h: handle NAMING LOOKUP
+
+2014-10-02  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp: don't pick next peer same as previous
+
+2014-10-02  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp: fixed race condition
+
+2014-10-02  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h: request destination LeaseSet and wait for 5
+	seconds if not found
+
+2014-10-01  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, I2PTunnel.cpp, SAM.cpp, SOCKS.cpp, Streaming.cpp,
+	Streaming.h: some cleanup
+
+2014-10-01  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h, Streaming.cpp, Streaming.h: don't create SAM
+	session is local destination exists
+
+2014-10-01  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp: don't  block tunnel list for a long time
+
+2014-10-01  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp, Streaming.cpp, Streaming.h: don't publish local
+	destination of client I2PTunnel
+
+2014-10-01  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp, I2PTunnel.cpp, I2PTunnel.h, README.md: specify
+	separate local destination for client I2PTunnels
+
+2014-09-30  orignal <i2porignal@yandex.ru>
+
+	* I2NPProtocol.cpp: don't create non-accepted transit tunnel
+
+2014-09-30  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h, I2NPProtocol.cpp,
+	RouterContext.cpp, RouterContext.h: start/stop accepting transit
+	tunnels
+
+2014-09-30  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h, Streaming.cpp: handle DEST GENERATE
+
+2014-09-29  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h, TunnelPool.h: show local
+	destination's tunnels
+
+2014-09-29  orignal <i2porignal@yandex.ru>
+
+	* SSUData.cpp, SSUData.h: don't handle same message twice
+
+2014-09-29  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, I2NPProtocol.cpp, I2NPProtocol.h, NetDb.cpp, NetDb.h:  check tunnel where DatabaseStore message comes from
+
+2014-09-29  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp: handle commands with params
+
+2014-09-29  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h, Streaming.h: handle SILENT flag
+
+2014-09-28  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h, Streaming.cpp, Streaming.h: show
+	local destinations
+
+2014-09-28  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h: split diagnostics by few pages
+
+2014-09-28  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp: don't process pending tunnel twice
+
+2014-09-28  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp: parse SAM commands
+
+2014-09-27  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h: generate reandom tunnelMsgID
+
+2014-09-27  Mikal <mikalv@mikalv.net>
+
+	* Win32/i2pd.sln, Win32/i2pd.vcxproj, Win32/i2pd.vcxproj.filters: 
+	Update on win32 build files.  Some include and library settings are added for jenkins to match up
+	with meeh's win32 slave. Currenly not executing on winXP even
+	compiler and msdn claims to support it.
+
+2014-09-27  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h, Streaming.cpp, Streaming.h: publish local
+	destinations created by SAM session
+
+2014-09-26  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, I2PTunnel.cpp, NetDb.cpp, NetDb.h: request
+	LeaseSet through destination's tunnels
+
+2014-09-26  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h, Streaming.cpp, Streaming.h: handle STREAM ACCEPT
+
+2014-09-26  orignal <i2porignal@yandex.ru>
+
+	* I2NPProtocol.cpp, Tunnel.cpp, Tunnel.h: fixed tunnel build race
+	condition
+
+2014-09-25  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, NetDb.h, TunnelPool.cpp, TunnelPool.h: select high
+	bandwidth routers for client tunnels
+
+2014-09-25  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp: create SAM bridge
+
+2014-09-25  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h: implementation of STREAM CONNECT
+
+2014-09-25  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h: implementation of SESSION CREATE
+
+2014-09-24  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: generic GetRandomRputer
+
+2014-09-24  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, SAM.cpp, Streaming.cpp: delete all streams upon
+	deletion of a local destination
+
+2014-09-24  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h, Streaming.cpp, Streaming.h: create SAM session
+
+2014-09-24  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h: handle through traffic
+
+2014-09-24  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h, Win32/i2pd.vcxproj, build/CMakeLists.txt,
+	build/autotools/Makefile.in, filelist.mk: SAM added
+
+2014-09-23  orignal <i2porignal@yandex.ru>
+
+	* Makefile.linux: std option for different versions of gcc (by
+	hagen)
+
+2014-09-23  orignal <i2porignal@yandex.ru>
+
+	* AddressBook.cpp, AddressBook.h, HTTPProxy.cpp, NetDb.h: jump
+	service
+
+2014-09-23  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp: stop netdb tread immediately on termination
+
+2014-09-22  orignal <i2porignal@yandex.ru>
+
+	* Makefile.linux: use c++11 for 4.9 only
+
+2014-09-22  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #100 from hagen-i2p/cxx11-support Detect c++11 support by compiler
+
+2014-09-22  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: PeerTest from Charlie to Alice
+
+2014-09-22  hagen <hagen@mail.i2p>
+
+	* debian/control: * debian/control : enforce minimal version of compiler and cmake
+
+2014-09-22  hagen <hagen@mail.i2p>
+
+	* build/CMakeLists.txt: * cmake : show compiler version in summary
+
+2014-09-22  hagen <hagen@mail.i2p>
+
+	* build/CMakeLists.txt: * cmake : detect support of c++11 via compiler flags
+
+2014-09-22  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp: terminate NTCP session by timeout
+
+2014-09-22  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: don't send address for initial PeerTest
+
+2014-09-22  orignal <i2porignal@yandex.ru>
+
+	* Queue.h, Transports.cpp: proper termination
+
+2014-09-22  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, Transports.cpp: fixed crash on termination
+
+2014-09-22  orignal <i2porignal@yandex.ru>
+
+	* Makefile.linux: c++11 is not recognized by gcc 4.6. rolled back to
+	c++0x
+
+2014-09-22  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #99 from hagen-i2p/debian Debian package metadata
+
+2014-09-22  hagen <hagen@mail.i2p>
+
+	* debian/changelog: * debian/changelpg
+
+2014-09-21  orignal <i2porignal@yandex.ru>
+
+	* CryptoConst.cpp, CryptoConst.h, version.h: initialize crpto
+	constants on demand
+
+2014-09-20  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp: aquire DH keys if demanded  only
+
+2014-09-20  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp: fixed crash
+
+2014-09-19  orignal <i2porignal@yandex.ru>
+
+	* AddressBook.cpp, Identity.cpp, Identity.h: read extended
+	indentities from hosts.txt
+
+2014-09-19  orignal <i2porignal@yandex.ru>
+
+	* version.h: Update version.h fixed typo
+
+2014-09-19  hagen <hagen@mail.i2p>
+
+	* Makefile.linux: - remote hardcoded rpath from Makefile
+
+2014-09-19  hagen <hagen@mail.i2p>
+
+	* Makefile, Makefile.bsd, Makefile.linux, Makefile.osx: * Makefile : move common targets to top-level Makefile
+
+2014-09-19  hagen <hagen@mail.i2p>
+
+	* Makefile.linux: * fix CFLAGS in Makefile.linux
+
+2014-09-19  hagen <hagen@mail.i2p>
+
+	* debian/changelog, debian/compat, debian/control,
+	debian/copyright, debian/docs, debian/i2pd.default,
+	debian/i2pd.install, debian/init.d,
+	debian/patches/rename-binary.patch, debian/patches/series,
+	debian/rules, debian/source/format, debian/watch: + debian/
+
+2014-09-18  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSUData.cpp, SSUData.h: adjust MTU for incoming SSU
+	sessions
+
+2014-09-18  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h: read Identity from SessionConfirmed message
+
+2014-09-18  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: acquire DH pair by demand only
+
+2014-09-18  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h: avoid double delete
+
+2014-09-18  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #98 from hagen-i2p/better-cmakelists Better cmakelists
+
+2014-09-17  hagen <hagen@mail.i2p>
+
+	* build/CMakeLists.txt: * use hardening linker flags only with gcc
+
+2014-09-17  hagen <hagen@mail.i2p>
+
+	* build/BUILD_NOTES.md: + BUILD_NOTES.md
+
+2014-09-17  hagen <hagen@mail.i2p>
+
+	* build/CMakeLists.txt: * freebsd build fixes
+
+2014-09-17  hagen <hagen@mail.i2p>
+
+	* build/CMakeLists.txt: * fix -std= option for gcc
+
+2014-09-17  hagen <hagen@mail.i2p>
+
+	* build/CMakeLists.txt: * update summary
+
+2014-09-17  hagen <hagen@mail.i2p>
+
+	* build/CMakeLists.txt: * better CMakeLists
+
+2014-09-17  orignal <i2porignal@yandex.ru>
+
+	* RouterInfo.h: rollback
+
+2014-09-17  orignal <i2porignal@yandex.ru>
+
+	* RouterInfo.h: use Tag<32> for intro key
+
+2014-09-17  orignal <i2porignal@yandex.ru>
+
+	* base64.cpp: don't write beyond out buffer
+
+2014-09-17  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, Transports.cpp, Transports.h: reuse DH keys pairs
+	from failed NTCP sessions
+
+2014-09-17  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp: make sure we receive phases of exact size
+
+2014-09-16  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp: handle incorrect address
+
+2014-09-16  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp: don't delete socket twice
+
+2014-09-16  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h: POST longer messages
+
+2014-09-15  orignal <i2porignal@yandex.ru>
+
+	* HTTPProxy.cpp, HTTPServer.cpp, HTTPServer.h: send original user's
+	request through the proxy
+
+2014-09-15  orignal <i2porignal@yandex.ru>
+
+	* RouterInfo.cpp: fixed typo
+
+2014-09-14  orignal <i2porignal@yandex.ru>
+
+	* RouterContext.cpp, SSU.cpp: check if remote RouterInfo is
+	presented
+
+2014-09-14  orignal <i2porignal@yandex.ru>
+
+	* RouterInfo.cpp, RouterInfo.h: check MTU of remote router
+
+2014-09-14  orignal <i2porignal@yandex.ru>
+
+	* SSUData.cpp, SSUData.h: check MTU of remote router
+
+2014-09-14  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: exclude desctroyed session to introducer from RouterInfo
+
+2014-09-14  orignal <i2porignal@yandex.ru>
+
+	* SSUData.cpp, SSUData.h: SSU packet size
+
+2014-09-14  orignal <i2porignal@yandex.ru>
+
+	* SSUData.cpp, SSUData.h: fixed buffer overflow
+
+2014-09-14  orignal <i2porignal@yandex.ru>
+
+	* SOCKS.cpp, SOCKS.h: compatibility with VS2013
+
+2014-09-14  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h, TunnelPool.cpp: fixed race condition
+
+2014-09-13  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, Tunnel.cpp: send HolePunch if unreachable
+
+2014-09-13  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: don't try to connect to unreachable router from
+	unreachable router
+
+2014-09-13  orignal <i2porignal@yandex.ru>
+
+	* Makefile.linux: use -maes if AES-NI detected
+
+2014-09-13  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: fixed race condition
+
+2014-09-12  orignal <i2porignal@yandex.ru>
+
+	* HTTPProxy.cpp, HTTPServer.cpp: Content-Type for POST
+
+2014-09-12  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp: fixed malformed messages
+
+2014-09-12  orignal <i2porignal@yandex.ru>
+
+	* HTTPProxy.cpp, HTTPServer.cpp: fixed malformed messages
+
+2014-09-12  orignal <i2porignal@yandex.ru>
+
+	* HTTPProxy.cpp, HTTPProxy.h, HTTPServer.cpp: fixed POST methos
+
+2014-09-12  orignal <i2porignal@yandex.ru>
+
+	* SSUData.cpp: proper bitfields order
+
+2014-09-12  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: use data message for keep-alive
+
+2014-09-11  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h: reduced memory usage
+
+2014-09-11  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp, RouterContext.cpp, RouterContext.h: override SSU port
+	if specified
+
+2014-09-11  orignal <i2porignal@yandex.ru>
+
+	* TunnelEndpoint.cpp: handle out-of-sequence fragment for first
+	fragment
+
+2014-09-11  orignal <i2porignal@yandex.ru>
+
+	* TunnelEndpoint.cpp: handle out-of-sequence fragment for first
+	fragment
+
+2014-09-10  orignal <i2porignal@yandex.ru>
+
+	* TunnelEndpoint.cpp, TunnelEndpoint.h: handle out-of-sequence
+	tunnel fragments
+
+2014-09-10  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: fixed race condition
+
+2014-09-09  orignal <i2porignal@yandex.ru>
+
+	* I2PTunnel.cpp, I2PTunnel.h: maintain connections list for
+	I2PTunnel
+
+2014-09-09  orignal <i2porignal@yandex.ru>
+
+	* README.md: Update README.md ./configure should be used for autotools only
+
+2014-09-09  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #94 from tharvik/master Use autotools instead of basic Makefile
+
+2014-09-09  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h: limit session to introducer by 1 hour
+
+2014-09-09  orignal <i2porignal@yandex.ru>
+
+	* RouterContext.cpp, RouterContext.h, SSU.cpp, SSU.h: don't include
+	same introducer twice
+
+2014-09-08  orignal <i2porignal@yandex.ru>
+
+	* RouterContext.cpp, SSU.cpp: cleanup introducers at startup
+
+2014-09-08  orignal <i2porignal@yandex.ru>
+
+	* : commit fc50b24809fc8f6f3c3ba1e766882c7b0042103e Author: orignal
+	<i2porignal@yandex.ru> Date:   Mon Sep 8 16:43:20 2014 -0400
+
+2014-09-08  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #95 from kytvi2p/update_i2p_certificates sync certificates with those from the Java I2P's codebase
+
+2014-09-08  tharvik <tharvik@gmail.com>
+
+	* .gitignore, Makefile, Makefile.am, Makefile.bsd, Makefile.in,
+	Makefile.linux, Makefile.osx, README.md, aclocal.m4, config.guess,
+	config.h.in, config.sub, configure, configure.ac, depcomp,
+	install-sh, m4/ax_boost_base.m4, m4/ax_boost_date_time.m4,
+	m4/ax_boost_filesystem.m4, m4/ax_boost_program_options.m4,
+	m4/ax_boost_regex.m4, m4/ax_boost_system.m4,
+	m4/ax_cxx_compile_stdcxx_11.m4, m4/ax_pthread.m4, missing: Use
+	autotools instead of basic Makefile
+
+2014-09-06  orignal <i2porignal@yandex.ru>
+
+	* RouterContext.cpp, RouterContext.h, RouterInfo.cpp, RouterInfo.h,
+	SSU.cpp, SSU.h: select introducers
+
+2014-09-05  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h: relay request from non-established session
+
+2014-09-05  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h: session to introducer
+
+2014-09-05  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h: zero-length address in RelayRequest
+
+2014-09-05  orignal <i2porignal@yandex.ru>
+
+	* RouterContext.cpp: SSU tester and introducer by default
+
+2014-09-04  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: fixed incorrect PeerTest
+
+2014-09-04  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h: RelayTest for Bob and Charlie
+
+2014-09-04  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h: schdule connect timer
+
+2014-09-04  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: closed non-etsablished SSU session by timeout
+
+2014-09-04  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp, RouterContext.cpp, RouterContext.h: initialize context
+	after start-up
+
+2014-09-03  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h: send PeerTest to Charlie
+
+2014-09-03  orignal <i2porignal@yandex.ru>
+
+	* TunnelGateway.cpp: correct endianess for msgID
+
+2014-09-03  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h: GetRandomEstablishedSession
+
+2014-09-03  orignal <i2porignal@yandex.ru>
+
+	* I2NPProtocol.cpp: network bytes order for timestamp
+
+2014-09-03  orignal <i2porignal@yandex.ru>
+
+	* RouterContext.cpp: fixed typo
+
+2014-09-03  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h, version.h: moved itooopie to string
+	static constant
+
+2014-09-03  Meeh <meeh@i2pmail.org>
+
+	* Win32/i2pd.vcxproj, Win32/i2pd.vcxproj.filters: Removing unused
+	cpp file from win32 project files
+
+2014-09-02  orignal <i2porignal@yandex.ru>
+
+	* RouterContext.cpp, RouterInfo.cpp, RouterInfo.h: fill caps
+	property based on flags
+
+2014-09-02  orignal <i2porignal@yandex.ru>
+
+	* RouterContext.cpp: update core version at start-up
+
+2014-09-02  orignal <i2porignal@yandex.ru>
+
+	* TunnelPool.cpp, version.h: improved tunnels creation ratio
+
+2014-09-01  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #93 from kytvi2p/kfreebsd detect GNU/kFreeBSD
+
+2014-09-01  Kill Your TV <killyourtv@i2pmail.org>
+
+	* I2PEndian.h: detect GNU/kFreeBSD see https://lists.debian.org/debian-bsd/2010/01/msg00125.html
+
+2014-08-31  orignal <i2porignal@yandex.ru>
+
+	* RouterContext.cpp, RouterContext.h: update RouterInfo after 30
+	minutes if no changes
+
+2014-08-31  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, Tunnel.cpp, Tunnel.h: fixed race consition
+
+2014-08-31  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp: show expiring tunnel status
+
+2014-08-31  Meeh <meeh@i2pmail.org>
+
+	* HTTPServer.cpp: Making sure Content-Length is sent when having
+	body.  RFC;
+	http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4
+
+2014-08-31  Meeh <meeh@i2pmail.org>
+
+	* Identity.cpp: OSX build fix
+
+2014-08-30  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h: fixed race condition
+
+2014-08-29  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, Streaming.cpp, Streaming.h: assign
+	GarlicRoutingSession to stream
+
+2014-08-29  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp, TunnelPool.cpp: don't miss active tunnel
+
+2014-08-28  orignal <i2porignal@yandex.ru>
+
+	* Transports.cpp, Transports.h: hold I2NP message for 5 seconds if
+	router is not in netDb
+
+2014-08-28  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, Tunnel.cpp, TunnelPool.cpp: improved exploratory
+
+2014-08-28  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp: improved exploratory
+
+2014-08-27  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp, TunnelPool.cpp: random pick tunnels
+
+2014-08-27  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp, TunnelPool.cpp: pick established tunnels only
+
+2014-08-27  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp: send reply to DatabaseLookup through exploratory pool
+	or directly only
+
+2014-08-27  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp: check for buffer overflow
+
+2014-08-26  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp, Identity.h, README.md, Streaming.cpp, Streaming.h: 
+	server tunnel parameters
+
+2014-08-26  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h, TunnelPool.h: expiring status for tunnels
+
+2014-08-25  orignal <i2porignal@yandex.ru>
+
+	* Identity.h, RouterContext.cpp, RouterContext.h, RouterInfo.cpp,
+	RouterInfo.h, Streaming.cpp, Streaming.h, TunnelPool.h: moved common
+	code to LocalDestination
+
+2014-08-25  orignal <i2porignal@yandex.ru>
+
+	* RouterContext.cpp, RouterContext.h: use PrivateKeys for
+	RoutingContext
+
+2014-08-25  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: fixed race condition
+
+2014-08-24  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp: send our router information with RI request only
+
+2014-08-24  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, TunnelGateway.cpp: fixed crash
+
+2014-08-24  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp: speed-up destination request
+
+2014-08-24  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp, Streaming.cpp: ECDSA for local destinations
+
+2014-08-23  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp, Identity.h, Streaming.cpp, Streaming.h: use Signer
+	for local destination
+
+2014-08-23  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp, Identity.h, Streaming.cpp: create random keys for
+	different signature type
+
+2014-08-23  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp, Identity.h, Streaming.cpp, Streaming.h, version.h: 
+	PrivateKeys with extended identity
+
+2014-08-23  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp, Identity.h, LeaseSet.cpp, Signature.h: signature
+	size for LeaseSet
+
+2014-08-22  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp, Identity.h, LeaseSet.cpp, LeaseSet.h,
+	RouterContext.cpp, RouterContext.h, Streaming.cpp, Streaming.h,
+	TunnelPool.cpp, TunnelPool.h: extended identity for local
+	destination
+
+2014-08-22  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp, Identity.h, Streaming.cpp, Streaming.h: verify
+	streaming packet signature
+
+2014-08-22  orignal <i2porignal@yandex.ru>
+
+	* Signature.h: signing keys generators
+
+2014-08-22  orignal <i2porignal@yandex.ru>
+
+	* Signature.h: signers
+
+2014-08-22  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp: ECDSA key starts at 320-th byte
+
+2014-08-22  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp: correct lenght for LeaseSet
+
+2014-08-21  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp, Identity.h, LeaseSet.cpp, LeaseSet.h, Signature.h: 
+	process extended indetities for LeaseSets
+
+2014-08-21  orignal <i2porignal@yandex.ru>
+
+	* Signature.h: ECDSA P-256 signature
+
+2014-08-21  orignal <i2porignal@yandex.ru>
+
+	* base64.cpp, base64.h: base32 encode
+
+2014-08-21  orignal <i2porignal@yandex.ru>
+
+	* Identity.h, Signature.h, Win32/i2pd.vcxproj,
+	build/CMakeLists.txt, filelist.mk: Signature.h added
+
+2014-08-20  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: store tunnel pool with RoutingDestination
+
+2014-08-20  orignal <i2porignal@yandex.ru>
+
+	* I2PTunnel.cpp, I2PTunnel.h, Streaming.cpp, Streaming.h: server
+	I2PTunnel
+
+2014-08-20  orignal <i2porignal@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h, NetDb.cpp, NetDb.h,
+	Streaming.cpp, Streaming.h: publish local LeaseSet
+
+2014-08-19  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: ignore zero length packets
+
+2014-08-19  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, RouterInfo.cpp, RouterInfo.h: don't use unreachable RI
+	after 1 hour
+
+2014-08-18  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, Tunnel.h: wait more for tunnel creation
+
+2014-08-18  orignal <i2porignal@yandex.ru>
+
+	* I2NPProtocol.cpp, Tunnel.cpp, Tunnel.h: wait for 10 seconds before
+	delete a pending tunnel
+
+2014-08-18  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: proper endiness of relay tag
+
+2014-08-17  orignal <i2porignal@yandex.ru>
+
+	* I2PTunnel.cpp: close client socket if I2P gets closed
+
+2014-08-17  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp, Streaming.h, TunnelPool.cpp, TunnelPool.h: use same
+	outbound tunnel for streaming as long as possible
+
+2014-08-17  orignal <i2porignal@yandex.ru>
+
+	* Log.cpp: print time without date
+
+2014-08-17  Mikal Villa <meeh@sigterm.no>
+
+	* HTTPServer.cpp, version.h: Improving some html on the webconsole.
+	I'm gonna need to import css files, or bundle them inside. And a
+	html parser.
+
+2014-08-17  Mikal Villa <meeh@sigterm.no>
+
+	* build/CMakeLists.txt, filelist.mk: Adding header file (version.h)
+	to make scripts
+
+2014-08-17  Mikal Villa <meeh@sigterm.no>
+
+	* Log.cpp, Makefile.bsd, Makefile.linux, Makefile.osx: Adding
+	timestamp to logger.
+
+2014-08-17  Mikal Villa <meeh@sigterm.no>
+
+	* RouterContext.cpp, version.h: Patched
+	RouterContext::CreateNewRouter to read from config if available.  As
+	well as reading the version string from external file.
+
+2014-08-16  orignal <i2porignal@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h: shuffle records for VariableTunnelBuild
+	message
+
+2014-08-15  orignal <i2porignal@yandex.ru>
+
+	* Identity.h, RouterContext.h, Streaming.cpp, Streaming.h,
+	TunnelPool.cpp: notify inbound tunnels update
+
+2014-08-15  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, I2NPProtocol.cpp, TunnelPool.cpp: handle
+	garlic's DeliveryStatus in the garlic thread
+
+2014-08-15  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: send DeliveryStatus back through a tunnel
+	from same tunnel pool
+
+2014-08-15  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, Streaming.cpp, Streaming.h: pass actual
+	LeaseSet instead of I2NP message
+
+2014-08-15  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp: notify client if a stream got disconnected
+
+2014-08-14  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp: pick another lease for resend
+
+2014-08-14  orignal <i2porignal@yandex.ru>
+
+	* AddressBook.cpp, AddressBook.h, I2PTunnel.cpp: try to find
+	destination at every connect attempt
+
+2014-08-14  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp, README.md, SOCKS.h: IRC tunnel support
+
+2014-08-13  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp: fixed infinite loop
+
+2014-08-13  orignal <i2porignal@yandex.ru>
+
+	* I2PTunnel.cpp, Streaming.cpp: initial connect of I2PTunnel
+
+2014-08-13  orignal <i2porignal@yandex.ru>
+
+	* I2PTunnel.cpp, I2PTunnel.h: I2PTunnel data transfer
+
+2014-08-12  orignal <i2porignal@yandex.ru>
+
+	* I2PTunnel.cpp, I2PTunnel.h, Win32/i2pd.vcxproj,
+	build/CMakeLists.txt, filelist.mk: I2PTunnel added
+
+2014-08-12  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp: fixed crash
+
+2014-08-12  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: delete deprecated SendPacket
+
+2014-08-12  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: resend non-Acked packets together
+
+2014-08-12  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: handle NACKs
+
+2014-08-11  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: limit max number of resends
+
+2014-08-11  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp: fixed crash
+
+2014-08-11  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, Streaming.cpp: send buffer offset
+
+2014-08-11  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h: eepSite reponse with long content
+
+2014-08-11  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp: split stream to packets
+
+2014-08-11  orignal <i2porignal@yandex.ru>
+
+	* Makefile, Makefile.bsd: FreeBSD support
+
+2014-08-10  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: acks and resends
+
+2014-08-10  orignal <i2porignal@yandex.ru>
+
+	* I2NPProtocol.cpp, NetDb.cpp, TunnelEndpoint.cpp: exploratory
+	improvement
+
+2014-08-09  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: compression threshold
+
+2014-08-09  orignal <i2porignal@yandex.ru>
+
+	* TunnelConfig.h: fixed broken re-created tunnels
+
+2014-08-08  orignal <i2porignal@yandex.ru>
+
+	* TunnelConfig.h, TunnelPool.cpp, TunnelPool.h: re-create expired
+	tunnels
+
+2014-08-08  orignal <i2porignal@yandex.ru>
+
+	* util.cpp: fixed gcc build for FreeBSD
+
+2014-08-07  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: fill option data for SYN packet
+
+2014-08-07  orignal <i2porignal@yandex.ru>
+
+	* build/CMakeLists.txt: add CryptoConst to CMakeLists.txt
+
+2014-08-07  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #92 from chertov/master fix vs2013 build, constexpr require VC++ November 2013 CTP update
+
+2014-08-07  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #6 from PrivacySolutions/master Merge pull request from orignal/master
+
+2014-08-06  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: increase max packet size
+
+2014-08-06  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp: send FIN in streaming thread
+
+2014-08-06  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: don't futher process plain Ack
+
+2014-08-06  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.cpp, Identity.h, Streaming.cpp, Streaming.h: store and
+	check remote Identity
+
+2014-08-06  Meeh <meeh@i2pmail.org>
+
+	* build/CMakeLists.txt: Adding missing aes.cpp/h to CMake file list.
+	Issue #91
+
+2014-08-05  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp: fixed bug with FIN message
+
+2014-08-05  Meeh <meeh@i2pmail.org>
+
+	* contrib/certificates/reseed/swat_at_mail.i2p.crt: Adding SWAT's
+	reseed(su3) certificate.
+
+2014-08-04  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, Streaming.cpp: handle options in proper sequence
+
+2014-08-04  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h, Streaming.cpp, Streaming.h: incoming
+	connection to eepSite
+
+2014-08-02  orignal <romakoshelkin@yandex.ru>
+
+	* TransitTunnel.cpp: fixed race condition
+
+2014-08-01  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: incoming streams support
+
+2014-07-31  orignal <romakoshelkin@yandex.ru>
+
+	* LeaseSet.cpp, LeaseSet.h, NetDb.cpp, NetDb.h: delete expired
+	LeaseSets
+
+2014-07-30  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h: use short I2NP messages
+
+2014-07-30  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h: short I2NP message
+
+2014-07-30  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp: fixed crash
+
+2014-07-29  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, I2NPProtocol.cpp, I2NPProtocol.h,
+	Identity.h, RouterContext.h, Streaming.cpp, Streaming.h,
+	TunnelPool.cpp: re-create local LeaseSet only if expired
+
+2014-07-29  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h, Streaming.cpp: moved LeaseSet
+	creation away from StreamingDestination
+
+2014-07-29  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h, LeaseSet.h: DatabaseStore for
+	LeaseSet
+
+2014-07-29  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.h, LeaseSet.cpp, LeaseSet.h, RouterContext.cpp,
+	RouterContext.h, Streaming.cpp, Streaming.h, TunnelPool.h: create
+	LeaseSet from local tunnel pool
+
+2014-07-28  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp: handle excluded peers in DatabaseLookup
+
+2014-07-28  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp: send encrypted reply to DatabaseLokkup if requested
+
+2014-07-28  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: use SessionTag
+
+2014-07-28  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: one-time aes garlic encryption
+
+2014-07-27  orignal <romakoshelkin@yandex.ru>
+
+	* TunnelPool.cpp: fixed crash
+
+2014-07-26  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h, TunnelPool.cpp: tunnel state
+
+2014-07-26  Meeh <meeh@i2pmail.org>
+
+	* README.md: Update new CI icon
+
+2014-07-26  Meeh <meeh@i2pmail.org>
+
+	* .travis.yml, README.md: Removing broken travis
+
+2014-07-24  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h, NetDb.cpp: send floodfill in
+	DatabaseSerachReply
+
+2014-07-24  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, RouterInfo.cpp: don't load non-reachable routers
+
+2014-07-24  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h, NetDb.cpp, RouterInfo.cpp,
+	RouterInfo.h: send RouterInfo if found by DatabseLookup
+
+2014-07-23  orignal <romakoshelkin@yandex.ru>
+
+	* RouterContext.cpp: fixed crash
+
+2014-07-23  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h, NetDb.cpp, NetDb.h: moved
+	handling of DatabaseLookup to netDb's thread
+
+2014-07-23  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, RouterContext.cpp, RouterInfo.cpp, RouterInfo.h: load
+	RI buffer from file by request
+
+2014-07-22  Meeh <meeh@i2pmail.org>
+
+	* Reseed.cpp: Updating reseed host list (Since updated the java
+	version as well)
+
+2014-07-22  orignal <romakoshelkin@yandex.ru>
+
+	* RouterContext.cpp, RouterInfo.cpp: proper update of own RouterInfo
+
+2014-07-21  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, RouterInfo.cpp, RouterInfo.h: reduce memory usage by
+	deleting RI's buffer after parsing and saving
+
+2014-07-21  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h, SSUData.cpp: don't save received IV
+
+2014-07-21  orignal <romakoshelkin@yandex.ru>
+
+	* LeaseSet.cpp, LeaseSet.h, NetDb.cpp, NetDb.h, RouterInfo.cpp,
+	RouterInfo.h: don't copy RouterInfos and LeaseSets
+
+2014-07-21  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, Streaming.h: throw connection_reset error is
+	stream is closed
+
+2014-07-21  Meeh <meeh@i2pmail.org>
+
+	* : commit 105131a5f17909a6ea43cfcdd476c1027c424955 Author: Meeh
+	<meeh@i2pmail.org> Date:   Mon Jul 21 20:08:51 2014 +0200
+
+2014-07-20  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: delete unreachable SSU sessions
+
+2014-07-20  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, NTCPSession.cpp, NTCPSession.h, SSU.cpp, SSU.h: 
+	show number sent/received bytes through the status page
+
+2014-07-20  orignal <romakoshelkin@yandex.ru>
+
+	* SSUData.cpp, SSUData.h: resend
+
+2014-07-19  orignal <romakoshelkin@yandex.ru>
+
+	* SSUData.cpp, SSUData.h: fixed memory leak
+
+2014-07-18  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, Transports.cpp, Transports.h, Tunnel.cpp: close
+	connection to first hop of declined tunnel
+
+2014-07-17  orignal <romakoshelkin@yandex.ru>
+
+	* SSUData.cpp, SSUData.h: process extended data
+
+2014-07-17  orignal <romakoshelkin@yandex.ru>
+
+	* SSUData.cpp: handle individaul bitfields ack
+
+2014-07-17  Mikal Villa <meeh@sigterm.no>
+
+	* Makefile.linux, Makefile.osx, filelist.mk: Moving file list to a
+	common one. Still in makefile format, but now with CPP/H as input
+	instead of OBJECTS.  Issue #82
+
+2014-07-17  Mikal Villa <meeh@sigterm.no>
+
+	* build/i2pd.pro: Removing Qt build file. Issue #82
+
+2014-07-17  orignal <romakoshelkin@yandex.ru>
+
+	* TunnelPool.cpp: create inbound tunnel though outbound
+
+2014-07-16  Mikal Villa <meeh@sigterm.no>
+
+	* Makefile, Makefile.linux: Makefile now detects which file to use
+	(OSX or Linux) Issue #82
+
+2014-07-16  Mikal Villa <meeh@sigterm.no>
+
+	* HTTPServer.cpp, HTTPServer.h: Prepare support for POST/PUT
+
+2014-07-15  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: close SSU session if not established
+
+2014-07-15  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSUData.cpp, SSUData.h: send ack per fragment. temporary
+	disble check for duplicated through IV
+
+2014-07-15  orignal <romakoshelkin@yandex.ru>
+
+	* SSUData.cpp: fixed memory leak
+
+2014-07-14  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.h, SSUData.cpp, SSUData.h: save out-of-sequence fragments
+
+2014-07-14  Meeh <meeh@i2pmail.org>
+
+	* Reseed.cpp: Reseed list update + working on a (yet
+	uncommited)SSLClient class so the httpsReseedHostList had to be
+	commited as well.
+
+2014-07-14  Meeh <meeh@i2pmail.org>
+
+	* Reseed.cpp: Ignore su3 files for now, support is comming.
+
+2014-07-14  Meeh <meeh@i2pmail.org>
+
+	* Win32/i2pd.vcxproj, Win32/i2pd.vcxproj.filters: Updating win32
+	build files
+
+2014-07-14  Meeh <meeh@i2pmail.org>
+
+	* build/CMakeLists.txt: Updating cmake file
+
+2014-07-14  Meeh <meeh@i2pmail.org>
+
+	* build/i2pd.pro: Updating qmake template
+
+2014-07-14  Meeh <meeh@i2pmail.org>
+
+	* Makefile.osx: Added socks to osx makefile
+
+2014-07-14  Meeh <meeh@i2pmail.org>
+
+	* : Merge pull request #81 from majestrate/pull-request-0 socks proxy
+
+2014-07-14  Meeh <meeh@i2pmail.org>
+
+	* .travis.yml: To force build against OSX, set the language to
+	objective-c as well acording to
+
+	https://github.com/biocore/scikit-bio/issues/184#issuecomment-37843764
+
+2014-07-14  Meeh <meeh@i2pmail.org>
+
+	* .travis.yml: Re-adding caching of APT packages for linux builds
+
+2014-07-14  Meeh <meeh@i2pmail.org>
+
+	* .travis.yml: Trying the multi section setting.
+
+	https://github.com/travis-ci/travis-ci/issues/216#issuecomment-19430107
+
+2014-07-14  Meeh <meeh@i2pmail.org>
+
+	* .travis.yml: Minor changes to travis config
+
+2014-07-14  Meeh <meeh@i2pmail.org>
+
+	* .travis.yml: Testing travis OSX building
+
+2014-07-14  Meeh <meeh@i2pmail.org>
+
+	* Makefile.osx: Updating the OSX makefile. Should work from 10.7 ->
+	10.10 now.
+
+2014-07-13  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: load local destinations
+
+2014-07-11  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: fxied crash
+
+2014-07-11  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.h, Streaming.cpp, Streaming.h: multiple local
+	destinations
+
+2014-07-11  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: try to find existing SSU session to introducer first
+
+2014-07-11  orignal <romakoshelkin@yandex.ru>
+
+	* TunnelPool.cpp: specify number of hops for inbound tunnels
+
+2014-07-10  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, NetDb.cpp, RouterContext.cpp, RouterInfo.cpp,
+	RouterInfo.h: moved save to file to RI
+
+2014-07-10  orignal <romakoshelkin@yandex.ru>
+
+	* TransitTunnel.h, Tunnel.h, TunnelEndpoint.cpp, TunnelEndpoint.h: 
+	drop messages to other router coming down an inbound tunnel
+
+2014-07-10  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp: delete destination if not requested again
+
+2014-07-09  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h, Tunnel.cpp, TunnelPool.cpp: delete expired
+	tunnels
+
+2014-07-08  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h, TunnelPool.cpp, TunnelPool.h: always
+	pick outbound tunnel before sending packet
+
+2014-07-08  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, I2NPProtocol.cpp, I2NPProtocol.h, NetDb.cpp,
+	RouterContext.cpp: request and process encrypted LeaseSet
+
+2014-07-07  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: session decryption - tags
+
+2014-07-07  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, Identity.cpp, Identity.h, SSU.h: generic tag
+	introduced
+
+2014-07-07  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: delete obsolete requested destination
+
+2014-07-07  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp, Transports.cpp: fixed memory leak
+
+2014-07-06  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, SSU.cpp, SSUData.cpp: fixed memory leak
+
+2014-07-05  orignal <romakoshelkin@yandex.ru>
+
+	* TunnelEndpoint.cpp, TunnelEndpoint.h: fixed memory leak
+
+2014-07-04  orignal <romakoshelkin@yandex.ru>
+
+	* TunnelEndpoint.cpp, TunnelEndpoint.h: HandleFollowOnFragment
+
+2014-07-04  orignal <romakoshelkin@yandex.ru>
+
+	* TunnelEndpoint.cpp: fixed memory leak
+
+2014-07-04  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.h, NTCPSession.h, Transports.cpp, TunnelEndpoint.cpp: 
+	increased I2NP max message size to 32K and check if fragmented
+	message exceeds it
+
+2014-07-03  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp: catch transit DatabaseStore
+
+2014-07-03  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp: delete expired transit tunnels
+
+2014-07-03  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: keyspace rotation
+
+2014-07-03  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp: cleanup requested destinations
+
+2014-07-03  orignal <romakoshelkin@yandex.ru>
+
+	* Transports.cpp: fixed memory leak
+
+2014-07-02  orignal <romakoshelkin@yandex.ru>
+
+	* Daemon.cpp, Log.h: log to file if daemon only
+
+2014-07-02  orignal <romakoshelkin@yandex.ru>
+
+	* Daemon.cpp, DaemonLinux.cpp, Log.cpp, Log.h, Queue.h, i2p.cpp: 
+	daemonization.
+
+2014-06-27  orignal <romakoshelkin@yandex.ru>
+
+	* TunnelEndpoint.cpp: verify checksum
+
+2014-06-27  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp: fixed tunnel encryption for non-AESNI
+
+2014-06-26  orignal <romakoshelkin@yandex.ru>
+
+	* TransitTunnel.cpp, TransitTunnel.h: avoid race condition
+
+2014-06-26  orignal <romakoshelkin@yandex.ru>
+
+	* TunnelGateway.cpp, TunnelGateway.h: eliminate extra copy
+
+2014-06-26  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #77 from chertov/master fix VS project
+
+2014-06-26  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #5 from orignal/master Merge pull request from orignal/master
+
+2014-06-24  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp: set replyIV for each hop decryption
+
+2014-06-18  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp: fake tunnel build ecord
+
+2014-06-18  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp, TunnelConfig.h: don't rely on order in tunnel build
+	message. assign index to hop instead
+
+2014-06-18  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h, RouterInfo.cpp, RouterInfo.h: exclude hidden
+	routers from tunnels
+
+2014-06-17  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: check for duplicates
+
+2014-06-16  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: explore 5 addresses at the time
+
+2014-06-16  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, NetDb.cpp, NetDb.h: exploratory if tunnels are not
+	created yet
+
+2014-06-15  Mikal Villa <meeh@sigterm.no>
+
+	* I2PEndian.h, Makefile.osx: Adding support for Mac OSX.  Compiles fine on 10.9, $ uname -a Darwin mikalv.local 13.1.0 Darwin
+	Kernel Version 13.1.0: Thu Jan 16 19:40:37 PST 2014;
+	root:xnu-2422.90.20~2/RELEASE_X86_64 x86_64
+
+2014-06-12  orignal <romakoshelkin@yandex.ru>
+
+	* SSUData.cpp: don't print duplicate acks
+
+2014-06-12  orignal <romakoshelkin@yandex.ru>
+
+	* SSUData.cpp, SSUData.h: store sent messages until ack-ed
+
+2014-06-12  orignal <romakoshelkin@yandex.ru>
+
+	* Daemon.cpp: defualt port consistency (17007)
+
+2014-06-11  orignal <romakoshelkin@yandex.ru>
+
+	* TunnelEndpoint.cpp, TunnelEndpoint.h: check sequence of fragments
+
+2014-06-11  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #72 from ryzhovau/return_code EXIT_SUCCESS return code declaration
+
+2014-06-10  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h, SSUData.cpp, SSUData.h: moved sending acks to
+	SSUData
+
+2014-06-10  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h, SSUData.cpp, SSUData.h: moved sending I2NP
+	messages to SSUData
+
+2014-06-09  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: removed unused SSU states
+
+2014-06-08  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: don't use crypto++ AES directly
+
+2014-06-08  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, aes.cpp, aes.h: eliminated multiple of 16 check for AES
+
+2014-06-03  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.cpp, Identity.h: 64-bits alignment for RoutingKey
+
+2014-06-02  orignal <romakoshelkin@yandex.ru>
+
+	* Makefile, aes.cpp, aes.h: explicit AESNI flag
+
+2014-06-01  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: use CBCEncryption for session key encryption
+
+2014-05-15  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, Tunnel.cpp, TunnelConfig.h: TunnelDecryption for
+	tunnels
+
+2014-05-15  orignal <romakoshelkin@yandex.ru>
+
+	* TransitTunnel.cpp, TransitTunnel.h, aes.h: TunnelDecryption for
+	transit tunnel
+
+2014-05-15  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp, aes.h: tunnel decryption using AES-NI
+
+2014-05-15  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp, aes.h: tunnel encryption using AES-NI
+
+2014-05-15  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp, aes.h: tunnel encryption/decryption
+
+2014-05-15  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp: pass key schedule as parameter
+
+2014-05-14  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: session key decryption
+
+2014-05-14  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp, aes.cpp, aes.h: one block CBC encryption
+
+2014-05-13  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp: CBC decryption using AES-NI
+
+2014-05-13  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp: eliminated hadrcoded %rcx
+
+2014-05-12  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp, aes.h: CBC encryption through AES-NI
+
+2014-05-11  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, aes.h: use AEN-NI for garlic encryption
+
+2014-05-09  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h, TunnelConfig.h: replace tunnel encryption to
+	AES-NI
+
+2014-05-09  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp: eliminate hardcoded registers
+
+2014-05-09  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp, aes.h: ChiperBlock XOR
+
+2014-05-09  orignal <romakoshelkin@yandex.ru>
+
+	* aes.h: ChiperBlock XOR
+
+2014-05-09  orignal <romakoshelkin@yandex.ru>
+
+	* TransitTunnel.cpp, TransitTunnel.h: use AES-NI for transit tunnel
+	encryption
+
+2014-05-08  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp, aes.h: use AES-NI in new CBC encryption
+
+2014-05-08  orignal <romakoshelkin@yandex.ru>
+
+	* aes.h: ECBEncryption implementation
+
+2014-05-08  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp: fixed typo
+
+2014-05-08  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp, aes.h: invert expanded key schedule for decryption
+
+2014-05-08  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp: fixed key expansion
+
+2014-05-08  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp: load pointer to rdx directly
+
+2014-05-07  orignal <romakoshelkin@yandex.ru>
+
+	* hmac.h: 8-bytes alignment
+
+2014-05-07  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp: AES-NI encrypt and decrypt
+
+2014-05-07  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp, aes.h: AES-NI encrypt and decrypt
+
+2014-05-07  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp, aes.h: AES-NI encrypt and decrypt
+
+2014-05-07  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp, aes.h: aes key expansion
+
+2014-05-06  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h, aes.h: use new aes implementation
+	for NTCP
+
+2014-05-06  orignal <romakoshelkin@yandex.ru>
+
+	* aes.cpp, aes.h: encrypt/decrypt same buffer
+
+2014-05-06  orignal <romakoshelkin@yandex.ru>
+
+	* Makefile, aes.cpp, aes.h: aes added
+
+2014-05-04  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSUData.cpp: fixed memory leak
+
+2014-05-03  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.cpp, Identity.h, Streaming.cpp: copy constructor for
+	PrivateKeys
+
+2014-05-02  orignal <romakoshelkin@yandex.ru>
+
+	* CryptoConst.cpp: dsa constants as byte array
+
+2014-05-02  orignal <romakoshelkin@yandex.ru>
+
+	* CryptoConst.cpp: elgp as byte array
+
+2014-05-02  orignal <romakoshelkin@yandex.ru>
+
+	* CryptoConst.cpp, CryptoConst.h, Makefile: CryptoConst added
+
+2014-04-30  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h: handle TunnelBuild (8 records)
+	message
+
+2014-04-24  orignal <romakoshelkin@yandex.ru>
+
+	* Daemon.cpp, Daemon.h, Log.cpp, Log.h: moved log file from daemon
+	to log
+
+2014-04-24  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #4 from orignal/master Merge pull request from orignal/master
+
+2014-04-23  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp: rolled back
+
+2014-04-23  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #70 from cpubug/master fix CMAKE build
+
+2014-04-23  cpubug <admin@crtx.ru>
+
+	* Streaming.cpp: fix crash
+
+2014-04-23  cpubug <admin@crtx.ru>
+
+	* Identity.h: revert commit 61001ef
+
+2014-04-23  cpubug <admin@crtx.ru>
+
+	* Identity.cpp, Identity.h: load IdentHash from base32 string
+
+2014-04-23  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, Streaming.h: eliminate boost::protect
+
+2014-04-23  orignal <romakoshelkin@yandex.ru>
+
+	* Log.cpp, Log.h, Queue.h: flush log only when queue is empty
+
+2014-04-23  orignal <romakoshelkin@yandex.ru>
+
+	* Queue.h: proper termination
+
+2014-04-22  orignal <romakoshelkin@yandex.ru>
+
+	* Daemon.cpp: fixed warning
+
+2014-04-22  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #69 from chertov/master Windows Service support
+
+2014-04-23  root <static.59.150.46.78.clients.your-server.de>
+
+	* Daemon.cpp, DaemonLinux.cpp: fix linux build
+
+2014-04-23  chertov <chertovmv@gmail.com>
+
+	* : commit fbe765a530081ac59625b76c1aadf4b37f5f1703 Merge: 6516b64
+	9ec671b Author: chertov <chertovmv@gmail.com> Date:   Wed Apr 23
+	02:15:42 2014 +0400
+
+2014-04-23  chertov <chertovmv@gmail.com>
+
+	* Win32/i2pd.vcxproj: Run as admin
+
+2014-04-23  chertov <chertovmv@gmail.com>
+
+	* i2p.cpp: Use Daemon.init in main()
+
+2014-04-23  chertov <chertovmv@gmail.com>
+
+	* Log.cpp, Log.h: Logging to file directly. Win32 Services can't
+	write to std::cout
+
+2014-04-23  chertov <chertovmv@gmail.com>
+
+	* Daemon.cpp, Daemon.h, DaemonWin32.cpp: Using the d-pointer to hide
+	HTTPProxy, HTTPServer, add logfile ofstream
+
+2014-04-23  chertov <chertovmv@gmail.com>
+
+	* Win32/Win32Service.cpp, Win32/Win32Service.h: Win32Service uses
+	Daemon start()/stop()
+
+2014-04-23  chertov <chertovmv@gmail.com>
+
+	* HTTPServer.cpp: Print data path on the statistics page
+
+2014-04-22  orignal <romakoshelkin@yandex.ru>
+
+	* Makefile, SSU.cpp, SSU.h, SSUData.cpp, SSUData.h: split SSU to SSU
+	and SSUData
+
+2014-04-22  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #68 from chertov/master Add simple Linux, Win32 daemons
+
+2014-04-22  chertov <chertovmv@gmail.com>
+
+	* i2p.cpp: fix i2p.cpp
+
+2014-04-22  root <static.59.150.46.78.clients.your-server.de>
+
+	* Daemon.h, DaemonLinux.cpp, Makefile: fix Linux Daemon
+
+2014-04-20  chertov <chertovmv@gmail.com>
+
+	* Daemon.cpp, Daemon.h, DaemonLinux.cpp, DaemonWin32.cpp,
+	Win32/i2pd.vcxproj, Win32/i2pd.vcxproj.filters, i2p.cpp: Add simple
+	Linux, Win32 daemons
+
+2014-04-19  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h, Transports.cpp: separate thread for SSU server
+
+2014-04-18  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: common Send method
+
+2014-04-18  Meeh <meeh@i2pmail.org>
+
+	* : Merge pull request #67 from chertov/master add mikhail4021 Win32Service, run i2pd as admin
+
+2014-04-19  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #2 from orignal/master Merge pull request from orignal/master
+
+2014-04-17  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #66 from chertov/master http status code, load host.txt via proxy
+
+2014-04-18  chertov <chertovmv@gmail.com>
+
+	* Win32/.gitignore, Win32/i2pd.vcxproj, Win32/inno_installer.iss: 
+	Add simple Inno Setup installer script
+
+2014-04-18  chertov <chertovmv@gmail.com>
+
+	* AddressBook.cpp, HTTPServer.cpp, util.cpp, util.h: load host.txt
+	via HTTPProxy
+
+2014-04-18  chertov <chertovmv@gmail.com>
+
+	* HTTPServer.cpp, HTTPServer.h: add http status code
+
+2014-04-18  chertov <chertovmv@gmail.com>
+
+	* HTTPServer.cpp: Add *.b32.i2p address detection
+
+2014-04-18  chertov <chertovmv@gmail.com>
+
+	* util.cpp, util.h: remove static from i2p::util::url
+
+2014-04-17  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #1 from orignal/master Merge pull request from orignal/master
+
+2014-04-16  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: RelayResponse/RelayIntro
+
+2014-04-16  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: store relay tag if introducer
+
+2014-04-15  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp, SSU.cpp: fxied crash
+
+2014-04-15  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp: implement session key if shared key is shorter
+	than 64 bytes
+
+2014-04-15  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: implement session and mac key if shared key is shorter
+	than 64 bytes
+
+2014-04-14  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp: increment outgoing sequence number
+
+2014-04-14  chertov <chertovmv@gmail.com>
+
+	* : commit 022c6496175a91b5beec0674cd1de6f75470a822 Merge: 8694ed1
+	030bebf Author: orignal <i2porignal@yandex.ru> Date:   Sun Apr 13
+	17:11:51 2014 -0400
+
+2014-04-14  user <user@debian>
+
+	* build/i2pd.pro: add qcreator project
+
+2014-04-14  user <user@debian>
+
+	* AddressBook.cpp, util.cpp: fix hosts.txt loading bug
+
+2014-04-13  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: decrypt message first
+
+2014-04-12  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: check for duplicate and missing fragments
+
+2014-04-11  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: replace ReceiveQueue to std::queue
+
+2014-04-10  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: removed sync Receive operation
+
+2014-04-10  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: send PeerTest if partly has 'B' capability only
+
+2014-04-10  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: recognize PeerTest back from Bob to Alice
+
+2014-04-10  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: check if session key is available
+
+2014-04-09  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: fixed crash
+
+2014-04-09  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: fixed crash
+
+2014-04-09  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: save peer test nonces
+
+2014-04-09  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: delete session with introducer
+
+2014-04-09  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: send relay request through connected session
+
+2014-04-09  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: introducer session
+
+2014-04-09  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #28 from orignal/master Merge pull request from orignal/master
+
+2014-04-08  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: save relay tag
+
+2014-04-08  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: process relay intro
+
+2014-04-08  orignal <romakoshelkin@yandex.ru>
+
+	* : commit 24c546f283422f3f1112584309d624534b3871ad Merge: 40d5489
+	ad8559d Author: orignal <i2porignal@yandex.ru> Date:   Tue Apr 8
+	13:27:19 2014 -0400
+
+2014-04-08  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: use seesion key only for SesssionDestroy message
+
+2014-04-08  cpubug <admin@crtx.ru>
+
+	* Identity.h: fix gcc warning: deleting object of polymorphic class
+	type 'i2p::stream::StreamingDestination' which has non-virtual
+	destructor might cause undefined behaviour
+	[-Wdelete-non-virtual-dtor]
+
+2014-04-08  cpubug <admin@crtx.ru>
+
+	* Identity.h: added pointer check in RoutingDestination destructor
+
+2014-04-08  cpubug <admin@crtx.ru>
+
+	* Identity.cpp, Identity.h, LeaseSet.cpp, RouterInfo.cpp,
+	Streaming.cpp: replace CalcuateIdentHash to identity.Hash to avoid
+	duplication
+
+2014-04-07  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: delete inactive SSU sessions
+
+2014-04-07  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h, SSU.cpp, SSU.h: SSU timeout
+
+2014-04-07  orignal <romakoshelkin@yandex.ru>
+
+	* Transports.cpp, Transports.h: don't delete initial SSU sessions
+
+2014-04-07  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h, Transports.cpp: peer test
+
+2014-04-07  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: fixed small issues
+
+2014-04-07  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: process session created after decryption with intro key
+
+2014-04-07  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: process intro key message
+
+2014-04-07  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: send peer test by Alice
+
+2014-04-07  orignal <romakoshelkin@yandex.ru>
+
+	* : commit 130e1c2daf141002c65944062e2659d22b8172ec Author: orignal
+	<romakoshelkin@yandex.ru> Date:   Mon Apr 7 15:31:38 2014 -0400
+
+2014-04-07  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #59 from cpubug/master small fixes
+
+2014-04-07  cpubug <admin@crtx.ru>
+
+	* Identity.cpp, Identity.h: compute IdentHash in Identity method
+
+2014-04-07  cpubug <admin@crtx.ru>
+
+	* Identity.cpp, Identity.h: load Ident from base64 string
+
+2014-04-06  orignal <romakoshelkin@yandex.ru>
+
+	* TunnelPool.cpp: speedup inbound tunnels creation
+
+2014-04-06  orignal <romakoshelkin@yandex.ru>
+
+	* util.cpp, util.h: fixed build error
+
+2014-04-06  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #57 from chertov/master add user/password in url parser
+
+2014-04-06  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #27 from orignal/master Merge pull request from orignal/master
+
+2014-04-06  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #55 from chertov/master Initial download of hosts.txt for AddressBook
+
+2014-04-06  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #52 from chertov/master fix VS project
+
+2014-04-06  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #26 from orignal/master Merge pull request from orignal/master
+
+2014-04-05  orignal <romakoshelkin@yandex.ru>
+
+	* I2PEndian.h: endian.h for different platforms
+
+2014-04-05  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp, Transports.cpp: if NTCP failed, try to send
+	through SSU
+
+2014-04-05  Meeh <meeh@sigterm.no>
+
+	* build/CMakeLists.txt: Use paths for verification instead of bool
+	variables in CMake.
+
+2014-04-04  orignal <romakoshelkin@yandex.ru>
+
+	* Transports.cpp, Transports.h: DH keys supplier
+
+2014-04-04  orignal <romakoshelkin@yandex.ru>
+
+	* : commit 7f357e285fecc11c2001e8226f65dd7485f0a163 Author: orignal
+	<romakoshelkin@yandex.ru> Date:   Fri Apr 4 14:56:46 2014 -0400
+
+2014-04-04  Meeh <meeh@sigterm.no>
+
+	* build/cmake_modules/FindBoost.cmake: Removing FindBoost since it's
+	apparently shipped with default cmake.
+
+2014-04-04  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.cpp, Identity.h, NTCPSession.cpp, NTCPSession.h,
+	Transports.cpp, Transports.h: generate DH keys pair  per NTCP
+	session
+
+2014-04-04  Meeh <meeh@sigterm.no>
+
+	* build/CMakeLists.txt: Setting debug as default build mode.
+
+2014-04-04  Meeh <meeh@sigterm.no>
+
+	* build/CMakeLists.txt, build/cmake_modules/FindBoost.cmake,
+	build/cmake_modules/FindCryptoPP.cmake: Updating cmake so it exit if
+	libraries are missing. Adding FindBoost and upating FindCryptoPP.
+
+2014-04-04  Meeh <meeh@sigterm.no>
+
+	* : commit 24f0ff6c00ef0e39e4ba4f2a94b7dcfa452ab4cb Author: orignal
+	<romakoshelkin@yandex.ru> Date:   Thu Apr 3 16:27:37 2014 -0400
+
+2014-04-03  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #51 from cpubug/master CMAKE support
+
+2014-04-03  cpubug <admin@crtx.ru>
+
+	* .gitignore: remove 'build' from .gitignore
+
+2014-04-03  Meeh <meeh@sigterm.no>
+
+	* .travis.yml: Dropping clang for now.
+
+2014-04-03  orignal <romakoshelkin@yandex.ru>
+
+	* : commit 92b96d9b15206ee5ab7aa3777947f45ec881c6a0 Author: orignal
+	<romakoshelkin@yandex.ru> Date:   Thu Apr 3 12:19:12 2014 -0400
+
+2014-04-03  Meeh <meeh@sigterm.no>
+
+	* README.md: Adding build status to README
+
+2014-04-03  Meeh <meeh@sigterm.no>
+
+	* .travis.yml: dummy change for triggering travis
+
+2014-04-03  Meeh <meeh@i2pmail.org>
+
+	* .travis.yml: Adding initial travis file.
+
+2014-04-02  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, Tunnel.cpp, TunnelPool.h: move exploratory tunnels
+	to separate pool
+
+2014-04-02  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, Tunnel.cpp, Tunnel.h, TunnelPool.cpp,
+	TunnelPool.h: exploratory pool added
+
+2014-04-02  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: generic SSU timer
+
+2014-04-01  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.h, RouterContext.h, Streaming.cpp, Streaming.h,
+	TunnelPool.cpp, TunnelPool.h: moved encryption keys from TunnelPool
+	to StreamingDestination
+
+2014-04-01  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #50 from cpubug/master AddressBook
+
+2014-04-01  cpubug <admin@crtx.ru>
+
+	* AddressBook.cpp, AddressBook.h, Makefile: split AddressBook
+	header/source
+
+2014-04-01  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h, TunnelPool.h: pools per ident hash
+
+2014-04-01  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Tunnel.cpp, Tunnel.h, TunnelPool.cpp, TunnelPool.h: 
+	pass LocalDestination by reference
+
+2014-04-01  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.h, RouterContext.h, Streaming.h: GetIdentHash for
+	LocalDestination
+
+2014-04-01  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h: some cleanup
+
+2014-04-01  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h: some cleanup
+
+2014-03-31  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #25 from orignal/master don't send session request twice
+
+2014-03-31  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #24 from orignal/master delete non-responding SSU sessions
+
+2014-03-30  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #23 from orignal/master Merge pull request from orignal/master
+
+2014-03-30  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h: moved itoopieImage inside
+	HTTPConnection
+
+2014-03-29  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.h: fixed build error
+
+2014-03-29  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #49 from chertov/master use HTTPConnection as the base class for proxy
+
+2014-03-29  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #22 from orignal/master Merge pull request from orignal/master
+
+2014-03-29  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #48 from meeh420/master switch to AsyncReceive in HTTPProxy
+
+2014-03-29  Meeh <meeh@i2pmail.org>
+
+	* HTTPProxy.cpp, HTTPProxy.h: switch to AsyncReceive in HTTPProxy
+
+2014-03-29  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #21 from orignal/master Merge pull request from orignal/master
+
+2014-03-27  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.h: check buffer first for async receive
+
+2014-03-27  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h: Asyc receive from stream
+
+2014-03-27  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h: send reply
+
+2014-03-27  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #20 from orignal/master Merge pull request from orignal/master
+
+2014-03-26  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: async receive
+
+2014-03-26  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #19 from orignal/master Merge pull request from orignal/master
+
+2014-03-25  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp: send ack after last message only
+
+2014-03-25  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: AsyncReceive added
+
+2014-03-24  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: send SYN in streaming thread
+
+2014-03-24  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #18 from orignal/master Merge pull request from orignal/master
+
+2014-03-23  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Streaming.cpp, Streaming.h: separate thread for
+	streaming
+
+2014-03-23  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: cleanup exluded routers list for LeaseSets
+
+2014-03-23  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.h, LeaseSet.cpp, LeaseSet.h, Streaming.cpp, Streaming.h: 
+	pick random tunnel from LeaseSet
+
+2014-03-22  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, Streaming.cpp, Tunnel.cpp: request LeaseSet from 3
+	floodfills
+
+2014-03-22  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: wait for acknowledment before using garlic
+	tags
+
+2014-03-21  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, Tunnel.h, TunnelPool.cpp: don't test failed
+	tunnels
+
+2014-03-21  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h, TunnelPool.cpp: mark failed tunnels
+
+2014-03-21  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #17 from orignal/master Merge pull request from orignal/master
+
+2014-03-20  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp: pass local LeaseSet as const
+
+2014-03-20  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, I2NPProtocol.h, Streaming.cpp, Streaming.h: 
+	pass local LeaseSet as const
+
+2014-03-19  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: use PrivateKeys for local destination
+
+2014-03-19  orignal <romakoshelkin@yandex.ru>
+
+	* RouterInfo.cpp: fixed typo
+
+2014-03-19  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.cpp, Identity.h: load eepsite keys
+
+2014-03-19  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.h, Streaming.cpp, Streaming.h: load eepsite keys
+
+2014-03-19  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h, RouterInfo.cpp, RouterInfo.h: find router with
+	specified caps
+
+2014-03-19  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: store floodfills separately
+
+2014-03-19  orignal <romakoshelkin@yandex.ru>
+
+	* TunnelGateway.cpp, TunnelGateway.h: don't copy temporary data
+	structure
+
+2014-03-19  orignal <romakoshelkin@yandex.ru>
+
+	* RouterInfo.cpp, RouterInfo.h, SSU.cpp: extract caps
+
+2014-03-19  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #16 from orignal/master Merge pull request from orignal/master
+
+2014-03-18  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #47 from chertov/master fix VS project
+
+2014-03-18  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #15 from orignal/master Merge pull request from orignal/master
+
+2014-03-17  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPProxy.h: fixed linker error
+
+2014-03-17  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #46 from meeh420/master Simple HTTP Proxy
+
+2014-03-17  Meeh <meeh@i2pmail.org>
+
+	* HTTPProxy.cpp: Code cleanup
+
+2014-03-17  Meeh <meeh@i2pmail.org>
+
+	* HTTPProxy.cpp, HTTPProxy.h, Makefile, README.md, i2p.cpp: Adding a
+	simple GET HTTP Proxy
+
+2014-03-17  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, Tunnel.cpp, TunnelPool.cpp, TunnelPool.h: tunnel
+	test
+
+2014-03-17  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #14 from orignal/master Merge pull request from orignal/master
+
+2014-03-16  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, Streaming.cpp, Streaming.h, Tunnel.cpp,
+	TunnelPool.cpp, TunnelPool.h: outbound tunnel pool
+
+2014-03-16  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: close SSU session if MAC verification fails
+
+2014-03-16  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp: pulish our RouterInfo to 3 floodfills
+
+2014-03-15  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp: create LeaseSet encryption key per tunnel pool
+
+2014-03-15  orignal <romakoshelkin@yandex.ru>
+
+	* RouterContext.cpp, RouterContext.h, Streaming.cpp,
+	TunnelPool.cpp, TunnelPool.h: create LeaseSet encryption key per
+	tunnel pool
+
+2014-03-15  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #13 from orignal/master Merge pull request from orignal/master
+
+2014-03-14  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h, TunnelPool.cpp, TunnelPool.h: 3-hops tunnels
+	for tunnel pool
+
+2014-03-14  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, Tunnel.cpp, Tunnel.h, TunnelPool.cpp,
+	TunnelPool.h: manage tunnel pools
+
+2014-03-14  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, Streaming.cpp, Streaming.h, Tunnel.cpp, Tunnel.h,
+	TunnelPool.cpp, TunnelPool.h: manage tunnel pools
+
+2014-03-14  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.h, Streaming.cpp, Streaming.h, Tunnel.cpp, TunnelBase.h,
+	TunnelPool.cpp, TunnelPool.h: create inbound tunnels per local
+	destination
+
+2014-03-14  orignal <romakoshelkin@yandex.ru>
+
+	* Makefile, Tunnel.cpp, Tunnel.h, TunnelPool.cpp, TunnelPool.h: 
+	TunnelPool added
+
+2014-03-14  orignal <romakoshelkin@yandex.ru>
+
+	* RouterContext.cpp: use GetFullPath
+
+2014-03-13  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: find address
+
+2014-03-13  orignal <romakoshelkin@yandex.ru>
+
+	* AddressBook.h, NetDb.h, util.cpp, util.h: adress book added
+
+2014-03-13  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, HTTPServer.cpp, SSU.cpp: fixed crash and few other
+	small issues
+
+2014-03-13  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #45 from chertov/master adding files to а VS project, showed external ip on statistics page
+
+2014-03-13  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #12 from orignal/master Merge pull request from orignal/master
+
+2014-03-12  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, I2NPProtocol.cpp, I2NPProtocol.h,
+	NTCPSession.cpp, NetDb.cpp, SSU.cpp, Transports.cpp, Tunnel.cpp,
+	TunnelEndpoint.cpp: inbound tunnel where an I2NP messages has been
+	received from
+
+2014-03-12  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, SSU.h: print direction of SSU session
+
+2014-03-12  orignal <romakoshelkin@yandex.ru>
+
+	* util.cpp: don't call mapArgs from GetDataDir because it's not
+	initialized yet
+
+2014-03-01  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: set established state after hole punch
+
+2014-02-28  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: process HolePunch
+
+2014-02-26  orignal <romakoshelkin@yandex.ru>
+
+	* RouterInfo.cpp, Tunnel.cpp: create tunnel through any type of
+	transports
+
+2014-02-25  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, SSU.cpp: set SessionCreated state
+
+2014-02-24  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, SSU.h, Transports.h: show SSU sessions
+
+2014-02-24  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: verify SessionCreated
+
+2014-02-24  orignal <romakoshelkin@yandex.ru>
+
+	* RouterContext.cpp, RouterInfo.cpp, Transports.cpp: enable SSU
+
+2014-02-24  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, RouterInfo.cpp, SSU.cpp: send SSU DeliveryStatus
+
+2014-02-23  orignal <romakoshelkin@yandex.ru>
+
+	* RouterContext.cpp, RouterInfo.cpp: fill caps for SSU
+
+2014-02-23  orignal <romakoshelkin@yandex.ru>
+
+	* RouterContext.cpp, RouterContext.h, RouterInfo.cpp, RouterInfo.h: 
+	create SSU address
+
+2014-02-21  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #40 from meeh420/master router.info/router.key to data directory
+
+2014-02-21  Meeh <meeh@i2pmail.org>
+
+	* : commit 64aa588a9b01ca4b08ad7bcdb9f800db9448cb5e Author: orignal
+	<romakoshelkin@yandex.ru> Date:   Fri Feb 21 16:13:36 2014 -0500
+
+2014-02-20  orignal <romakoshelkin@yandex.ru>
+
+	* ElGamal.h, Garlic.cpp, Garlic.h, I2NPProtocol.cpp, Identity.h: 
+	replaced ElGamalEncrypt to ElGamalEncryption
+
+2014-02-20  orignal <romakoshelkin@yandex.ru>
+
+	* ElGamal.h, Garlic.cpp, Garlic.h, HTTPServer.cpp, NetDb.cpp,
+	Streaming.cpp, Streaming.h: use ElGamalEcryption for garlic
+	encryption
+
+2014-02-20  orignal <romakoshelkin@yandex.ru>
+
+	* RouterInfo.cpp, RouterInfo.h: parse introducers from RouterInfo
+
+2014-02-20  orignal <romakoshelkin@yandex.ru>
+
+	* ElGamal.h: ElGamalEncryptor added
+
+2014-02-19  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.h, TransitTunnel.cpp, Tunnel.cpp, TunnelGateway.cpp,
+	TunnelGateway.h: always pass delivery instructions to tunnel gateway
+
+2014-02-19  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, NTCPSession.h, TransitTunnel.cpp,
+	TransitTunnel.h, Tunnel.cpp, Tunnel.h, TunnelGateway.cpp,
+	TunnelGateway.h: pass delivery intructions to tunnel gateway
+
+2014-02-17  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h, Streaming.cpp: process b32 address
+	with path
+
+2014-02-16  orignal <romakoshelkin@yandex.ru>
+
+	* Transports.cpp: fixed crash
+
+2014-02-14  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, NetDb.cpp: limit depth of exploratory sent
+	directly
+
+2014-02-14  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, NetDb.cpp, NetDb.h: subscribe to LeaseSet
+
+2014-02-12  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: publish
+
+2014-02-12  Meeh <meeh@i2pmail.org>
+
+	* : commit 411ac5b898483abdb8d80d08524a29653a71edef Author: orignal
+	<romakoshelkin@yandex.ru> Date:   Wed Feb 12 16:36:13 2014 -0500
+
+2014-02-11  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: improve exploratory
+
+2014-02-11  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: handle session destroyed
+
+2014-02-10  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, Transports.cpp: use SSU if NTCP is not available
+
+2014-02-10  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: wait for DeliveryStatus message
+
+2014-02-10  Meeh <meeh@i2pmail.org>
+
+	* : commit 735f6bd72ad64857d0fef064439a16bc452ee5bf Author: orignal
+	<romakoshelkin@yandex.ru> Date:   Sun Feb 9 18:28:34 2014 -0500
+
+2014-02-09  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #38 from meeh420/master Added volatile keyword
+
+2014-02-09  orignal <romakoshelkin@yandex.ru>
+
+	* Makefile, UPnP.cpp, UPnP.h: UPnP added
+
+2014-02-09  orignal <romakoshelkin@yandex.ru>
+
+	* RouterContext.cpp, RouterInfo.cpp, RouterInfo.h, SSU.cpp, SSU.h,
+	Transports.cpp, hmac.h: eliminate unnecessary const_cast
+
+2014-02-09  Meeh <meeh@i2pmail.org>
+
+	* : commit ec5eafafebef3ddaf6e521a93dcf1ffe6fb28569 Author: orignal
+	<romakoshelkin@yandex.ru> Date:   Sat Feb 8 21:06:40 2014 -0500
+
+2014-02-08  Meeh <meeh@i2pmail.org>
+
+	* Queue.h, i2p.cpp: Adding volatile keyword
+
+2014-02-07  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #36 from meeh420/master Rewrite
+
+2014-02-07  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: process ACKs
+
+2014-02-08  Meeh <meeh@i2pmail.org>
+
+	* i2p.cpp: defining vars should cost less than function calls
+
+2014-02-08  Meeh <meeh@i2pmail.org>
+
+	* Queue.h: Rewrite the thread stop in Queue
+
+2014-02-07  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: send ack
+
+2014-02-07  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.h, SSU.cpp:  handle SSU I2NP header
+
+2014-02-06  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: handle recieved I2NP message
+
+2014-02-06  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #11 from orignal/master Merge pull request #11 from orignal/master
+
+2014-02-05  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: parse data message
+
+2014-02-05  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #35 from meeh420/master Rewrite of signal handler, pid file
+
+2014-02-05  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #34 from chertov/master fix LittleEndian, change endian.h version
+
+2014-02-05  chertov <chertovmv@gmail.com>
+
+	* I2PEndian.cpp, I2PEndian.h, LittleBigEndian.h, Streaming.cpp,
+	i2p.cpp, portable_endian.h: fix LittleEndian, change endian.h
+	version
+
+2014-02-04  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #9 from orignal/master Merge pull request #9 from orignal/master
+
+2014-02-04  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #33 from meeh420/master Daemon, simple file logging, etc
+
+2014-02-05  Meeh <meeh@i2pmail.org>
+
+	* i2p.cpp: Try not to break windows builds.
+
+2014-02-05  Meeh <meeh@i2pmail.org>
+
+	* README.md, i2p.cpp: Log to file, reload config and daemon mode
+
+2014-02-05  Meeh <meeh@i2pmail.org>
+
+	* Queue.h: Should fix the segfault at exit
+
+2014-02-04  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: SessionConfirmed message
+
+2014-02-03  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #8 from orignal/master Merge pull request #8 from orignal/master
+
+2014-02-03  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: create MAC key
+
+2014-02-03  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp: fixed crash
+
+2014-02-03  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #31 from chertov/master fix windows build, add windows GetDefaultDataDir, add files to
+	project
+
+2014-02-03  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #7 from orignal/master Merge pull request from orignal/master
+
+2014-02-02  Meeh <meeh@i2pmail.org>
+
+	* RouterInfo.cpp: return
+
+2014-02-02  Meeh <meeh@i2pmail.org>
+
+	* RouterInfo.cpp: RouterInfo file size fix
+
+2014-02-02  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #27 from meeh420/master Fixing reseed
+
+2014-02-01  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: handle received packets in right order
+
+2014-02-01  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: use key of remote router as ident key for
+	SessionCreated
+
+2014-02-01  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: save new RouterInfos to ~/.i2pd
+
+2014-02-01  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #23 from meeh420/master Load netDb from data directory
+
+2014-02-01  orignal <romakoshelkin@yandex.ru>
+
+	* util.cpp: fixed compilation error and potentil memory corruption
+
+2014-02-01  orignal <romakoshelkin@yandex.ru>
+
+	* hmac.h: fixed HMAC calculation. Tested and verified
+
+2014-02-01  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #22 from meeh420/master Should fix compilation error on some systems
+
+2014-02-01  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #21 from meeh420/master Adding support for config file
+
+2014-02-01  Meeh <meeh@i2pmail.org>
+
+	* i2p.cpp, util.cpp, util.h: Custom datadir + cleanup
+
+2014-02-01  Meeh <meeh@i2pmail.org>
+
+	* util.cpp: use single dash to query options
+
+2014-02-01  Meeh <meeh@i2pmail.org>
+
+	* Makefile, i2p.cpp, util.cpp, util.h: Adding support for config
+	file Example: -port=17070 --port=17070 cat /home/$USER/.i2pd/i2p.conf port=17070
+
+2014-01-31  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: avoid unnececssary recusion
+
+2014-01-31  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h, Reseed.cpp, Reseed.h: fixed compilation error
+	in gcc 4.6
+
+2014-01-31  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #20 from meeh420/master Reseed implementation v1, http only
+
+2014-01-31  Meeh <meeh@i2pmail.org>
+
+	* README.md: documentation update
+
+2014-01-31  Meeh <meeh@i2pmail.org>
+
+	* Reseed.cpp, Reseed.h, util.cpp: Adding more reseed hosts Ignore
+	zip files
+
+2014-01-31  Meeh <meeh@i2pmail.org>
+
+	* : commit 86355cfe09278ff158bf45192451da0017dd72b2 Author: Meeh
+	<meeh@i2pmail.org> Date:   Fri Jan 31 07:22:11 2014 +0100
+
+2014-01-30  orignal <romakoshelkin@yandex.ru>
+
+	* Makefile: call mkdir only once
+
+2014-01-30  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #19 from meeh420/master Updates on option parser & testing
+
+2014-01-31  Meeh <meeh@i2pmail.org>
+
+	* .gitignore, Makefile: Updating Makefile to collect build objects
+	in a folder
+
+2014-01-31  Meeh <meeh@i2pmail.org>
+
+	* README.md: Update README.md
+
+2014-01-31  Meeh <meeh@i2pmail.org>
+
+	* README.md, i2p.cpp, util.cpp, util.h: Adding more to the option
+	parser.  Adding instruction on how to test it.
+
+2014-01-30  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: send SessionCreated message
+
+2014-01-30  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #18 from meeh420/master Fix. Thanks to zzz @ #i2p-dev
+
+2014-01-29  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: extract streaming packet fields
+
+2014-01-29  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #16 from meeh420/master Adding lightweight option parser
+
+2014-01-29  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp: endpoint for SSU server
+
+2014-01-30  Meeh <meeh@i2pmail.org>
+
+	* Makefile, RouterContext.cpp, i2p.cpp: Adding lightweight option
+	parser
+
+2014-01-29  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp: use base64 alphabet directly
+
+2014-01-29  orignal <romakoshelkin@yandex.ru>
+
+	* base64.cpp, base64.h: use base64 alphabet directly
+
+2014-01-29  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp: use base64 alphabet directly
+
+2014-01-29  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #15 from meeh420/master NetDb update
+
+2014-01-29  Meeh <meeh@i2pmail.org>
+
+	* NetDb.cpp, NetDb.h: Create netDb directory structure
+
+2014-01-29  Meeh <meeh@i2pmail.org>
+
+	* .gitignore: gitignore update
+
+2014-01-29  Meeh <meeh@i2pmail.org>
+
+	* : commit 58386bb88e5d38fed70e645616125899c5c7b959 Author: orignal
+	<romakoshelkin@yandex.ru> Date:   Tue Jan 28 16:49:54 2014 -0500
+
+2014-01-28  Meeh <meeh@i2pmail.org>
+
+	* .gitignore: Updating gitignore
+
+2014-01-27  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #14 from meeh420/master Adding missing pthread library to linker.
+
+2014-01-28  Meeh <meeh@i2pmail.org>
+
+	* Makefile: Adding missing pthread library to linker.
+
+2014-01-27  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h, hmac.h: SSUHeader and authenticate added
+
+2014-01-26  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: save out-of-seq messages and process
+	them later
+
+2014-01-26  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: request RouterInfo connecting directly to a
+	floodfill
+
+2014-01-26  orignal <romakoshelkin@yandex.ru>
+
+	* LeaseSet.cpp: request lease's gateway if not found in the netDb
+
+2014-01-26  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp: print out message type sent to an inbound tunnel
+
+2014-01-25  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h, RouterInfo.cpp, RouterInfo.h, Tunnel.cpp,
+	Tunnel.h: check for transport protocols compatibility between
+	routers
+
+2014-01-25  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #13 from chertov/master fix NetDb save bug, console cyrillic symbols, add files to project
+
+2014-01-24  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #6 from orignal/master Merge pull request #6 from orignal/master
+
+2014-01-24  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, Tunnel.cpp: use any router for second hop of tunnel
+
+2014-01-24  orignal <romakoshelkin@yandex.ru>
+
+	* SSU.cpp, SSU.h: SSU payload types
+
+2014-01-23  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #5 from orignal/master Merge pull request #5 from orignal/master
+
+2014-01-23  orignal <romakoshelkin@yandex.ru>
+
+	* hmac.h: implementation of HMAC-MD5-128
+
+2014-01-22  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp: make sure not all routers get deleted after long break
+
+2014-01-22  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp: clean-up from obsolete RouterInfos
+
+2014-01-22  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp: fixed build with boost 1.46
+
+2014-01-22  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: download RouterInfo through HTTP
+
+2014-01-22  orignal <romakoshelkin@yandex.ru>
+
+	* RouterInfo.cpp: bigger buffer size temporary for win32
+
+2014-01-22  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: use kademlia to pick floodfill for destination
+
+2014-01-22  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #12 from chertov/master fix file save/load bug, replace endian.h
+
+2014-01-21  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #4 from orignal/master Merge pull request from orignal/master
+
+2014-01-22  chertov <chertovmv@gmail.com>
+
+	* Win32/.gitignore: add .gitignor into Win32
+
+2014-01-22  chertov <chertovmv@gmail.com>
+
+	* RouterContext.cpp, RouterInfo.cpp, TunnelConfig.h: fix binary
+	files
+
+2014-01-21  orignal <romakoshelkin@yandex.ru>
+
+	* RouterInfo.cpp, RouterInfo.h: ipv4 only
+
+2014-01-21  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h, RouterInfo.cpp: check if IP
+	address is valid
+
+2014-01-21  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h, RouterContext.cpp,
+	RouterInfo.cpp, RouterInfo.h, Transports.cpp: use
+	boost::asio::address for address
+
+2014-01-21  orignal <romakoshelkin@yandex.ru>
+
+	* TunnelConfig.h: fixed incorrect memory access
+
+2014-01-21  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #3 from orignal/master make sure crypto consts get initialized first
+
+2014-01-20  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #2 from orignal/master Merge pull request #1 from orignal/master
+
+2014-01-20  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h, TunnelBase.h, TunnelEndpoint.cpp: send
+	multiple messages
+
+2014-01-20  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp: fixed compilation error
+
+2014-01-20  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #10 from mikhail4021/master a bug and warnings
+
+2014-01-20  mikhail4021 <mikhail.smal@gmail.com>
+
+	* : Merge pull request #2 from orignal/master update
+
+2014-01-19  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, Streaming.cpp: check received sequence number for
+	gaps and duplicates
+
+2014-01-19  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, Transports.cpp: request router if not found
+
+2014-01-18  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp: show recived page 'as is'
+
+2014-01-18  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, Streaming.cpp: recreate session tags
+
+2014-01-17  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, I2NPProtocol.cpp, I2NPProtocol.h: handle
+	DeliveryStatus message
+
+2014-01-16  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp: reverted sequence of hash and tunnelID
+
+2014-01-16  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Streaming.cpp, TunnelEndpoint.cpp: check garlic
+	message payload hash
+
+2014-01-14  orignal <romakoshelkin@yandex.ru>
+
+	* LeaseSet.cpp: invert endDate
+
+2014-01-14  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, LeaseSet.cpp, LeaseSet.h, Streaming.cpp: check
+	expiration of lease
+
+2014-01-14  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h: extract address
+
+2014-01-14  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Tunnel.cpp, Tunnel.h: multi-tunnels LeaseSet
+
+2014-01-13  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp: set minimum comression level
+
+2014-01-12  orignal <romakoshelkin@yandex.ru>
+
+	* LeaseSet.h, NetDb.cpp: fixed memory leak
+
+2014-01-12  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h, Streaming.cpp, Streaming.h: request
+	b32-coded I2P address from HTTP server
+
+2014-01-12  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: implemented connect and close
+
+2014-01-12  orignal <romakoshelkin@yandex.ru>
+
+	* i2p.cpp: fixed compilation error
+
+2014-01-10  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: send quick ack
+
+2014-01-10  orignal <romakoshelkin@yandex.ru>
+
+	* Queue.h, Streaming.cpp, Streaming.h: stream recieve queue
+
+2014-01-10  chertov <chertovmv@gmail.com>
+
+	* : Merge pull request #1 from orignal/master new changes
+
+2014-01-10  mikhail4021 <mikhail.smal@gmail.com>
+
+	* .gitignore, Win32/i2pd.sln, Win32/i2pd.vcxproj,
+	Win32/i2pd.vcxproj.filters, i2pd.sln, i2pd.vcxproj,
+	i2pd.vcxproj.filters: folder structure updated
+
+2014-01-09  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: support of multiple incoming garlic sessions
+
+2014-01-09  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp, RouterInfo.h, Streaming.cpp, Streaming.h: fixed
+	few small issues
+
+2014-01-09  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp: implemented delivery type tunnel for garlic
+
+2014-01-09  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, Streaming.cpp, Tunnel.cpp: fixed Linux build
+
+2014-01-09  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #8 from chertov/master fix boost filesystem version
+
+2014-01-09  orignal <romakoshelkin@yandex.ru>
+
+	* : Merge pull request #7 from mikhail4021/master compilation errors solved
+
+2014-01-09  mikhail4021 <mikhail.smal@gmail.com>
+
+	* : Merge pull request #1 from orignal/master merge with master
+
+2014-01-09  mikhail4021 <mikhail.smal@gmail.com>
+
+	* README.md: readme updated
+
+2014-01-09  mikhail4021 <mikhail.smal@gmail.com>
+
+	* Garlic.cpp, I2NPProtocol.cpp, I2PEndian.cpp, I2PEndian.h,
+	Identity.h, LittleBigEndian.h, NTCPSession.cpp, NetDb.cpp,
+	RouterInfo.cpp, Streaming.cpp, Timestamp.h, TransitTunnel.cpp,
+	Tunnel.cpp, TunnelEndpoint.cpp, TunnelGateway.cpp, i2p.cpp,
+	i2pd.sln, i2pd.vcxproj, i2pd.vcxproj.filters: ms visual studio 2013
+	support not full support
+
+2014-01-08  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, I2NPProtocol.cpp, I2NPProtocol.h,
+	LeaseSet.cpp, Streaming.cpp, Streaming.h: include DeliveryStatus to
+	Garlic
+
+2014-01-08  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp, TunnelConfig.h: common constructor for TunnelConfig
+
+2014-01-06  orignal <romakoshelkin@yandex.ru>
+
+	* Streaming.cpp, TunnelGateway.cpp: fixed out of range bug
+
+2014-01-05  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, TransitTunnel.cpp, TransitTunnel.h: show trafic
+	for transit tunnels
+
+2014-01-05  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h: hadlle DatabaseLookup message
+
+2014-01-05  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp, TunnelGateway.cpp, TunnelGateway.h: long tunnel
+	messages
+
+2014-01-05  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h, NetDb.cpp, NetDb.h: deep
+	exploratory
+
+2014-01-03  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h, TunnelBase.h: manage transit tunnels
+
+2014-01-03  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, I2NPProtocol.cpp, I2NPProtocol.h,
+	NTCPSession.cpp, NetDb.cpp, Transports.cpp, TunnelEndpoint.cpp: 
+	differentiate garlic message received from tunnel and directly
+
+2014-01-03  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.cpp, Identity.h, NetDb.cpp, NetDb.h, RouterInfo.cpp,
+	RouterInfo.h: kademlia
+
+2014-01-02  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, NetDb.cpp, NetDb.h: wrap LeaseSet lookups into garlic
+
+2014-01-01  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, LeaseSet.h, Streaming.cpp, Streaming.h: send streaming
+	protocol data
+
+2013-12-30  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, Streaming.cpp, Streaming.h: Create and send
+	local LeaseSet
+
+2013-12-29  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h, RouterInfo.cpp, RouterInfo.h,
+	Transports.cpp, Transports.h, Tunnel.cpp: improved stability
+
+2013-12-25  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: better exploratory
+
+2013-12-22  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.cpp, Identity.h, NTCPSession.cpp, NTCPSession.h,
+	NetDb.cpp, NetDb.h, RouterContext.cpp: remove dead routers
+
+2013-12-20  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.cpp, Identity.h, Makefile, RouterContext.cpp,
+	RouterContext.h: Keys added
+
+2013-12-19  orignal <romakoshelkin@yandex.ru>
+
+	* Identity.h, LeaseSet.cpp, LeaseSet.h, RouterInfo.cpp: moved
+	Identity to separate file
+
+2013-12-19  orignal <romakoshelkin@yandex.ru>
+
+	* LeaseSet.cpp, LeaseSet.h, NTCPSession.h, RouterContext.cpp,
+	RouterContext.h, RouterInfo.cpp, RouterInfo.h, Streaming.cpp,
+	Streaming.h: common Identity for LeaseSet and RouterInfo
+
+2013-12-13  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, I2NPProtocol.cpp, I2NPProtocol.h: handle
+	garlic message
+
+2013-12-12  orignal <romakoshelkin@yandex.ru>
+
+	* RouterContext.cpp, RouterContext.h: LeaseSet keys
+
+2013-12-12  orignal <romakoshelkin@yandex.ru>
+
+	* Makefile, Streaming.cpp, Streaming.h: Streaming added
+
+2013-12-11  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, NetDb.cpp, TransitTunnel.cpp, Tunnel.cpp,
+	TunnelEndpoint.cpp: fixed complilation errors
+
+2013-12-11  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.h: non-const RouterInfo
+
+2013-12-10  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, I2NPProtocol.cpp, I2NPProtocol.h,
+	NTCPSession.cpp, NetDb.cpp, RouterContext.cpp, RouterContext.h,
+	RouterInfo.cpp, RouterInfo.h, Timestamp.h, Transports.h,
+	Tunnel.cpp, Tunnel.h, TunnelBase.h, TunnelEndpoint.cpp,
+	TunnelEndpoint.h: cumulative update
+
+2013-12-10  orignal <romakoshelkin@yandex.ru>
+
+	* base64.cpp, base64.h: base64 added
+
+2013-12-10  orignal <romakoshelkin@yandex.ru>
+
+	* Makefile, i2p.cpp: Temporary Makefile and main
+
+2013-12-10  orignal <romakoshelkin@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h: HTTP Server added
+
+2013-12-10  orignal <romakoshelkin@yandex.ru>
+
+	* Log.cpp, Log.h, Queue.h: Log and queue added
+
+2013-12-06  orignal <romakoshelkin@yandex.ru>
+
+	* Tunnel.cpp, Tunnel.h, TunnelConfig.h: Tunnel added
+
+2013-11-29  orignal <romakoshelkin@yandex.ru>
+
+	* LeaseSet.h, NTCPSession.cpp, NTCPSession.h, NetDb.cpp, NetDb.h,
+	RouterInfo.h, TransitTunnel.cpp, TransitTunnel.h, Transports.cpp,
+	Transports.h, TunnelGateway.cpp, TunnelGateway.h: Inroduced
+	IdentHash
+
+2013-11-27  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: request RouterInfo for newly dicovered
+	floodfills
+
+2013-11-26  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, LeaseSet.h, RouterInfo.cpp, RouterInfo.h: delivery
+	type Destination for garlic cloves
+
+2013-11-24  orignal <romakoshelkin@yandex.ru>
+
+	* Garlic.cpp, Garlic.h, LeaseSet.cpp, LeaseSet.h, RouterInfo.h: 
+	Garlic session per destination
+
+2013-11-23  orignal <romakoshelkin@yandex.ru>
+
+	* ElGamal.h, Garlic.cpp, Garlic.h: Initial commit of garlic
+
+2013-11-22  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h, NetDb.cpp, NetDb.h,
+	TunnelBase.h, TunnelGateway.cpp, TunnelGateway.h: pack 3
+	DatabaseLookup messages into one TunnelData while processing
+	DatabaseSearchReply
+
+2013-11-20  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h, NetDb.cpp, NetDb.h,
+	RouterInfo.cpp, RouterInfo.h: process and save new RouterInfo
+
+2013-11-18  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h, NetDb.cpp, NetDb.h: Exploratory
+
+2013-11-13  orignal <romakoshelkin@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: NetDb added
+
+2013-11-13  orignal <romakoshelkin@yandex.ru>
+
+	* TunnelBase.h, TunnelGateway.cpp, TunnelGateway.h: split long
+	message to multiple fragments
+
+2013-11-10  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h: TunnelGateway implementation
+
+2013-11-10  orignal <romakoshelkin@yandex.ru>
+
+	* TransitTunnel.cpp, TransitTunnel.h, TunnelBase.h,
+	TunnelEndpoint.cpp, TunnelEndpoint.h, TunnelGateway.cpp,
+	TunnelGateway.h: transit tunnel
+
+2013-10-27  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, NTCPSession.cpp, NTCPSession.h: don't create
+	temporary NTCP send buffer
+
+2013-10-27  orignal <romakoshelkin@yandex.ru>
+
+	* Timestamp.h: Timestamp added
+
+2013-10-27  orignal <romakoshelkin@yandex.ru>
+
+	* RouterInfo.cpp, RouterInfo.h: RouterInfo added
+
+2013-10-27  orignal <romakoshelkin@yandex.ru>
+
+	* Transports.cpp, Transports.h: Transport thread added
+
+2013-10-27  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h: send I2NP message instead plain
+	buffer
+
+2013-10-27  orignal <romakoshelkin@yandex.ru>
+
+	* I2NPProtocol.cpp, I2NPProtocol.h: I2NP protocol added
+
+2013-10-22  orignal <romakoshelkin@yandex.ru>
+
+	* RouterContext.cpp, RouterContext.h: RouterContext added
+
+2013-10-22  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h: fixed race condition
+
+2013-09-09  orignal <romakoshelkin@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h: NTCP implementation added
+
+2013-09-01  orignal <romakoshelkin@yandex.ru>
+
+	* README.md: requrements
+
+2013-09-01  orignal <romakoshelkin@yandex.ru>
+
+	* ElGamal.h: ElGamal added
+
+2013-09-01  orignal <romakoshelkin@yandex.ru>
+
+	* : commit 80342b2ebcdd6abe7a043bb078abc12227b05f26 Author: orignal
+	<vrv@Mint12.(none)> Date:   Sun Sep 1 13:38:57 2013 -0400
+
+2013-09-01  orignal <romakoshelkin@yandex.ru>
+
+	* Initial commit
+
