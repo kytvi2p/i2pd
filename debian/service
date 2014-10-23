@@ -11,7 +11,7 @@ User=i2pd
 PermissionsStartOnly=yes
 ExecStartPre=/bin/touch /run/i2pd.pid
 ExecStartPre=/bin/chown i2pd:i2pd /run/i2pd.pid
-ExecStart=/usr/sbin/i2pd $DAEMON_ARGS --daemon=1 --log=1 --service=1
+ExecStart=/usr/lib/i2pd/i2p $DAEMON_ARGS --daemon=1 --log=1 --service=1
 
 [Install]
 WantedBy=multi-user.target
