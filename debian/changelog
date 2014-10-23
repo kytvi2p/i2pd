@@ -1,3 +1,9 @@
+i2pd (0.1.0-2~deb7u+1) stable; urgency=medium
+
+  * Backport to Wheezy
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 23 Oct 2014 22:42:26 +0000
+
 i2pd (0.1.0-2) unstable; urgency=medium
 
   * Include hosts.txt in package.
@@ -6,12 +12,6 @@ i2pd (0.1.0-2) unstable; urgency=medium
   * Move i2pd to /usr/bin so that regular users can run it more easily.
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 23 Oct 2014 22:04:47 +0000
-
-i2pd (0.1.0-1~deb7u+1) stable; urgency=medium
-
-  * Backport to Wheezy
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Fri, 17 Oct 2014 19:37:09 +0000
 
 i2pd (0.1.0-1) unstable; urgency=medium
 
