@@ -1,3 +1,9 @@
+i2pd (0.1.0-2ubuntu1) trusty; urgency=medium
+
+  * Building for Trusty
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 23 Oct 2014 22:43:29 +0000
+
 i2pd (0.1.0-2) unstable; urgency=medium
 
   * Include hosts.txt in package.
@@ -6,12 +12,6 @@ i2pd (0.1.0-2) unstable; urgency=medium
   * Move i2pd to /usr/bin so that regular users can run it more easily.
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 23 Oct 2014 22:04:47 +0000
-
-i2pd (0.1.0-1ubuntu1) trusty; urgency=medium
-
-  * Building for Trusty
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Fri, 17 Oct 2014 19:39:19 +0000
 
 i2pd (0.1.0-1) unstable; urgency=medium
 
