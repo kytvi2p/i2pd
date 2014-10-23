@@ -10,7 +10,9 @@ override_dh_auto_clean:
 
 
 override_dh_install:
-	install i2p $(CURDIR)/debian/i2pd/usr/sbin/i2pd
+	install -d $(CURDIR)/debian/i2pd/usr/lib/i2pd
+	install i2p $(CURDIR)/debian/i2pd/usr/lib/i2pd/i2p
+	install debian/i2pd.sh $(CURDIR)/debian/i2pd/usr/bin/i2pd
 
 override_dh_strip:
 	dh_strip --dbg-package=i2pd-dbg
