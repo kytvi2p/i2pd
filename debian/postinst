@@ -23,6 +23,7 @@ case "$1" in
        chown -f ${I2PDSYSUSER}:adm /var/log/i2pd.log
     fi
     [ -d $I2PDHOME ] || mkdir -m0750 $I2PDHOME
+    [ -r $I2PDHOME/hosts.txt ] || zcat /usr/share/doc/i2pd/examples/hosts.txt.gz > $I2PDHOME/hosts.txt
     chown -f -R $I2PDSYSUSER:${I2PDSYSUSER} ${I2PDHOME}
 
 ;;

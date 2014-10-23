@@ -15,9 +15,10 @@
 PATH="/sbin:/usr/sbin:/bin:/usr/bin"
 DESC="I2P router daemon"
 NAME="i2pd"
-DAEMON="/usr/sbin/i2pd"
+DAEMON="/usr/lib/i2pd/i2p"
+DAEMON_HOME="/var/lib/i2pd"
 DAEMON_ARGS=""
-PIDFILE="/run//$NAME.pid"
+PIDFILE="/run/$NAME.pid"
 USER="i2pd"
 
 [ -x $DAEMON ] || exit 0
@@ -26,16 +27,13 @@ USER="i2pd"
 . /lib/init/vars.sh
 . /lib/lsb/init-functions
 
-if [ ! -d $(dirname $PIDFILE) ]; then
-    mkdir -p $(dirname $PIDFILE)
-fi
-
-#chown ${USER}:${USER} $(dirname $PIDFILE)
-
 do_start()
 {
   start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --chuid "$USER" --test > /dev/null \
     || return 1
+  if [ ! -e ${DAEMON_HOME}/hosts.txt ]; then
+      zcat /usr/share/doc/i2pd/examples/hosts.txt.gz > $DAEMON_HOME/hosts.txt
+  fi
   touch $PIDFILE
   chown ${USER}:${USER} $PIDFILE
   start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --chuid "$USER" -- \
