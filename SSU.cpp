@@ -12,13 +12,13 @@
 
 namespace i2p
 {
-namespace ssu
+namespace transport
 {
 
 	SSUSession::SSUSession (SSUServer& server, boost::asio::ip::udp::endpoint& remoteEndpoint,
-		const i2p::data::RouterInfo * router, bool peerTest ): 
-		m_Server (server), m_RemoteEndpoint (remoteEndpoint), m_RemoteRouter (router), 
-		m_Timer (m_Server.GetService ()), m_DHKeysPair (nullptr), m_PeerTest (peerTest),
+		const i2p::data::RouterInfo * router, bool peerTest ): TransportSession (router), 
+		m_Server (server), m_RemoteEndpoint (remoteEndpoint), 
+		m_Timer (m_Server.GetService ()), m_PeerTest (peerTest),
  		m_State (eSessionStateUnknown), m_IsSessionKey (false), m_RelayTag (0),
 		m_Data (*this), m_NumSentBytes (0), m_NumReceivedBytes (0)
 	{
@@ -28,8 +28,7 @@ namespace ssu
 	}
 
 	SSUSession::~SSUSession ()
-	{
-		delete m_DHKeysPair;		
+	{		
 	}	
 	
 	void SSUSession::CreateAESandMacKey (const uint8_t * pubKey)
@@ -38,7 +37,7 @@ namespace ssu
 		uint8_t sharedKey[256];
 		if (!dh.Agree (sharedKey, m_DHKeysPair->privateKey, pubKey))
 		{    
-		    LogPrint ("Couldn't create shared key");
+		    LogPrint (eLogError, "Couldn't create shared key");
 			return;
 		};
 
@@ -105,14 +104,14 @@ namespace ssu
 					auto address = i2p::context.GetRouterInfo ().GetSSUAddress ();
 					if (!address)
 					{
-						LogPrint ("SSU is not supported");
+						LogPrint (eLogError, "SSU is not supported");
 						return;
 					}	
 					if (Validate (buf, len, address->key))
 						Decrypt (buf, len, address->key);
 					else
 					{
-						LogPrint ("MAC verification failed ", len, " bytes from ", senderEndpoint);
+						LogPrint (eLogError, "MAC verification failed ", len, " bytes from ", senderEndpoint);
 						m_Server.DeleteSession (this); 
 						return;
 					}	
@@ -129,7 +128,7 @@ namespace ssu
 		switch (header->GetPayloadType ())
 		{
 			case PAYLOAD_TYPE_DATA:
-				LogPrint ("SSU data received");
+				LogPrint (eLogDebug, "SSU data received");
 				ProcessData (buf + sizeof (SSUHeader), len - sizeof (SSUHeader));
 			break;
 			case PAYLOAD_TYPE_SESSION_REQUEST:
@@ -142,12 +141,12 @@ namespace ssu
 				ProcessSessionConfirmed (buf, len);
 			break;	
 			case PAYLOAD_TYPE_PEER_TEST:
-				LogPrint ("SSU peer test received");
+				LogPrint (eLogDebug, "SSU peer test received");
 				ProcessPeerTest (buf + sizeof (SSUHeader), len - sizeof (SSUHeader), senderEndpoint);
 			break;
 			case PAYLOAD_TYPE_SESSION_DESTROYED:
 			{
-				LogPrint ("SSU session destroy received");
+				LogPrint (eLogDebug, "SSU session destroy received");
 				m_Server.DeleteSession (this); // delete this 
 				break;
 			}	
@@ -157,24 +156,24 @@ namespace ssu
 					m_Server.DeleteSession (this);
 			break;
 			case PAYLOAD_TYPE_RELAY_REQUEST:
-				LogPrint ("SSU relay request received");
+				LogPrint (eLogDebug, "SSU relay request received");
 				ProcessRelayRequest (buf + sizeof (SSUHeader), len - sizeof (SSUHeader), senderEndpoint);
 			break;
 			case PAYLOAD_TYPE_RELAY_INTRO:
-				LogPrint ("SSU relay intro received");
+				LogPrint (eLogDebug, "SSU relay intro received");
 				ProcessRelayIntro (buf + sizeof (SSUHeader), len - sizeof (SSUHeader));
 			break;
 			default:
-				LogPrint ("Unexpected SSU payload type ", (int)header->GetPayloadType ());
+				LogPrint (eLogWarning, "Unexpected SSU payload type ", (int)header->GetPayloadType ());
 		}
 	}
 
 	void SSUSession::ProcessSessionRequest (uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& senderEndpoint)
 	{
-		LogPrint ("Session request received");	
+		LogPrint (eLogDebug, "Session request received");	
 		m_RemoteEndpoint = senderEndpoint;
 		if (!m_DHKeysPair)
-			m_DHKeysPair = i2p::transports.GetNextDHKeysPair ();
+			m_DHKeysPair = transports.GetNextDHKeysPair ();
 		CreateAESandMacKey (buf + sizeof (SSUHeader));
 		SendSessionCreated (buf + sizeof (SSUHeader));
 	}
@@ -183,65 +182,80 @@ namespace ssu
 	{
 		if (!m_RemoteRouter || !m_DHKeysPair)
 		{
-			LogPrint ("Unsolicited session created message");
+			LogPrint (eLogWarning, "Unsolicited session created message");
 			return;
 		}
 
-		LogPrint ("Session created received");	
+		LogPrint (eLogDebug, "Session created received");	
 		m_Timer.cancel (); // connect timer
-		uint8_t signedData[532]; // x,y, our IP, our port, remote IP, remote port, relayTag, signed on time 
+		SignedData s; // x,y, our IP, our port, remote IP, remote port, relayTag, signed on time 
 		uint8_t * payload = buf + sizeof (SSUHeader);	
 		uint8_t * y = payload;
 		CreateAESandMacKey (y);
-		memcpy (signedData, m_DHKeysPair->publicKey, 256); // x
-		memcpy (signedData + 256, y, 256); // y
+		s.Insert (m_DHKeysPair->publicKey, 256); // x
+		s.Insert (y, 256); // y
 		payload += 256;
-		payload += 1; // size, assume 4
+		uint8_t addressSize = *payload;
+		payload += 1; // size
 		uint8_t * ourAddress = payload;
-		boost::asio::ip::address_v4 ourIP (be32toh (*(uint32_t* )ourAddress));
-		payload += 4; // address
+		boost::asio::ip::address ourIP;
+		if (addressSize == 4) // v4
+		{	
+			boost::asio::ip::address_v4::bytes_type bytes;
+			memcpy (bytes.data (), ourAddress, 4);
+			ourIP = boost::asio::ip::address_v4 (bytes);
+		}	
+		else // v6
+		{
+			boost::asio::ip::address_v6::bytes_type bytes;
+			memcpy (bytes.data (), ourAddress, 16);
+			ourIP = boost::asio::ip::address_v6 (bytes);
+		}	
+		s.Insert (ourAddress, addressSize); // our IP 
+		payload += addressSize; // address
 		uint16_t ourPort = be16toh (*(uint16_t *)payload);
+		s.Insert (payload, 2); // our port
 		payload += 2; // port
-		memcpy (signedData + 512, ourAddress, 6); // our IP and port 
 		LogPrint ("Our external address is ", ourIP.to_string (), ":", ourPort);
-		i2p::context.UpdateAddress (ourIP.to_string ().c_str ());
-		*(uint32_t *)(signedData + 518) = htobe32 (m_RemoteEndpoint.address ().to_v4 ().to_ulong ()); // remote IP
-		*(uint16_t *)(signedData + 522) = htobe16 (m_RemoteEndpoint.port ()); // remote port
-		memcpy (signedData + 524, payload, 8); // relayTag and signed on time 
+		i2p::context.UpdateAddress (ourIP);
+		if (m_RemoteEndpoint.address ().is_v4 ())
+			s.Insert (m_RemoteEndpoint.address ().to_v4 ().to_bytes ().data (), 4); // remote IP v4
+		else
+			s.Insert (m_RemoteEndpoint.address ().to_v6 ().to_bytes ().data (), 16); // remote IP v6
+		s.Insert (htobe16 (m_RemoteEndpoint.port ())); // remote port
+		s.Insert (payload, 8); // relayTag and signed on time 
 		m_RelayTag = be32toh (*(uint32_t *)payload);
 		payload += 4; // relayTag
 		payload += 4; // signed on time
-		// decrypt DSA signature
+		// decrypt signature
+		size_t signatureLen = m_RemoteIdentity.GetSignatureLen ();
+		size_t paddingSize = signatureLen & 0x0F; // %16
+		if (paddingSize > 0) signatureLen += (16 - paddingSize);
 		m_SessionKeyDecryption.SetIV (((SSUHeader *)buf)->iv);
-		m_SessionKeyDecryption.Decrypt (payload, 48, payload);
+		m_SessionKeyDecryption.Decrypt (payload, signatureLen, payload);
 		// verify
-		CryptoPP::DSA::PublicKey pubKey;
-		pubKey.Initialize (i2p::crypto::dsap, i2p::crypto::dsaq, i2p::crypto::dsag, CryptoPP::Integer (m_RemoteRouter->GetRouterIdentity ().signingKey, 128));
-		CryptoPP::DSA::Verifier verifier (pubKey);
-		if (!verifier.VerifyMessage (signedData, 532, payload, 40))
-			LogPrint ("SSU signature verification failed");
+		if (!s.Verify (m_RemoteIdentity, payload))
+			LogPrint (eLogError, "SSU signature verification failed");
 		
-		SendSessionConfirmed (y, ourAddress);
+		SendSessionConfirmed (y, ourAddress, addressSize + 2);
 	}	
 
 	void SSUSession::ProcessSessionConfirmed (uint8_t * buf, size_t len)
 	{
-		LogPrint ("Session confirmed received");	
+		LogPrint (eLogDebug, "Session confirmed received");	
 		uint8_t * payload = buf + sizeof (SSUHeader);
 		payload++; // identity fragment info
 		uint16_t identitySize = be16toh (*(uint16_t *)payload);	
 		payload += 2; // size of identity fragment
-		if (identitySize == i2p::data::DEFAULT_IDENTITY_SIZE)
-		{
-			i2p::data::Identity ident;
-			ident.FromBuffer (payload, identitySize);
-			m_RemoteIdent = ident.Hash ();
-			m_Data.UpdatePacketSize (m_RemoteIdent);
-		}
-		else
-			LogPrint ("SSU unexpected identity size ", identitySize);
+		m_RemoteIdentity.FromBuffer (payload, identitySize);
+		m_Data.UpdatePacketSize (m_RemoteIdentity.GetIdentHash ());
 		payload += identitySize; // identity	
-		// TODO: verify signature
+		payload += 4; // signed-on time
+		size_t paddingSize = (payload - buf) + m_RemoteIdentity.GetSignatureLen ();
+		paddingSize &= 0x0F;  // %16
+		if (paddingSize > 0) paddingSize = 16 - paddingSize;
+		payload += paddingSize;
+		// TODO: verify signature (need data from session request), payload points to signature
 		SendI2NPMessage (CreateDeliveryStatusMsg (0));
 		Established ();
 	}
@@ -251,21 +265,30 @@ namespace ssu
 		auto introKey = GetIntroKey ();
 		if (!introKey)
 		{
-			LogPrint ("SSU is not supported");
+			LogPrint (eLogError, "SSU is not supported");
 			return;
 		}
 	
-		uint8_t buf[304 + 18]; // 304 bytes for ipv4 (320 for ipv6)
+		uint8_t buf[320 + 18]; // 304 bytes for ipv4, 320 for ipv6
 		uint8_t * payload = buf + sizeof (SSUHeader);
 		memcpy (payload, m_DHKeysPair->publicKey, 256); // x
-		payload[256] = 4; // we assume ipv4
-		*(uint32_t *)(payload + 257) =  htobe32 (m_RemoteEndpoint.address ().to_v4 ().to_ulong ()); 
+		bool isV4 = m_RemoteEndpoint.address ().is_v4 ();
+		if (isV4)
+		{
+			payload[256] = 4; 
+			memcpy (payload + 257, m_RemoteEndpoint.address ().to_v4 ().to_bytes ().data(), 4); 
+		}
+		else
+		{
+			payload[256] = 16; 
+			memcpy (payload + 257, m_RemoteEndpoint.address ().to_v6 ().to_bytes ().data(), 16); 
+		}	
 		
 		uint8_t iv[16];
 		CryptoPP::RandomNumberGenerator& rnd = i2p::context.GetRandomNumberGenerator ();
 		rnd.GenerateBlock (iv, 16); // random iv
-		FillHeaderAndEncrypt (PAYLOAD_TYPE_SESSION_REQUEST, buf, 304, introKey, iv, introKey);
-		m_Server.Send (buf, 304, m_RemoteEndpoint);
+		FillHeaderAndEncrypt (PAYLOAD_TYPE_SESSION_REQUEST, buf, isV4 ? 304 : 320, introKey, iv, introKey);
+		m_Server.Send (buf, isV4 ? 304 : 320, m_RemoteEndpoint);
 	}
 
 	void SSUSession::SendRelayRequest (uint32_t iTag, const uint8_t * iKey)
@@ -273,7 +296,7 @@ namespace ssu
 		auto address = i2p::context.GetRouterInfo ().GetSSUAddress ();
 		if (!address)
 		{
-			LogPrint ("SSU is not supported");
+			LogPrint (eLogError, "SSU is not supported");
 			return;
 		}
 	
@@ -304,30 +327,48 @@ namespace ssu
 	void SSUSession::SendSessionCreated (const uint8_t * x)
 	{
 		auto introKey = GetIntroKey ();
-		auto address = i2p::context.GetRouterInfo ().GetSSUAddress ();
+		auto address = IsV6 () ? i2p::context.GetRouterInfo ().GetSSUV6Address () :
+			i2p::context.GetRouterInfo ().GetSSUAddress (true); //v4 only
 		if (!introKey || !address)
 		{
-			LogPrint ("SSU is not supported");
+			LogPrint (eLogError, "SSU is not supported");
 			return;
 		}
 		CryptoPP::RandomNumberGenerator& rnd = i2p::context.GetRandomNumberGenerator ();
-		uint8_t signedData[532]; // x,y, remote IP, remote port, our IP, our port, relayTag, signed on time 
-		memcpy (signedData, x, 256); // x
+		SignedData s; // x,y, remote IP, remote port, our IP, our port, relayTag, signed on time 
+		s.Insert (x, 256); // x
 
-		uint8_t buf[368 + 18];	
+		uint8_t buf[384 + 18];	
 		uint8_t * payload = buf + sizeof (SSUHeader);
 		memcpy (payload, m_DHKeysPair->publicKey, 256);
-		memcpy (signedData + 256, payload, 256); // y
+		s.Insert (payload, 256); // y
 		payload += 256;
-		*payload = 4; // we assume ipv4
-		payload++;
-		*(uint32_t *)(payload) = htobe32 (m_RemoteEndpoint.address ().to_v4 ().to_ulong ()); 
-		payload += 4;
+		if (m_RemoteEndpoint.address ().is_v4 ())
+		{
+			// ipv4
+			*payload = 4;
+			payload++;
+			memcpy (payload, m_RemoteEndpoint.address ().to_v4 ().to_bytes ().data(), 4); 
+			s.Insert (payload, 4); // remote endpoint IP V4
+			payload += 4;
+		}
+		else
+		{
+			// ipv6
+			*payload = 16;
+			payload++;
+			memcpy (payload, m_RemoteEndpoint.address ().to_v6 ().to_bytes ().data(), 16); 
+			s.Insert (payload, 16); // remote endpoint IP V6
+			payload += 16;
+		}
 		*(uint16_t *)(payload) = htobe16 (m_RemoteEndpoint.port ());
+		s.Insert (payload, 2); // remote port
 		payload += 2;
-		memcpy (signedData + 512, payload - 6, 6); // remote endpoint IP and port 
-		*(uint32_t *)(signedData + 518) = htobe32 (address->host.to_v4 ().to_ulong ()); // our IP
-		*(uint16_t *)(signedData + 522) = htobe16 (address->port); // our port
+		if (address->host.is_v4 ())
+			s.Insert (address->host.to_v4 ().to_bytes ().data (), 4); // our IP V4
+		else
+			s.Insert (address->host.to_v6 ().to_bytes ().data (), 16); // our IP V6
+		s.Insert (htobe16 (address->port)); // our port
 		uint32_t relayTag = 0;
 		if (i2p::context.GetRouterInfo ().IsIntroducer ())
 		{
@@ -339,57 +380,68 @@ namespace ssu
 		payload += 4; // relay tag 
 		*(uint32_t *)(payload) = htobe32 (i2p::util::GetSecondsSinceEpoch ()); // signed on time
 		payload += 4;
-		memcpy (signedData + 524, payload - 8, 8); // relayTag and signed on time 
-		i2p::context.Sign (signedData, 532, payload); // DSA signature
+		s.Insert (payload - 8, 8); // relayTag and signed on time 
+		s.Sign (i2p::context.GetPrivateKeys (), payload); // DSA signature
 		// TODO: fill padding with random data	
 
 		uint8_t iv[16];
 		rnd.GenerateBlock (iv, 16); // random iv
-		// encrypt signature and 8 bytes padding with newly created session key	
+		// encrypt signature and padding with newly created session key	
+		size_t signatureLen = i2p::context.GetIdentity ().GetSignatureLen ();
+		size_t paddingSize = signatureLen & 0x0F; // %16
+		if (paddingSize > 0) signatureLen += (16 - paddingSize);
 		m_SessionKeyEncryption.SetIV (iv);
-		m_SessionKeyEncryption.Encrypt (payload, 48, payload);
-
+		m_SessionKeyEncryption.Encrypt (payload, signatureLen, payload);
+		payload += signatureLen;
+		size_t msgLen = payload - buf;
+		
 		// encrypt message with intro key
-		FillHeaderAndEncrypt (PAYLOAD_TYPE_SESSION_CREATED, buf, 368, introKey, iv, introKey);	
-		Send (buf, 368);
+		FillHeaderAndEncrypt (PAYLOAD_TYPE_SESSION_CREATED, buf, msgLen, introKey, iv, introKey);	
+		Send (buf, msgLen);
 	}
 
-	void SSUSession::SendSessionConfirmed (const uint8_t * y, const uint8_t * ourAddress)
+	void SSUSession::SendSessionConfirmed (const uint8_t * y, const uint8_t * ourAddress, size_t ourAddressLen)
 	{
-		uint8_t buf[480 + 18];
+		uint8_t buf[512 + 18];
 		uint8_t * payload = buf + sizeof (SSUHeader);
 		*payload = 1; // 1 fragment
 		payload++; // info
-		size_t identLen = sizeof (i2p::context.GetRouterIdentity ()); // 387 bytes
-		*(uint16_t *)(payload) =  htobe16 (identLen);
+		size_t identLen = i2p::context.GetIdentity ().GetFullLen (); // 387+ bytes
+		*(uint16_t *)(payload) = htobe16 (identLen);
 		payload += 2; // cursize
-		memcpy (payload, (uint8_t *)&i2p::context.GetRouterIdentity (), identLen);
+		i2p::context.GetIdentity ().ToBuffer (payload, identLen);
 		payload += identLen;
 		uint32_t signedOnTime = i2p::util::GetSecondsSinceEpoch ();
 		*(uint32_t *)(payload) = htobe32 (signedOnTime); // signed on time
 		payload += 4;
-		size_t paddingSize = ((payload - buf) + 40)%16;
+		auto signatureLen = i2p::context.GetIdentity ().GetSignatureLen ();
+		size_t paddingSize = ((payload - buf) + signatureLen)%16;
 		if (paddingSize > 0) paddingSize = 16 - paddingSize;
 		// TODO: fill padding	
 		payload += paddingSize; // padding size
 
 		// signature		
-		uint8_t signedData[532]; // x,y, our IP, our port, remote IP, remote port, relayTag, our signed on time 
-		memcpy (signedData, m_DHKeysPair->publicKey, 256); // x
-		memcpy (signedData + 256, y, 256); // y
-		memcpy (signedData + 512, ourAddress, 6); // our address/port as seem by party
-		*(uint32_t *)(signedData + 518) = htobe32 (m_RemoteEndpoint.address ().to_v4 ().to_ulong ()); // remote IP
-		*(uint16_t *)(signedData + 522) = htobe16 (m_RemoteEndpoint.port ()); // remote port
-		*(uint32_t *)(signedData + 524) = htobe32 (m_RelayTag); // relay tag
-		*(uint32_t *)(signedData + 528) = htobe32 (signedOnTime); // signed on time
-		i2p::context.Sign (signedData, 532, payload); // DSA signature	
-
+		SignedData s; // x,y, our IP, our port, remote IP, remote port, relayTag, our signed on time 
+		s.Insert (m_DHKeysPair->publicKey, 256); // x
+		s.Insert (y, 256); // y
+		s.Insert (ourAddress, ourAddressLen); // our address/port as seem by party
+		if (m_RemoteEndpoint.address ().is_v4 ())
+			s.Insert (m_RemoteEndpoint.address ().to_v4 ().to_bytes ().data (), 4); // remote IP V4
+		else
+			s.Insert (m_RemoteEndpoint.address ().to_v6 ().to_bytes ().data (), 16); // remote IP V6	
+		s.Insert (htobe16 (m_RemoteEndpoint.port ())); // remote port
+		s.Insert (htobe32 (m_RelayTag)); // relay tag
+		s.Insert (htobe32 (signedOnTime)); // signed on time
+		s.Sign (i2p::context.GetPrivateKeys (), payload); // DSA signature	
+		payload += signatureLen;
+		
+		size_t msgLen = payload - buf;
 		uint8_t iv[16];
 		CryptoPP::RandomNumberGenerator& rnd = i2p::context.GetRandomNumberGenerator ();
 		rnd.GenerateBlock (iv, 16); // random iv
 		// encrypt message with session key
-		FillHeaderAndEncrypt (PAYLOAD_TYPE_SESSION_CONFIRMED, buf, 480, m_SessionKey, iv, m_MacKey);
-		Send (buf, 480);
+		FillHeaderAndEncrypt (PAYLOAD_TYPE_SESSION_CONFIRMED, buf, msgLen, m_SessionKey, iv, m_MacKey);
+		Send (buf, msgLen);
 	}
 
 	void SSUSession::ProcessRelayRequest (uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& from)
@@ -417,9 +469,14 @@ namespace ssu
 	void SSUSession::SendRelayResponse (uint32_t nonce, const boost::asio::ip::udp::endpoint& from,
 		const uint8_t * introKey, const boost::asio::ip::udp::endpoint& to)
 	{
-		uint8_t buf[64 + 18];
+		uint8_t buf[80 + 18]; // 64 Alice's ipv4 and 80 Alice's ipv6
 		uint8_t * payload = buf + sizeof (SSUHeader);
-		// Charlie	
+		// Charlie's address always v4
+		if (!to.address ().is_v4 ())
+		{
+			LogPrint (eLogError, "Charlie's IP must be v4");
+			return;
+		}
 		*payload = 4;
 		payload++; // size
 		*(uint32_t *)payload = htobe32 (to.address ().to_v4 ().to_ulong ()); // Charlie's IP
@@ -427,10 +484,21 @@ namespace ssu
 		*(uint16_t *)payload = htobe16 (to.port ()); // Charlie's port
 		payload += 2; // port
 		// Alice
-		*payload = 4;
-		payload++; // size
-		*(uint32_t *)payload = htobe32 (from.address ().to_v4 ().to_ulong ()); // Alice's IP
-		payload += 4; // address	
+		bool isV4 = from.address ().is_v4 (); // Alice's
+		if (isV4)
+		{
+			*payload = 4;
+			payload++; // size
+			memcpy (payload, from.address ().to_v4 ().to_bytes ().data (), 4); // Alice's IP V4
+			payload += 4; // address	
+		}
+		else
+		{
+			*payload = 16;
+			payload++; // size
+			memcpy (payload, from.address ().to_v6 ().to_bytes ().data (), 16); // Alice's IP V6
+			payload += 16; // address	
+		}
 		*(uint16_t *)payload = htobe16 (from.port ()); // Alice's port
 		payload += 2; // port
 		*(uint32_t *)payload = htobe32 (nonce);		
@@ -438,8 +506,8 @@ namespace ssu
 		if (m_State == eSessionStateEstablished)
 		{	
 			// encrypt with session key
-			FillHeaderAndEncrypt (PAYLOAD_TYPE_RELAY_RESPONSE, buf, 64);
-			Send (buf, 64);
+			FillHeaderAndEncrypt (PAYLOAD_TYPE_RELAY_RESPONSE, buf, isV4 ? 64 : 80);
+			Send (buf, isV4 ? 64 : 80);
 		}	
 		else
 		{
@@ -447,15 +515,21 @@ namespace ssu
 			uint8_t iv[16];
 			CryptoPP::RandomNumberGenerator& rnd = i2p::context.GetRandomNumberGenerator ();
 			rnd.GenerateBlock (iv, 16); // random iv
-			FillHeaderAndEncrypt (PAYLOAD_TYPE_RELAY_RESPONSE, buf, 64, introKey, iv, introKey);
-			m_Server.Send (buf, 64, from);
+			FillHeaderAndEncrypt (PAYLOAD_TYPE_RELAY_RESPONSE, buf, isV4 ? 64 : 80, introKey, iv, introKey);
+			m_Server.Send (buf, isV4 ? 64 : 80, from);
 		}	
-		LogPrint ("SSU relay response sent");
+		LogPrint (eLogDebug, "SSU relay response sent");
 	}	
 
 	void SSUSession::SendRelayIntro (SSUSession * session, const boost::asio::ip::udp::endpoint& from)
 	{
 		if (!session) return;	
+		// Alice's address always v4
+		if (!from.address ().is_v4 ())
+		{
+			LogPrint (eLogError, "Alice's IP must be v4");
+			return;
+		}	
 		uint8_t buf[48 + 18];
 		uint8_t * payload = buf + sizeof (SSUHeader);
 		*payload = 4;
@@ -470,25 +544,39 @@ namespace ssu
 		rnd.GenerateBlock (iv, 16); // random iv
 		FillHeaderAndEncrypt (PAYLOAD_TYPE_RELAY_INTRO, buf, 48, session->m_SessionKey, iv, session->m_MacKey);
 		m_Server.Send (buf, 48, session->m_RemoteEndpoint);
-		LogPrint ("SSU relay intro sent");
+		LogPrint (eLogDebug, "SSU relay intro sent");
 	}
 	
 	void SSUSession::ProcessRelayResponse (uint8_t * buf, size_t len)
 	{
-		LogPrint ("Relay response received");		
+		LogPrint (eLogDebug, "Relay response received");		
 		uint8_t * payload = buf + sizeof (SSUHeader);
+		uint8_t remoteSize = *payload; 
 		payload++; // remote size
 		//boost::asio::ip::address_v4 remoteIP (be32toh (*(uint32_t* )(payload)));
-		payload += 4; // remote address
+		payload += remoteSize; // remote address
 		//uint16_t remotePort = be16toh (*(uint16_t *)(payload));
 		payload += 2; // remote port
+		uint8_t ourSize = *payload; 
 		payload++; // our size
-		boost::asio::ip::address_v4 ourIP (be32toh (*(uint32_t* )(payload)));
-		payload += 4; // our address
+		boost::asio::ip::address ourIP;
+		if (ourSize == 4)
+		{
+			boost::asio::ip::address_v4::bytes_type bytes;
+			memcpy (bytes.data (), payload, 4);
+			ourIP = boost::asio::ip::address_v4 (bytes);
+		}
+		else
+		{
+			boost::asio::ip::address_v6::bytes_type bytes;
+			memcpy (bytes.data (), payload, 16);
+			ourIP = boost::asio::ip::address_v6 (bytes);
+		}
+		payload += ourSize; // our address
 		uint16_t ourPort = be16toh (*(uint16_t *)(payload));
 		payload += 2; // our port
 		LogPrint ("Our external address is ", ourIP.to_string (), ":", ourPort);
-		i2p::context.UpdateAddress (ourIP.to_string ().c_str ());
+		i2p::context.UpdateAddress (ourIP);
 	}
 
 	void SSUSession::ProcessRelayIntro (uint8_t * buf, size_t len)
@@ -504,7 +592,7 @@ namespace ssu
 			m_Server.Send (buf, 0, boost::asio::ip::udp::endpoint (address, port));
 		}
 		else
-			LogPrint ("Address size ", size, " is not supported"); 	
+			LogPrint (eLogWarning, "Address size ", size, " is not supported"); 	
 	}		
 
 	void SSUSession::FillHeaderAndEncrypt (uint8_t payloadType, uint8_t * buf, size_t len, 
@@ -512,7 +600,7 @@ namespace ssu
 	{	
 		if (len < sizeof (SSUHeader))
 		{
-			LogPrint ("Unexpected SSU packet length ", len);
+			LogPrint (eLogError, "Unexpected SSU packet length ", len);
 			return;
 		}
 		SSUHeader * header = (SSUHeader *)buf;
@@ -535,7 +623,7 @@ namespace ssu
 	{
 		if (len < sizeof (SSUHeader))
 		{
-			LogPrint ("Unexpected SSU packet length ", len);
+			LogPrint (eLogError, "Unexpected SSU packet length ", len);
 			return;
 		}
 		SSUHeader * header = (SSUHeader *)buf;
@@ -556,7 +644,7 @@ namespace ssu
 	{
 		if (len < sizeof (SSUHeader))
 		{
-			LogPrint ("Unexpected SSU packet length ", len);
+			LogPrint (eLogError, "Unexpected SSU packet length ", len);
 			return;
 		}
 		SSUHeader * header = (SSUHeader *)buf;
@@ -572,7 +660,7 @@ namespace ssu
 	{
 		if (len < sizeof (SSUHeader))
 		{
-			LogPrint ("Unexpected SSU packet length ", len);
+			LogPrint (eLogError, "Unexpected SSU packet length ", len);
 			return;
 		}
 		SSUHeader * header = (SSUHeader *)buf;
@@ -589,7 +677,7 @@ namespace ssu
 	{
 		if (len < sizeof (SSUHeader))
 		{
-			LogPrint ("Unexpected SSU packet length ", len);
+			LogPrint (eLogError, "Unexpected SSU packet length ", len);
 			return false;
 		}
 		SSUHeader * header = (SSUHeader *)buf;
@@ -609,7 +697,7 @@ namespace ssu
 		{	
 			// set connect timer
 			ScheduleConnectTimer ();
-			m_DHKeysPair = i2p::transports.GetNextDHKeysPair ();
+			m_DHKeysPair = transports.GetNextDHKeysPair ();
 			SendSessionRequest ();
 		}	
 	}
@@ -762,7 +850,7 @@ namespace ssu
 		uint8_t * introKey = buf;
 		if (port && !address)
 		{
-			LogPrint ("Address of ", size, " bytes not supported");	
+			LogPrint (eLogWarning, "Address of ", size, " bytes not supported");	
 			return;
 		}	
 		if (m_PeerTestNonces.count (nonce) > 0)
@@ -770,13 +858,13 @@ namespace ssu
 			// existing test
 			if (m_PeerTest)
 			{
-				LogPrint ("SSU peer test from Bob. We are Alice");
+				LogPrint (eLogDebug, "SSU peer test from Bob. We are Alice");
 				m_PeerTestNonces.erase (nonce);
 				m_PeerTest = false;
 			}
 			else if (port)
 			{
-				LogPrint ("SSU peer test from Charlie. We are Bob");
+				LogPrint (eLogDebug, "SSU peer test from Charlie. We are Bob");
 				boost::asio::ip::udp::endpoint ep (boost::asio::ip::address_v4 (be32toh (address)), be16toh (port)); // Alice's address/port
 				auto session = m_Server.FindSession (ep); // find session with Alice
 				if (session)
@@ -784,7 +872,7 @@ namespace ssu
 			}
 			else
 			{
-				LogPrint ("SSU peer test from Alice. We are Charlie");
+				LogPrint (eLogDebug, "SSU peer test from Alice. We are Charlie");
 				SendPeerTest (nonce, senderEndpoint.address ().to_v4 ().to_ulong (),
 						senderEndpoint.port (), introKey); // to Alice
 			}
@@ -797,13 +885,13 @@ namespace ssu
 				m_PeerTestNonces.insert (nonce);
 				if (port)
 				{
-					LogPrint ("SSU peer test from Bob. We are Charlie");
+					LogPrint (eLogDebug, "SSU peer test from Bob. We are Charlie");
 					Send (PAYLOAD_TYPE_PEER_TEST, buf1, len); // back to Bob
 					SendPeerTest (nonce, be32toh (address), be16toh (port), introKey); // to Alice
 				}
 				else
 				{
-					LogPrint ("SSU peer test from Alice. We are Bob");
+					LogPrint (eLogDebug, "SSU peer test from Alice. We are Bob");
 					auto session = m_Server.GetRandomEstablishedSession (this); // charlie
 					if (session)
 						session->SendPeerTest (nonce, senderEndpoint.address ().to_v4 ().to_ulong (),
@@ -811,7 +899,7 @@ namespace ssu
 				}
 			}
 			else
-				LogPrint ("SSU peer test from Charlie. We are Alice");
+				LogPrint (eLogDebug, "SSU peer test from Charlie. We are Alice");
 		}	
 	}
 	
@@ -858,11 +946,11 @@ namespace ssu
 
 	void SSUSession::SendPeerTest ()
 	{
-		LogPrint ("SSU sending peer test");
+		LogPrint (eLogDebug, "SSU sending peer test");
 		auto address = i2p::context.GetRouterInfo ().GetSSUAddress ();
 		if (!address)
 		{
-			LogPrint ("SSU is not supported. Can't send peer test");
+			LogPrint (eLogError, "SSU is not supported. Can't send peer test");
 			return;
 		}
 		uint32_t nonce = i2p::context.GetRandomNumberGenerator ().GenerateWord32 ();
@@ -883,7 +971,7 @@ namespace ssu
 			// encrypt message with session key
 			FillHeaderAndEncrypt (PAYLOAD_TYPE_DATA, buf, 48);
 			Send (buf, 48);
-			LogPrint ("SSU keep-alive sent");
+			LogPrint (eLogDebug, "SSU keep-alive sent");
 			ScheduleTermination ();
 		}	
 	}
@@ -896,17 +984,17 @@ namespace ssu
 			// encrypt message with session key
 			FillHeaderAndEncrypt (PAYLOAD_TYPE_SESSION_DESTROYED, buf, 48);
 			Send (buf, 48);
-			LogPrint ("SSU session destroyed sent");
+			LogPrint (eLogDebug, "SSU session destroyed sent");
 		}
 	}	
 
 	void SSUSession::Send (uint8_t type, const uint8_t * payload, size_t len)
 	{
-		uint8_t buf[SSU_MTU + 18];
+		uint8_t buf[SSU_MTU_V4 + 18];
 		size_t msgSize = len + sizeof (SSUHeader); 
-		if (msgSize > SSU_MTU)
+		if (msgSize > SSU_MTU_V4)
 		{
-			LogPrint ("SSU payload size ", msgSize, " exceeds MTU");
+			LogPrint (eLogWarning, "SSU payload size ", msgSize, " exceeds MTU");
 			return;
 		} 
 		memcpy (buf + sizeof (SSUHeader), payload, len);
@@ -923,11 +1011,19 @@ namespace ssu
 
 
 	SSUServer::SSUServer (int port): m_Thread (nullptr), m_Work (m_Service),
-		m_Endpoint (boost::asio::ip::udp::v4 (), port), m_Socket (m_Service, m_Endpoint),
-		m_IntroducersUpdateTimer (m_Service)	
+		m_Endpoint (boost::asio::ip::udp::v4 (), port), m_EndpointV6 (boost::asio::ip::udp::v6 (), port),
+		m_Socket (m_Service, m_Endpoint), m_SocketV6 (m_Service), m_IntroducersUpdateTimer (m_Service)	
 	{
 		m_Socket.set_option (boost::asio::socket_base::receive_buffer_size (65535));
 		m_Socket.set_option (boost::asio::socket_base::send_buffer_size (65535));
+		if (context.SupportsV6 ())
+		{
+			m_SocketV6.open (boost::asio::ip::udp::v6());
+			m_SocketV6.set_option (boost::asio::ip::v6_only (true));
+			m_SocketV6.set_option (boost::asio::socket_base::receive_buffer_size (65535));
+			m_SocketV6.set_option (boost::asio::socket_base::send_buffer_size (65535));
+			m_SocketV6.bind (m_EndpointV6);
+		}
 	}
 	
 	SSUServer::~SSUServer ()
@@ -941,6 +1037,8 @@ namespace ssu
 		m_IsRunning = true;
 		m_Thread = new std::thread (std::bind (&SSUServer::Run, this));
 		m_Service.post (boost::bind (&SSUServer::Receive, this));  
+		if (context.SupportsV6 ())
+			m_Service.post (boost::bind (&SSUServer::ReceiveV6, this));  
 		if (i2p::context.IsUnreachable ())
 			ScheduleIntroducersUpdateTimer ();
 	}
@@ -969,7 +1067,7 @@ namespace ssu
 			}
 			catch (std::exception& ex)
 			{
-				LogPrint ("SSU server: ", ex.what ());
+				LogPrint (eLogError, "SSU server: ", ex.what ());
 			}	
 		}	
 	}
@@ -989,40 +1087,71 @@ namespace ssu
 
 	void SSUServer::Send (const uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& to)
 	{
-		m_Socket.send_to (boost::asio::buffer (buf, len), to);
+		if (to.protocol () == boost::asio::ip::udp::v4()) 
+			m_Socket.send_to (boost::asio::buffer (buf, len), to);
+		else
+			m_SocketV6.send_to (boost::asio::buffer (buf, len), to);
 	}	
 
 	void SSUServer::Receive ()
 	{
-		m_Socket.async_receive_from (boost::asio::buffer (m_ReceiveBuffer, SSU_MTU), m_SenderEndpoint,
+		m_Socket.async_receive_from (boost::asio::buffer (m_ReceiveBuffer, SSU_MTU_V4), m_SenderEndpoint,
 			boost::bind (&SSUServer::HandleReceivedFrom, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)); 
 	}
+
+	void SSUServer::ReceiveV6 ()
+	{
+		m_SocketV6.async_receive_from (boost::asio::buffer (m_ReceiveBufferV6, SSU_MTU_V6), m_SenderEndpointV6,
+			boost::bind (&SSUServer::HandleReceivedFromV6, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)); 
+	}	
 
 	void SSUServer::HandleReceivedFrom (const boost::system::error_code& ecode, std::size_t bytes_transferred)
 	{
 		if (!ecode)
 		{
-			SSUSession * session = nullptr;
-			auto it = m_Sessions.find (m_SenderEndpoint);
-			if (it != m_Sessions.end ())
-				session = it->second;
-			if (!session)
-			{
-				session = new SSUSession (*this, m_SenderEndpoint);
-				m_Sessions[m_SenderEndpoint] = session;
-				LogPrint ("New SSU session from ", m_SenderEndpoint.address ().to_string (), ":", m_SenderEndpoint.port (), " created");
-			}
-			session->ProcessNextMessage (m_ReceiveBuffer, bytes_transferred, m_SenderEndpoint);
+			HandleReceivedBuffer (m_SenderEndpoint, m_ReceiveBuffer, bytes_transferred);
 			Receive ();
 		}
 		else
 			LogPrint ("SSU receive error: ", ecode.message ());
 	}
 
+	void SSUServer::HandleReceivedFromV6 (const boost::system::error_code& ecode, std::size_t bytes_transferred)
+	{
+		if (!ecode)
+		{
+			HandleReceivedBuffer (m_SenderEndpointV6, m_ReceiveBufferV6, bytes_transferred);
+			ReceiveV6 ();
+		}
+		else
+			LogPrint ("SSU V6 receive error: ", ecode.message ());
+	}
+
+	void SSUServer::HandleReceivedBuffer (boost::asio::ip::udp::endpoint& from, uint8_t * buf, std::size_t bytes_transferred)
+	{
+		SSUSession * session = nullptr;
+		auto it = m_Sessions.find (from);
+		if (it != m_Sessions.end ())
+			session = it->second;
+		if (!session)
+		{
+			session = new SSUSession (*this, from);
+			m_Sessions[from] = session;
+			LogPrint ("New SSU session from ", from.address ().to_string (), ":", from.port (), " created");
+		}
+		session->ProcessNextMessage (buf, bytes_transferred, from);
+	}
+
 	SSUSession * SSUServer::FindSession (const i2p::data::RouterInfo * router)
 	{
 		if (!router) return nullptr;
-		auto address = router->GetSSUAddress ();
+		auto address = router->GetSSUAddress (true); // v4 only
+ 		if (!address) return nullptr;
+		auto session = FindSession (boost::asio::ip::udp::endpoint (address->host, address->port));
+		if (session || !context.SupportsV6 ())
+			return session;
+		// try v6
+		address = router->GetSSUV6Address (); 
 		if (!address) return nullptr;
 		return FindSession (boost::asio::ip::udp::endpoint (address->host, address->port));
 	}	
@@ -1041,7 +1170,7 @@ namespace ssu
 		SSUSession * session = nullptr;
 		if (router)
 		{
-			auto address = router->GetSSUAddress ();
+			auto address = router->GetSSUAddress (!context.SupportsV6 ());
 			if (address)
 			{
 				boost::asio::ip::udp::endpoint remoteEndpoint (address->host, address->port);
@@ -1101,7 +1230,7 @@ namespace ssu
 						}
 						else
 						{	
-							LogPrint ("Can't connect to unreachable router. No introducers presented");
+							LogPrint (eLogWarning, "Can't connect to unreachable router. No introducers presented");
 							m_Sessions.erase (remoteEndpoint);
 							delete session;
 							session = nullptr;
@@ -1110,7 +1239,7 @@ namespace ssu
 				}
 			}
 			else
-				LogPrint ("Router ", router->GetIdentHashAbbreviation (), " doesn't have SSU address");
+				LogPrint (eLogWarning, "Router ", router->GetIdentHashAbbreviation (), " doesn't have SSU address");
 		}
 		return session;
 	}
