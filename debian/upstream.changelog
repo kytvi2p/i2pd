@@ -1,3 +1,299 @@
+2014-10-30  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #106 from kytvi2p/fix_makefiles Makefile updates
+
+2014-10-30  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Makefile.linux: recognize clang in linux
+
+2014-10-30  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Makefile, Makefile.bsd, Makefile.linux: allow CXXFLAGS to be set
+	without overwriting needed flags
+
+2014-10-29  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Makefile, Makefile.bsd, Makefile.linux, Makefile.osx,
+	debian/patches/rename-binary.patch, debian/rules: use standard make
+	variables
+
+2014-10-29  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Makefile.linux: check for 64-bit compiler
+
+2014-10-29  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: find SSU V6 sessions
+
+2014-10-29  orignal <i2porignal@yandex.ru>
+
+	* RouterInfo.cpp, RouterInfo.h, SSU.cpp: select proper SSU address
+	for incoming sessions
+
+2014-10-29  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, RouterContext.cpp, RouterInfo.cpp, SSU.cpp: 
+	incoming ipv6 SSU sessions
+
+2014-10-29  orignal <i2porignal@yandex.ru>
+
+	* RouterInfo.cpp: check router identity certificate
+
+2014-10-29  orignal <i2porignal@yandex.ru>
+
+	* RouterInfo.cpp: delete SSU V6 address
+
+2014-10-29  orignal <i2porignal@yandex.ru>
+
+	* RouterInfo.cpp, RouterInfo.h: don't verify signature for RI loaded
+	from file
+
+2014-10-29  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h, Transports.cpp: incoming SSU V6 sessions
+
+2014-10-29  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp, NTCPSession.cpp, RouterContext.cpp, RouterContext.h,
+	SSU.cpp: pass our address as boost's address
+
+2014-10-29  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h: handle ipv6 adrresses
+
+2014-10-29  orignal <i2porignal@yandex.ru>
+
+	* SSU.h, SSUData.cpp, SSUData.h: MTU for ipv6
+
+2014-10-28  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: signature size for SessionCreated
+
+2014-10-28  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: process ipv6 addresses in SessionCreated
+
+2014-10-28  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: process ipv6 addresses in SessionCreated
+
+2014-10-28  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: send actual identity in SessionConfirmed message
+
+2014-10-28  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSUData.cpp: different log levels
+
+2014-10-28  orignal <i2porignal@yandex.ru>
+
+	* Log.cpp, Log.h: different log levels
+
+2014-10-28  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: use SignedData class for signing/verification
+
+2014-10-28  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp: added missing line
+
+2014-10-28  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h, TransportSession.h: common code
+	for signing and verifing exchanged data
+
+2014-10-27  orignal <i2porignal@yandex.ru>
+
+	* : commit 7900e9b12610f90cf2c0fa75b3e38c45580a8c3f Author: orignal
+	<i2porignal@yandex.ru> Date:   Mon Oct 27 20:36:03 2014 -0400
+
+2014-10-27  Meeh <meeh@i2pmail.org>
+
+	* : commit 88fb8a217de9a92a66c8469628876cd13466bc7f Author: Meeh
+	<meeh@i2pmail.org> Date:   Mon Oct 27 22:53:01 2014 +0100
+
+2014-10-27  orignal <i2porignal@yandex.ru>
+
+	* Datagram.cpp, Datagram.h: handle incoming datagramms
+
+2014-10-27  orignal <i2porignal@yandex.ru>
+
+	* Datagram.cpp, Datagram.h: send datagram through destination's
+	thread
+
+2014-10-27  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, NTCPSession.cpp, README.md, RouterContext.cpp,
+	RouterContext.h, Transports.cpp, Transports.h: incoming ipv6
+	connections
+
+2014-10-26  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp, RouterContext.cpp, RouterContext.h, RouterInfo.cpp,
+	RouterInfo.h, Transports.cpp: support ipv6 for outgoing NTCP
+	connections
+
+2014-10-25  orignal <i2porignal@yandex.ru>
+
+	* RouterInfo.cpp, RouterInfo.h: some cleanup
+
+2014-10-25  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp: Update Daemon.cpp rollback
+
+2014-10-25  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #105 from CameronNemo/daemon Various init script and daemonization fixups
+
+2014-10-25  Cameron Norman <CameronNemo@users.noreply.github.com>
+
+	* debian/i2pd.init: Implement reload in init script
+
+2014-10-25  Cameron Norman <CameronNemo@users.noreply.github.com>
+
+	* debian/i2pd.init, debian/init.d: Rename init.d to i2pd.init
+
+2014-10-25  Cameron Norman <CameronNemo@users.noreply.github.com>
+
+	* Daemon.cpp: Decouple logging and daemonization
+
+2014-10-24  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp: verify signature through remore identity
+
+2014-10-24  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h, SSU.cpp, SSU.h,
+	TransportSession.h: moved remote RI and identity to TransportSession
+
+2014-10-24  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, NTCPSession.cpp, NTCPSession.h, NetDb.cpp,
+	NetDb.h, Transports.cpp: set unreachable trough NetDb
+
+2014-10-24  orignal <i2porignal@yandex.ru>
+
+	* AddressBook.cpp, AddressBook.h, ClientContext.h, HTTPProxy.cpp,
+	HTTPServer.cpp, I2PTunnel.cpp, NetDb.h, SAM.cpp: moved AddressBook
+	to ClientContext
+
+2014-10-24  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp: initialize router identity
+
+2014-10-24  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, NTCPSession.cpp, NTCPSession.h, Transports.cpp: 
+	don't specify RI for inbound NTCP connections
+
+2014-10-24  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h: use remote router indentity
+
+2014-10-24  orignal <i2porignal@yandex.ru>
+
+	* RouterInfo.cpp: take identity of local RI from private keys
+
+2014-10-23  orignal <i2porignal@yandex.ru>
+
+	* Datagram.cpp, SAM.cpp, SAM.h: send datagram from SAM
+
+2014-10-23  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp: fixed windows build
+
+2014-10-23  orignal <i2porignal@yandex.ru>
+
+	* Datagram.cpp, Datagram.h: send datagram
+
+2014-10-22  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, HTTPProxy.cpp, HTTPServer.cpp,
+	HTTPServer.h, Streaming.cpp, Streaming.h: send destination port for
+	streaming
+
+2014-10-22  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, SAM.cpp, SAM.h: create datagram
+	destination through SAM
+
+2014-10-22  orignal <i2porignal@yandex.ru>
+
+	* Datagram.cpp, Datagram.h, Destination.cpp, Destination.h,
+	Win32/i2pd.vcxproj, build/CMakeLists.txt,
+	build/autotools/Makefile.in, filelist.mk: Datagram added
+
+2014-10-22  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, Streaming.cpp, Streaming.h: moved
+	Data payload processing to StreamingDestination
+
+2014-10-22  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, HTTPServer.cpp, I2PTunnel.cpp,
+	SAM.cpp, SOCKS.cpp, Streaming.cpp, Streaming.h: create streams
+	through ClientDestination
+
+2014-10-22  orignal <i2porignal@yandex.ru>
+
+	* ClientContext.cpp, ClientContext.h, Destination.cpp,
+	Destination.h, HTTPServer.cpp, I2PTunnel.cpp, I2PTunnel.h, SAM.cpp,
+	SAM.h, SOCKS.cpp, Streaming.cpp, Streaming.h: moved
+	StreamingDestination inside ClientDestination
+
+2014-10-21  orignal <i2porignal@yandex.ru>
+
+	* I2NPProtocol.cpp, NTCPSession.cpp, RouterContext.h, SSU.cpp,
+	TunnelPool.cpp, TunnelPool.h: cleaned up from duplicated methods
+
+2014-10-21  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, HTTPServer.h: don't block HTTP server/proxy for 10
+	seconds anymore
+
+2014-10-21  orignal <i2porignal@yandex.ru>
+
+	* Daemon.cpp, HTTPServer.cpp, I2NPProtocol.cpp, NTCPSession.cpp,
+	NTCPSession.h, NetDb.cpp, SSU.cpp, SSU.h, SSUData.cpp, SSUData.h,
+	TransitTunnel.cpp, Transports.cpp, Transports.h, Tunnel.cpp,
+	TunnelEndpoint.cpp, TunnelGateway.cpp: moved transports to
+	'transport' namespace
+
+2014-10-21  orignal <i2porignal@yandex.ru>
+
+	* README.md: Update README.md
+
+2014-10-20  orignal <i2porignal@yandex.ru>
+
+	* TunnelGateway.cpp: better packaging
+
+2014-10-20  orignal <i2porignal@yandex.ru>
+
+	* Identity.h: fixed typo
+
+2014-10-20  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h, SSU.cpp, SSU.h,
+	TransportSession.h, Transports.cpp, Transports.h: TransportSession
+	added
+
+2014-10-20  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp, Identity.h, NTCPSession.h, SSU.h, Transports.cpp,
+	Transports.h: moved DHKeysPair to Transport
+
+2014-10-20  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #102 from herrniemand/patch-1 Update BUILD_NOTES.md
+
+2014-10-18  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, Streaming.cpp, Streaming.h: show queue size
+
+2014-10-17  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, Garlic.h: delete expired incoming tags
+
 2014-10-17  orignal <i2porignal@yandex.ru>
 
 	* Garlic.cpp: fixed typo
