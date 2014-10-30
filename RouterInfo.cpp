@@ -31,7 +31,7 @@ namespace data
 		m_Buffer = new uint8_t[MAX_RI_BUFFER_SIZE];
 		memcpy (m_Buffer, buf, len);
 		m_BufferLen = len;
-		ReadFromBuffer ();
+		ReadFromBuffer (true);
 	}	
 
 	RouterInfo::~RouterInfo ()
@@ -51,7 +51,7 @@ namespace data
 		m_Properties.clear ();
 		memcpy (m_Buffer, buf, len);
 		m_BufferLen = len;
-		ReadFromBuffer ();
+		ReadFromBuffer (true);
 		// don't delete buffer until save to file
 	}	
 		
@@ -59,7 +59,6 @@ namespace data
 	{	
 		m_RouterIdentity = identity;
 		m_IdentHash = m_RouterIdentity.Hash ();
-		UpdateIdentHashBase64 ();
 		m_Timestamp = i2p::util::GetMillisecondsSinceEpoch ();
 	}
 	
@@ -72,7 +71,7 @@ namespace data
 			m_BufferLen = s.tellg ();
 			if (m_BufferLen < 40)
 			{
-				LogPrint("File", m_FullPath, " is malformed");
+				LogPrint(eLogError, "File", m_FullPath, " is malformed");
 				return false;
 			}
 			s.seekg(0, std::ios::beg);
@@ -82,7 +81,7 @@ namespace data
 		}	
 		else
 		{
-			LogPrint ("Can't open file ", m_FullPath);
+			LogPrint (eLogError, "Can't open file ", m_FullPath);
 			return false;		
 		}
 		return true;
@@ -91,27 +90,36 @@ namespace data
 	void RouterInfo::ReadFromFile ()
 	{
 		if (LoadFile ())
-			ReadFromBuffer ();
+			ReadFromBuffer (false); 
 	}	
 
-	void RouterInfo::ReadFromBuffer ()
+	void RouterInfo::ReadFromBuffer (bool verifySignature)
 	{
 		std::stringstream str (std::string ((char *)m_Buffer, m_BufferLen));
 		ReadFromStream (str);
-		// verify signature
-		CryptoPP::DSA::PublicKey pubKey;
-		pubKey.Initialize (i2p::crypto::dsap, i2p::crypto::dsaq, i2p::crypto::dsag, CryptoPP::Integer (m_RouterIdentity.signingKey, 128));
-		CryptoPP::DSA::Verifier verifier (pubKey);
-		int l = m_BufferLen - 40;
-		if (!verifier.VerifyMessage ((uint8_t *)m_Buffer, l, (uint8_t *)m_Buffer + l, 40))
+		if (verifySignature)
 		{	
-			LogPrint ("signature verification failed");
+			// verify signature
+			CryptoPP::DSA::PublicKey pubKey;
+			pubKey.Initialize (i2p::crypto::dsap, i2p::crypto::dsaq, i2p::crypto::dsag, CryptoPP::Integer (m_RouterIdentity.signingKey, 128));
+			CryptoPP::DSA::Verifier verifier (pubKey);
+			int l = m_BufferLen - 40;
+			if (!verifier.VerifyMessage ((uint8_t *)m_Buffer, l, (uint8_t *)m_Buffer + l, 40))
+			{	
+				LogPrint (eLogError, "signature verification failed");
+			}
 		}	
 	}	
 	
 	void RouterInfo::ReadFromStream (std::istream& s)
 	{
-		s.read ((char *)&m_RouterIdentity, sizeof (m_RouterIdentity));
+		s.read ((char *)&m_RouterIdentity, DEFAULT_IDENTITY_SIZE);
+		if (m_RouterIdentity.certificate.type != CERTIFICATE_TYPE_NULL)
+		{
+			LogPrint (eLogError, "Certificate type ", m_RouterIdentity.certificate.type, " is not supported");
+			SetUnreachable (true);
+			return;
+		}
 		s.read ((char *)&m_Timestamp, sizeof (m_Timestamp));
 		m_Timestamp = be64toh (m_Timestamp);
 		// read addresses
@@ -151,7 +159,7 @@ namespace data
 					if (ecode)
 					{	
 						// TODO: we should try to resolve address here
-						LogPrint ("Unexpected address ", value);
+						LogPrint (eLogWarning, "Unexpected address ", value);
 						isValidAddress = false;
 					}	
 					else
@@ -226,7 +234,6 @@ namespace data
 		}		
 		
 		CryptoPP::SHA256().CalculateDigest(m_IdentHash, (uint8_t *)&m_RouterIdentity, sizeof (m_RouterIdentity));
-		UpdateIdentHashBase64 ();
 
 		if (!m_SupportedTransports || !m_Addresses.size() || (UsesIntroducer () && !introducers))
 			SetUnreachable (true);
@@ -279,18 +286,9 @@ namespace data
 
 		SetProperty ("caps", caps.c_str ());
 	}
-
-	void RouterInfo::UpdateIdentHashBase64 ()
-	{
-		size_t l = i2p::data::ByteStreamToBase64 (m_IdentHash, 32, m_IdentHashBase64, 48);
-		m_IdentHashBase64[l] = 0;
-		memcpy (m_IdentHashAbbreviation, m_IdentHashBase64, 4);
-		m_IdentHashAbbreviation[4] = 0;
-	}	
 		
 	void RouterInfo::WriteToStream (std::ostream& s)
 	{
-		s.write ((char *)&m_RouterIdentity, sizeof (m_RouterIdentity));
 		uint64_t ts = htobe64 (m_Timestamp);
 		s.write ((char *)&ts, sizeof (ts));
 
@@ -376,6 +374,14 @@ namespace data
 				value[l] = 0;
 				WriteString (value, properties);
 				properties << ';';
+				// write mtu
+				if (address.mtu)
+				{
+					WriteString ("mtu", properties);
+					properties << '=';
+					WriteString (boost::lexical_cast<std::string>(address.mtu), properties);
+					properties << ';';
+				}	
 			}	
 			WriteString ("port", properties);
 			properties << '=';
@@ -410,7 +416,7 @@ namespace data
 		if (!m_Buffer)
 		{
 			if (LoadFile ())
-				LogPrint ("Buffer for ", m_IdentHashAbbreviation, " loaded from file");
+				LogPrint ("Buffer for ", GetIdentHashAbbreviation (), " loaded from file");
 		} 
 		return m_Buffer; 
 	}
@@ -419,6 +425,9 @@ namespace data
 	{
 		m_Timestamp = i2p::util::GetMillisecondsSinceEpoch (); // refresh timstamp
 		std::stringstream s;
+		uint8_t ident[1024];
+		auto identLen = privateKeys.GetPublic ().ToBuffer (ident, 1024);
+		s.write ((char *)ident, identLen);			
 		WriteToStream (s);
 		m_BufferLen = s.str ().size ();
 		if (!m_Buffer)
@@ -438,7 +447,7 @@ namespace data
 			f.write ((char *)m_Buffer, m_BufferLen);
 		}	
 		else
-			LogPrint ("Can't save to file");
+			LogPrint (eLogError, "Can't save to file");
 	}
 	
 	size_t RouterInfo::ReadString (char * str, std::istream& s)
@@ -465,11 +474,12 @@ namespace data
 		addr.transportStyle = eTransportNTCP;
 		addr.cost = 2;
 		addr.date = 0;
+		addr.mtu = 0;
 		m_Addresses.push_back(addr);	
-		m_SupportedTransports |= eNTCPV4;
+		m_SupportedTransports |= addr.host.is_v6 () ? eNTCPV6 : eNTCPV4;
 	}	
 
-	void RouterInfo::AddSSUAddress (const char * host, int port, const uint8_t * key)
+	void RouterInfo::AddSSUAddress (const char * host, int port, const uint8_t * key, int mtu)
 	{
 		Address addr;
 		addr.host = boost::asio::ip::address::from_string (host);
@@ -477,9 +487,10 @@ namespace data
 		addr.transportStyle = eTransportSSU;
 		addr.cost = 10; // NTCP should have priority over SSU
 		addr.date = 0;
+		addr.mtu = mtu; 
 		memcpy (addr.key, key, 32);
 		m_Addresses.push_back(addr);	
-		m_SupportedTransports |= eSSUV4;
+		m_SupportedTransports |= addr.host.is_v6 () ? eNTCPV6 : eSSUV4;
 		m_Caps |= eSSUTesting; 
 		m_Caps |= eSSUIntroducer; 
 	}	
@@ -568,6 +579,47 @@ namespace data
 			return m_SupportedTransports & (eSSUV4 | eSSUV6);
 	}
 
+	bool RouterInfo::IsV6 () const
+	{
+		return m_SupportedTransports & (eNTCPV6 | eSSUV6);
+	}
+
+	void RouterInfo::EnableV6 ()
+	{
+		if (!IsV6 ())
+			m_SupportedTransports |= eNTCPV6 | eSSUV6;
+	}
+		
+	void RouterInfo::DisableV6 ()
+	{		
+		if (IsV6 ())
+		{	
+			// NTCP
+			m_SupportedTransports &= ~eNTCPV6; 
+			for (size_t i = 0; i < m_Addresses.size (); i++)
+			{
+				if (m_Addresses[i].transportStyle == i2p::data::RouterInfo::eTransportNTCP &&
+					m_Addresses[i].host.is_v6 ())
+				{
+					m_Addresses.erase (m_Addresses.begin () + i);
+					break;
+				}
+			}	
+			
+			// SSU
+			m_SupportedTransports &= ~eSSUV6; 
+			for (size_t i = 0; i < m_Addresses.size (); i++)
+			{
+				if (m_Addresses[i].transportStyle == i2p::data::RouterInfo::eTransportSSU &&
+					m_Addresses[i].host.is_v6 ())
+				{
+					m_Addresses.erase (m_Addresses.begin () + i);
+					break;
+				}
+			}	
+		}	
+	}
+		
 	bool RouterInfo::UsesIntroducer () const
 	{
 		return m_Caps & Caps::eUnreachable; // non-reachable
@@ -583,13 +635,18 @@ namespace data
 		return GetAddress (eTransportSSU, v4only);
 	}	
 
-	const RouterInfo::Address * RouterInfo::GetAddress (TransportStyle s, bool v4only) const
+	const RouterInfo::Address * RouterInfo::GetSSUV6Address () const 
+	{
+		return GetAddress (eTransportSSU, false, true);
+	}	
+		
+	const RouterInfo::Address * RouterInfo::GetAddress (TransportStyle s, bool v4only, bool v6only) const
 	{
 		for (auto& address : m_Addresses)
 		{
 			if (address.transportStyle == s)
 			{	
-				if (!v4only || address.host.is_v4 ())
+				if ((!v4only || address.host.is_v4 ()) && (!v6only || address.host.is_v6 ()))
 					return &address;
 			}	
 		}	

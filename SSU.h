@@ -13,11 +13,12 @@
 #include "Identity.h"
 #include "RouterInfo.h"
 #include "I2NPProtocol.h"
+#include "TransportSession.h"
 #include "SSUData.h"
 
 namespace i2p
 {
-namespace ssu
+namespace transport
 {
 #pragma pack(1)
 	struct SSUHeader
@@ -57,7 +58,7 @@ namespace ssu
 	};	
 
 	class SSUServer;
-	class SSUSession
+	class SSUSession: public TransportSession
 	{
 		public:
 
@@ -71,7 +72,7 @@ namespace ssu
 			void WaitForIntroduction ();
 			void Close ();
 			boost::asio::ip::udp::endpoint& GetRemoteEndpoint () { return m_RemoteEndpoint; };
-			const i2p::data::RouterInfo * GetRemoteRouter () const  { return m_RemoteRouter; };
+			bool IsV6 () const { return m_RemoteEndpoint.address ().is_v6 (); };
 			void SendI2NPMessage (I2NPMessage * msg);
 			void SendPeerTest (); // Alice			
 
@@ -95,7 +96,7 @@ namespace ssu
 			void ProcessSessionCreated (uint8_t * buf, size_t len);
 			void SendSessionCreated (const uint8_t * x);
 			void ProcessSessionConfirmed (uint8_t * buf, size_t len);
-			void SendSessionConfirmed (const uint8_t * y, const uint8_t * ourAddress);
+			void SendSessionConfirmed (const uint8_t * y, const uint8_t * ourAddress, size_t ourAddressLen);
 			void ProcessRelayRequest (uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& from);
 			void SendRelayResponse (uint32_t nonce, const boost::asio::ip::udp::endpoint& from,
 				const uint8_t * introKey, const boost::asio::ip::udp::endpoint& to);
@@ -128,10 +129,7 @@ namespace ssu
 			friend class SSUData; // TODO: change in later
 			SSUServer& m_Server;
 			boost::asio::ip::udp::endpoint m_RemoteEndpoint;
-			const i2p::data::RouterInfo * m_RemoteRouter;
-			i2p::data::IdentHash m_RemoteIdent; // if m_RemoteRouter is null
 			boost::asio::deadline_timer m_Timer;
-			i2p::data::DHKeysPair * m_DHKeysPair; // X - for client and Y - for server
 			bool m_PeerTest;
 			SessionState m_State;
 			bool m_IsSessionKey;
@@ -171,7 +169,10 @@ namespace ssu
 
 			void Run ();
 			void Receive ();
-			void HandleReceivedFrom (const boost::system::error_code& ecode, std::size_t bytes_transferred);	
+			void ReceiveV6 ();
+			void HandleReceivedFrom (const boost::system::error_code& ecode, std::size_t bytes_transferred);
+			void HandleReceivedFromV6 (const boost::system::error_code& ecode, std::size_t bytes_transferred);
+			void HandleReceivedBuffer (boost::asio::ip::udp::endpoint& from, uint8_t * buf, std::size_t bytes_transferred);
 
 			template<typename Filter>
 			SSUSession * GetRandomSession (Filter filter);
@@ -186,12 +187,12 @@ namespace ssu
 			std::thread * m_Thread;	
 			boost::asio::io_service m_Service;
 			boost::asio::io_service::work m_Work;
-			boost::asio::ip::udp::endpoint m_Endpoint;
-			boost::asio::ip::udp::socket m_Socket;
-			boost::asio::ip::udp::endpoint m_SenderEndpoint;
+			boost::asio::ip::udp::endpoint m_Endpoint, m_EndpointV6;
+			boost::asio::ip::udp::socket m_Socket, m_SocketV6;
+			boost::asio::ip::udp::endpoint m_SenderEndpoint, m_SenderEndpointV6;
 			boost::asio::deadline_timer m_IntroducersUpdateTimer;
 			std::list<boost::asio::ip::udp::endpoint> m_Introducers; // introducers we are connected to
-			uint8_t m_ReceiveBuffer[2*SSU_MTU];
+			uint8_t m_ReceiveBuffer[2*SSU_MTU_V4], m_ReceiveBufferV6[2*SSU_MTU_V6]; 
 			std::map<boost::asio::ip::udp::endpoint, SSUSession *> m_Sessions;
 			std::map<uint32_t, boost::asio::ip::udp::endpoint> m_Relays; // we are introducer
 
