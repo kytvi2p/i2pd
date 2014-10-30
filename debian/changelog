@@ -1,14 +1,14 @@
+i2pd (0.2.0-1ubuntu1) trusty; urgency=medium
+
+  * Building for Trusty
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 30 Oct 2014 15:47:22 +0000
+
 i2pd (0.2.0-1) unstable; urgency=medium
 
   * New upstream release, 0.2.0
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 30 Oct 2014 14:53:47 +0000
-
-i2pd (0.1.0-2ubuntu1) trusty; urgency=medium
-
-  * Building for Trusty
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 23 Oct 2014 22:43:29 +0000
 
 i2pd (0.1.0-2) unstable; urgency=medium
 
