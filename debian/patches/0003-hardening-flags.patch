@@ -8,18 +8,15 @@ Enable hardening flags (https://wiki.debian.org/Hardening)
  Makefile.linux | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/Makefile.linux b/Makefile.linux
-index 37987c8..fcab001 100644
 --- a/Makefile.linux
 +++ b/Makefile.linux
-@@ -1,5 +1,5 @@
- CC = g++
--CFLAGS = -g -Wall
-+CFLAGS = -g -Wall $(shell dpkg-buildflags --get CXXFLAGS)
- CXXVER := $(shell ${CC} -dumpversion)
+@@ -1,4 +1,4 @@
+-CXXFLAGS = -g -Wall
++CXXFLAGS = -g -Wall $(shell dpkg-buildflags --get CXXFLAGS)
+ CXXVER := $(shell $(CXX) -dumpversion)
  
- ifeq ($(shell expr match ${CXXVER} "4\.[0-9][0-9]"),4) # >= 4.10
-@@ -15,5 +15,5 @@ endif
+ FGREP = fgrep
+@@ -19,5 +19,5 @@
  
  include filelist.mk
  INCFLAGS =
