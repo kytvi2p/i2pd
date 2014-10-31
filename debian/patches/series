@@ -2,3 +2,6 @@
 #0002-fix-pidfile-location.patch
 0003-hardening-flags.patch
 #0004-no-.i2pd.patch
+0001-split-SSU-to-SSU-and-SSUSession.patch
+0002-split-SSU-to-SSU-and-SSUSession.patch
+0003-0.2.0.patch
