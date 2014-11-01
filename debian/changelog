@@ -1,3 +1,13 @@
+i2pd (0.2.0-2) unstable; urgency=medium
+
+  * Make build slightly more deterministic. The resultant deb files won't
+    match, but the binaries within will.
+  * Update man page to document the new --v6 option.
+  * Add commits from the 0.2.0 tag to commit
+    0b77c9651b. The version wasn't bumped until 0b77c9651b.
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Fri, 31 Oct 2014 20:03:31 +0000
+
 i2pd (0.2.0-1ubuntu1) trusty; urgency=medium
 
   * Building for Trusty

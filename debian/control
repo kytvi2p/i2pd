@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: Kill Your TV <killyourtv@i2pmail.org>
 Build-Depends: debhelper (>= 9.0.0),
  ,dh-systemd
+ ,faketime
  ,libboost-dev
  ,libboost-filesystem-dev
  ,libboost-program-options-dev
