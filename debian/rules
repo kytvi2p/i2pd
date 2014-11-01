@@ -1,12 +1,21 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
 
+DEBIAN_DIR = $(dir $(firstword $(MAKEFILE_LIST)))
+DAT = $(shell dpkg-parsechangelog -l$(DEBIAN_DIR)changelog | sed -e '/^Date:/!d' -e 's/Date:\ //')
+DATE = $(shell faketime "$(DAT)" date -u +"%Y-%m-%d %H:%M:%S")
+FT = faketime -f -m "$(DATE)"
+
+
 %:
 	dh $@ --parallel
 
 override_dh_auto_clean:
 	rm -f i2pd
 	dh_auto_clean
+
+override_dh_auto_build-arch:
+	$(FT) dh_auto_build -a
 
 
 override_dh_install:
@@ -15,7 +24,7 @@ override_dh_install:
 	install debian/i2pd.sh $(CURDIR)/debian/i2pd/usr/bin/i2pd
 
 override_dh_strip:
-	dh_strip --dbg-package=i2pd-dbg
+	$(FT) dh_strip --dbg-package=i2pd-dbg
 
 override_dh_installchangelogs:
 	# upstream changelog should be recreated using git2cl

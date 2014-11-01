@@ -1,4 +1,4 @@
-.TH I2PD "1" "October 23, 2014"
+.TH I2PD "1" "October 31, 2014"
 
 .SH NAME
 i2pd \- Load-balanced unspoofable packet switching network
@@ -39,6 +39,9 @@ If enabled, system folders (\fB/var/run/i2pd.pid\fR, \fB/var/log/i2pd.log\fR, \f
 .TP
 \fB\-\-unreachable=\fR[\fI1\fR|\fI0\fR]
 \fI1\fR if router is declared as unreachable and works through introducers. (default: \fI0\fR, off)
+.TP
+\fB\-\-v6=\fR[\fI1\fR|\fI0\fR]
+\fI1\fR if \fBi2pd\fR should communicate via IPv6. (default: \fI0\fR, off)
 .TP
 \fB\-\-httpproxyport=\fR
 The local port for the HTTP Proxy to listen on (default: \fI4446\fR)
