@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <cryptopp/modes.h>
 #include <cryptopp/aes.h>
+#include "Identity.h"
 
 namespace i2p
 {
@@ -21,6 +22,8 @@ namespace crypto
 		}	 
 	};
 
+	typedef i2p::data::Tag<32> AESKey;
+	
 #ifdef AESNI
 	class ECBCryptoAESNI
 	{	
@@ -31,7 +34,7 @@ namespace crypto
 			
 		protected:
 
-			void ExpandKey (const uint8_t * key);
+			void ExpandKey (const AESKey& key);
 		
 		protected:
 
@@ -43,7 +46,7 @@ namespace crypto
 	{
 		public:
 		
-			void SetKey (const uint8_t * key) { ExpandKey (key); };
+			void SetKey (const AESKey& key) { ExpandKey (key); };
 			void Encrypt (const ChipherBlock * in, ChipherBlock * out);	
 	};	
 
@@ -51,7 +54,7 @@ namespace crypto
 	{
 		public:
 		
-			void SetKey (const uint8_t * key);
+			void SetKey (const AESKey& key);
 			void Decrypt (const ChipherBlock * in, ChipherBlock * out);		
 	};	
 
@@ -64,7 +67,7 @@ namespace crypto
 	{
 		public:
 		
-			void SetKey (const uint8_t * key) 
+			void SetKey (const AESKey& key) 
 			{ 
 				m_Encryption.SetKey (key, 32); 
 			}
@@ -82,7 +85,7 @@ namespace crypto
 	{
 		public:
 		
-			void SetKey (const uint8_t * key) 
+			void SetKey (const AESKey& key) 
 			{ 
 				m_Decryption.SetKey (key, 32); 
 			}
@@ -105,7 +108,7 @@ namespace crypto
 	
 			CBCEncryption () { memset (m_LastBlock.buf, 0, 16); };
 
-			void SetKey (const uint8_t * key) { m_ECBEncryption.SetKey (key); }; // 32 bytes
+			void SetKey (const AESKey& key) { m_ECBEncryption.SetKey (key); }; // 32 bytes
 			void SetIV (const uint8_t * iv) { memcpy (m_LastBlock.buf, iv, 16); }; // 16 bytes
 
 			void Encrypt (int numBlocks, const ChipherBlock * in, ChipherBlock * out);
@@ -125,7 +128,7 @@ namespace crypto
 	
 			CBCDecryption () { memset (m_IV.buf, 0, 16); };
 
-			void SetKey (const uint8_t * key) { m_ECBDecryption.SetKey (key); }; // 32 bytes
+			void SetKey (const AESKey& key) { m_ECBDecryption.SetKey (key); }; // 32 bytes
 			void SetIV (const uint8_t * iv) { memcpy (m_IV.buf, iv, 16); }; // 16 bytes
 
 			void Decrypt (int numBlocks, const ChipherBlock * in, ChipherBlock * out);
@@ -142,7 +145,7 @@ namespace crypto
 	{
 		public:
 
-			void SetKeys (const uint8_t * layerKey, const uint8_t * ivKey)
+			void SetKeys (const AESKey& layerKey, const AESKey& ivKey)
 			{
 				m_LayerEncryption.SetKey (layerKey);
 				m_IVEncryption.SetKey (ivKey);
@@ -164,7 +167,7 @@ namespace crypto
 	{
 		public:
 
-			void SetKeys (const uint8_t * layerKey, const uint8_t * ivKey)
+			void SetKeys (const AESKey& layerKey, const AESKey& ivKey)
 			{
 				m_LayerDecryption.SetKey (layerKey);
 				m_IVDecryption.SetKey (ivKey);
