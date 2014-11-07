@@ -1,10 +1,10 @@
 
-#define I2Pd_AppName "i2pd" 
-#define I2Pd_ver "0.1" 
+#define I2Pd_AppName "i2pd"
+#define I2Pd_ver "0.2"
 
 [Setup]
-AppName={#I2Pd_AppName} 
-AppVersion={#I2Pd_ver} 
+AppName={#I2Pd_AppName}
+AppVersion={#I2Pd_ver}
 DefaultDirName={pf}\I2Pd
 DefaultGroupName=I2Pd
 UninstallDisplayIcon={app}\I2Pd.exe
@@ -13,27 +13,50 @@ SolidCompression=yes
 OutputDir=.
 LicenseFile=.\..\LICENSE
 OutputBaseFilename=setup_{#I2Pd_AppName}_v{#I2Pd_ver}
+ArchitecturesInstallIn64BitMode=x64
+
 
 [Files]
-Source: "i2pd.exe"; DestDir: "{app}"
+Source: "x64\Release\i2pd.exe"; DestDir: "{app}"; DestName: "i2pd.exe"; Check: Is64BitInstallMode
+Source: "Release\i2pd.exe"; DestDir: "{app}"; Check: not Is64BitInstallMode
+Source: "..\README.md"; DestDir: "{app}"; DestName: "Readme.txt"; AfterInstall: ConvertLineEndings
 
 [Icons]
 Name: "{group}\I2Pd"; Filename: "{app}\i2pd.exe"
+Name: "{group}\Readme"; Filename: "{app}\Readme.txt"
+
+
+[Registry]
+Root: HKCU; Subkey: "Environment"; ValueName: "Path"; ValueType: "string"; ValueData: "{app};{olddata}"; Check: NotOnPathAlready(); Flags: preservestringtype;
 
 [Code]
 
 var
-  DefaultTop, 
-  DefaultLeft, 
+  DefaultTop,
+  DefaultLeft,
   DefaultHeight,
-  DefaultBackTop, 
-  DefaultNextTop, 
+  DefaultBackTop,
+  DefaultNextTop,
   DefaultCancelTop,
-  DefaultBevelTop, 
+  DefaultBevelTop,
   DefaultOuterHeight: Integer;
 
-const 
+const
   LicenseHeight = 400;
+   LF = #10;
+   CR = #13;
+   CRLF = CR + LF;
+
+procedure ConvertLineEndings();
+  var
+     FilePath : String;
+     FileContents : String;
+begin
+   FilePath := ExpandConstant(CurrentFileName)
+   LoadStringFromFile(FilePath, FileContents);
+   StringChangeEx(FileContents, LF, CRLF, False);
+   SaveStringToFile(FilePath, FileContents, False);
+end;
 
 procedure InitializeWizard();
 begin
@@ -67,7 +90,7 @@ begin
     WizardForm.BackButton.Top := DefaultBackTop + (LicenseHeight - DefaultHeight);
     WizardForm.Bevel.Top := DefaultBevelTop + (LicenseHeight - DefaultHeight);
   end
-  else 
+  else
   begin
     WizardForm.Top := DefaultTop;
     WizardForm.Left := DefaultLeft;
@@ -77,5 +100,50 @@ begin
     WizardForm.NextButton.Top := DefaultNextTop;
     WizardForm.BackButton.Top := DefaultBackTop;
     WizardForm.Bevel.Top := DefaultBevelTop;
+  end;
+end;
+
+function NotOnPathAlready(): Boolean;
+var
+  BinDir, Path: String;
+begin
+  Log('Checking if i2pd dir is already in the %PATH%');
+  if RegQueryStringValue(HKEY_CURRENT_USER, 'Environment', 'Path', Path) then
+  begin // Successfully read the value
+    Log('HKCUEnvironmentPATH = ' + Path);
+    BinDir := ExpandConstant('{app}');
+    Log('Looking for i2pd dir in %PATH%: ' + BinDir + ' in ' + Path);
+    if Pos(LowerCase(BinDir), Lowercase(Path)) = 0 then
+    begin
+      Log('Did not find i2pd dir in %PATH% so I will add it');
+      Result := True;
+    end
+    else
+    begin
+      Log('Found i2pd dir in %PATH% so will not add it again');
+      Result := False;
+    end
+  end
+  else // The key probably doesn't exist
+  begin
+    Log('Could not access HKCUEnvironmentPATH so I assume that it is OK to add it');
+    Result := True;
+  end;
+end;
+
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  BinDir, Path: String;
+begin
+  if (CurUninstallStep = usPostUninstall)
+     and (RegQueryStringValue(HKEY_CURRENT_USER, 'Environment', 'PATH', Path)) then
+  begin
+    BinDir := ExpandConstant('{app}');
+    if Pos(LowerCase(BinDir) + ';', Lowercase(Path)) <> 0 then
+    begin
+      StringChange(Path, BinDir + ';', '');
+      RegWriteStringValue(HKEY_CURRENT_USER, 'Environment', 'PATH', Path);
+    end;
   end;
 end;
