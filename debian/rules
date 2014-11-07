@@ -6,13 +6,15 @@ DAT = $(shell dpkg-parsechangelog -l$(DEBIAN_DIR)changelog | sed -e '/^Date:/!d'
 DATE = $(shell faketime "$(DAT)" date -u +"%Y-%m-%d %H:%M:%S")
 FT = faketime -f -m "$(DATE)"
 
-
 %:
 	dh $@ --parallel --with systemd
 
 override_dh_auto_clean:
 	rm -f i2pd
 	dh_auto_clean
+
+override_dh_auto_build:
+	$(FT) make USE_AESNI=no CXXFLAGS="$(shell dpkg-buildflags --get CXXFLAGS)" LDFLAGS="$(shell dpkg-buildflags --get LDFLAGS)"
 
 override_dh_auto_build-arch:
 	$(FT) dh_auto_build -a

@@ -38,7 +38,7 @@ namespace transport
 		m_DelayedMessages.clear ();	
 	}
 
-	void NTCPSession::CreateAESKey (uint8_t * pubKey, uint8_t * aesKey)
+	void NTCPSession::CreateAESKey (uint8_t * pubKey, i2p::crypto::AESKey& key)
 	{
 		CryptoPP::DH dh (elgp, elgg);
 		uint8_t sharedKey[256];
@@ -49,6 +49,7 @@ namespace transport
 			return;
 		};
 
+		uint8_t * aesKey = key;
 		if (sharedKey[0] & 0x80)
 		{
 			aesKey[0] = 0;
@@ -201,7 +202,7 @@ namespace transport
 		m_Establisher->phase2.encrypted.timestamp = tsB;
 		// TODO: fill filler
 
-		uint8_t aesKey[32];
+		i2p::crypto::AESKey aesKey;
 		CreateAESKey (m_Establisher->phase1.pubKey, aesKey);
 		m_Encryption.SetKey (aesKey);
 		m_Encryption.SetIV (y + 240);
@@ -249,7 +250,7 @@ namespace transport
 		{	
 			LogPrint ("Phase 2 received: ", bytes_transferred);
 		
-			uint8_t aesKey[32];
+			i2p::crypto::AESKey aesKey;
 			CreateAESKey (m_Establisher->phase2.pubKey, aesKey);
 			m_Decryption.SetKey (aesKey);
 			m_Decryption.SetIV (m_Establisher->phase2.pubKey + 240);
@@ -427,7 +428,7 @@ namespace transport
 		if (ecode)
         {
 			LogPrint ("Read error: ", ecode.message ());
-			if (ecode != boost::asio::error::operation_aborted)
+			//if (ecode != boost::asio::error::operation_aborted)
 				Terminate ();
 		}
 		else
@@ -589,7 +590,8 @@ namespace transport
 		if (ecode != boost::asio::error::operation_aborted)
 		{	
 			LogPrint ("No activity fo ", NTCP_TERMINATION_TIMEOUT, " seconds");
-			Terminate ();
+			//Terminate ();
+			m_Socket.close ();// invoke Terminate () from HandleReceive 
 		}	
 	}	
 		
