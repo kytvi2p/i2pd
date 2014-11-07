@@ -1,14 +1,14 @@
+i2pd (0.2.1+git20141107.4b0001b-1ubuntu1) trusty; urgency=medium
+
+  * Building for Trusty
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Fri, 07 Nov 2014 19:58:30 +0000
+
 i2pd (0.2.1+git20141107.4b0001b-1) unstable; urgency=medium
 
   * New git uptream snapshot
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Fri, 07 Nov 2014 15:31:24 +0000
-
-i2pd (0.2.0-2ubuntu1) trusty; urgency=medium
-
-  * Building for Trusty
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Sat, 01 Nov 2014 02:33:15 +0000
 
 i2pd (0.2.0-2) unstable; urgency=medium
 
