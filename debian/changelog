@@ -1,14 +1,14 @@
+i2pd (0.2.1+git20141107.4b0001b-2~deb7u+1) stable; urgency=medium
+
+  * BAckport to Wheezy
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Wed, 19 Nov 2014 00:17:29 +0000
+
 i2pd (0.2.1+git20141107.4b0001b-2) unstable; urgency=medium
 
   * Fix typo in wrapper script
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 18 Nov 2014 04:04:05 +0000
-
-i2pd (0.2.1+git20141107.4b0001b-1~deb7u+1) stable; urgency=medium
-
-  * Backport to Wheezy
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Fri, 07 Nov 2014 17:19:33 +0000
 
 i2pd (0.2.1+git20141107.4b0001b-1) unstable; urgency=medium
 
@@ -25,12 +25,6 @@ i2pd (0.2.0-2) unstable; urgency=medium
     0b77c9651b. The version wasn't bumped until 0b77c9651b.
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Fri, 31 Oct 2014 20:03:31 +0000
-
-i2pd (0.2.0-1~deb7u+1) stable; urgency=medium
-
-  * Backport to Wheezy
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 30 Oct 2014 15:33:23 +0000
 
 i2pd (0.2.0-1) unstable; urgency=medium
 
