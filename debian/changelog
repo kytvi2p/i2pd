@@ -1,3 +1,9 @@
+i2pd (0.2.1+git20141107.4b0001b-2) unstable; urgency=medium
+
+  * Fix typo in wrapper script
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 18 Nov 2014 04:04:05 +0000
+
 i2pd (0.2.1+git20141107.4b0001b-1~precise+1) precise; urgency=medium
 
   * Backport to Precise
