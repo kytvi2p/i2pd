@@ -55,10 +55,9 @@ namespace data
 		// don't delete buffer until save to file
 	}	
 		
-	void RouterInfo::SetRouterIdentity (const Identity& identity)
+	void RouterInfo::SetRouterIdentity (const IdentityEx& identity)
 	{	
 		m_RouterIdentity = identity;
-		m_IdentHash = m_RouterIdentity.Hash ();
 		m_Timestamp = i2p::util::GetMillisecondsSinceEpoch ();
 	}
 	
@@ -95,31 +94,20 @@ namespace data
 
 	void RouterInfo::ReadFromBuffer (bool verifySignature)
 	{
-		std::stringstream str (std::string ((char *)m_Buffer, m_BufferLen));
+		size_t identityLen = m_RouterIdentity.FromBuffer (m_Buffer, m_BufferLen);
+		std::stringstream str (std::string ((char *)m_Buffer + identityLen, m_BufferLen - identityLen));
 		ReadFromStream (str);
 		if (verifySignature)
 		{	
 			// verify signature
-			CryptoPP::DSA::PublicKey pubKey;
-			pubKey.Initialize (i2p::crypto::dsap, i2p::crypto::dsaq, i2p::crypto::dsag, CryptoPP::Integer (m_RouterIdentity.signingKey, 128));
-			CryptoPP::DSA::Verifier verifier (pubKey);
-			int l = m_BufferLen - 40;
-			if (!verifier.VerifyMessage ((uint8_t *)m_Buffer, l, (uint8_t *)m_Buffer + l, 40))
-			{	
+			int l = m_BufferLen - m_RouterIdentity.GetSignatureLen ();
+			if (!m_RouterIdentity.Verify ((uint8_t *)m_Buffer, l, (uint8_t *)m_Buffer + l))	
 				LogPrint (eLogError, "signature verification failed");
-			}
 		}	
 	}	
 	
 	void RouterInfo::ReadFromStream (std::istream& s)
 	{
-		s.read ((char *)&m_RouterIdentity, DEFAULT_IDENTITY_SIZE);
-		if (m_RouterIdentity.certificate.type != CERTIFICATE_TYPE_NULL)
-		{
-			LogPrint (eLogError, "Certificate type ", m_RouterIdentity.certificate.type, " is not supported");
-			SetUnreachable (true);
-			return;
-		}
 		s.read ((char *)&m_Timestamp, sizeof (m_Timestamp));
 		m_Timestamp = be64toh (m_Timestamp);
 		// read addresses
@@ -232,8 +220,6 @@ namespace data
 			if (!strcmp (key, "caps"))
 				ExtractCaps (value);
 		}		
-		
-		CryptoPP::SHA256().CalculateDigest(m_IdentHash, (uint8_t *)&m_RouterIdentity, sizeof (m_RouterIdentity));
 
 		if (!m_SupportedTransports || !m_Addresses.size() || (UsesIntroducer () && !introducers))
 			SetUnreachable (true);

@@ -10,36 +10,70 @@ namespace i2p
 {
 namespace crypto
 {	
-	union ChipherBlock	
+	struct ChipherBlock	
 	{
 		uint8_t buf[16];
-		uint64_t ll[2];
 
 		void operator^=(const ChipherBlock& other) // XOR
 		{
-			ll[0] ^= other.ll[0];
-			ll[1] ^= other.ll[1];
+#if defined(__x86_64__) // for Intel x64 
+			__asm__
+			(
+				"movups	(%[buf]), %%xmm0 \n"	
+				"movups	(%[other]), %%xmm1 \n"	
+				"pxor %%xmm1, %%xmm0 \n"
+				"movups	%%xmm0, (%[buf]) \n"
+				: 
+				: [buf]"r"(buf), [other]"r"(other.buf) 
+				: "%xmm0", "%xmm1", "memory"
+			);			
+#else
+			// TODO: implement it better
+			for (int i = 0; i < 16; i++)
+				buf[i] ^= other.buf[i];
+#endif
 		}	 
 	};
 
 	typedef i2p::data::Tag<32> AESKey;
 	
+	template<size_t sz>
+	class AESAlignedBuffer // 16 bytes alignment
+	{
+		public:
+		
+			AESAlignedBuffer ()
+			{
+				m_Buf = m_UnalignedBuffer;
+				uint8_t rem = ((uint64_t)m_Buf) & 0x0f;
+				if (rem)
+					m_Buf += (16 - rem);
+			}
+		
+			operator uint8_t * () { return m_Buf; };
+			operator const uint8_t * () const { return m_Buf; };
+
+		private:
+
+			uint8_t m_UnalignedBuffer[sz + 15]; // up to 15 bytes alignment
+			uint8_t * m_Buf;
+	};			
+
+
 #ifdef AESNI
 	class ECBCryptoAESNI
 	{	
 		public:
 
-			ECBCryptoAESNI ();
 			uint8_t * GetKeySchedule () { return m_KeySchedule; };
-			
+
 		protected:
 
 			void ExpandKey (const AESKey& key);
 		
-		protected:
+		private:
 
-			uint8_t * m_KeySchedule; // start of 16 bytes boundary of m_UnalignedBuffer
-			uint8_t m_UnalignedBuffer[256]; // 14 rounds for AES-256, 240 + 16 bytes
+			AESAlignedBuffer<240> m_KeySchedule;  // 14 rounds for AES-256, 240 bytes
 	};	
 
 	class ECBEncryptionAESNI: public ECBCryptoAESNI
