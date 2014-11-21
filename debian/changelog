@@ -1,3 +1,28 @@
+i2pd (0.3.0-1) unstable; urgency=medium
+
+  [ orignal ]
+  * delete single message routing session immediately
+  * api added
+  * start/stop/init through api
+  * specify application name
+  * create local destination through API
+  * streaming api functions added
+  * store RIs as shared pointers
+  * AES buffer aligned to 16 bytes
+  * receive buffers aligned to 16
+  * fixed misalignment
+  * encrypted delivery status
+  * read RI from buffer
+  * support of RI with EcDSA
+  * SU3 file parser
+  * shared pointer for local RI
+  * return shared_ptr to RI
+
+  [ Kill Your TV ]
+  * New upstream release
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Fri, 21 Nov 2014 14:21:08 +0000
+
 i2pd (0.2.1+git20141107.4b0001b-2ubuntu1) trusty; urgency=medium
 
   * Building for Trusty
