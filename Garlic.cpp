@@ -148,7 +148,7 @@ namespace garlic
 	size_t GarlicRoutingSession::CreateAESBlock (uint8_t * buf, const I2NPMessage * msg)
 	{
 		size_t blockSize = 0;
-		bool createNewTags = m_Owner && ((int)m_SessionTags.size () <= m_NumTags/2);
+		bool createNewTags = m_Owner && m_NumTags && ((int)m_SessionTags.size () <= m_NumTags/2);
 		UnconfirmedTags * newTags = createNewTags ? GenerateSessionTags () : nullptr;
 		*(uint16_t *)buf = newTags ? htobe16 (newTags->numTags) : 0; // tag count
 		blockSize += 2;
@@ -272,6 +272,16 @@ namespace garlic
 				size += 4; 	
 				// create msg 
 				I2NPMessage * msg = CreateDeliveryStatusMsg (msgID);
+				if (m_Owner)
+				{
+					//encrypt 
+					uint8_t key[32], tag[32];
+					m_Rnd.GenerateBlock (key, 32); // random session key 
+					m_Rnd.GenerateBlock (tag, 32); // random session tag
+					m_Owner->AddSessionKey (key, tag);
+					GarlicRoutingSession garlic (key, tag);
+					msg = garlic.WrapSingleMessage (msg);		
+				}
 				memcpy (buf + size, msg->GetBuffer (), msg->GetLength ());
 				size += msg->GetLength ();
 				DeleteI2NPMessage (msg);
@@ -304,9 +314,10 @@ namespace garlic
 	{
 		if (key)
 		{
+			uint32_t ts = i2p::util::GetSecondsSinceEpoch ();
 			auto decryption = std::make_shared<i2p::crypto::CBCDecryption>();
 			decryption->SetKey (key);
-			m_Tags[SessionTag(tag)] = decryption;
+			m_Tags[SessionTag(tag, ts)] = decryption;
 		}
 	}
 
@@ -314,7 +325,7 @@ namespace garlic
 	{
 		uint8_t * buf = msg->GetPayload ();
 		uint32_t length = be32toh (*(uint32_t *)buf);
-		buf += 4; // lentgh
+		buf += 4; // length
 		auto it = m_Tags.find (SessionTag(buf));
 		if (it != m_Tags.end ())
 		{
@@ -469,8 +480,16 @@ namespace garlic
 	I2NPMessage * GarlicDestination::WrapMessage (const i2p::data::RoutingDestination& destination, 
 		I2NPMessage * msg, bool attachLeaseSet)	
 	{
-		auto session = GetRoutingSession (destination, attachLeaseSet ? 32 : 0); // don't use tag if no LeaseSet
-		return session->WrapSingleMessage (msg);	
+		if (attachLeaseSet) // we should maintain this session
+		{	
+			auto session = GetRoutingSession (destination, 32);  // 32 tags by default
+			return session->WrapSingleMessage (msg);	
+		}
+		else // one time session
+		{
+			GarlicRoutingSession session (this, &destination, 0); // don't use tag if no LeaseSet
+			return session.WrapSingleMessage (msg);
+		}	
 	}
 
 	GarlicRoutingSession * GarlicDestination::GetRoutingSession (
@@ -488,7 +507,7 @@ namespace garlic
 		}	
 		return session;
 	}	
-
+		
 	void GarlicDestination::DeliveryStatusSent (GarlicRoutingSession * session, uint32_t msgID)
 	{
 		m_CreatedSessions[msgID] = session;
