@@ -1,3 +1,9 @@
+i2pd (0.4.0-1ubuntu1) utopic; urgency=medium
+
+  * Building for Utopic
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 25 Nov 2014 19:32:02 +0000
+
 i2pd (0.4.0-1) unstable; urgency=medium
 
   [ orignal ]
