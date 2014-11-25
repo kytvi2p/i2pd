@@ -21,7 +21,7 @@ namespace i2p
 {
 namespace data
 {		
-	I2NPMessage * RequestedDestination::CreateRequestMessage (const RouterInfo * router,
+	I2NPMessage * RequestedDestination::CreateRequestMessage (std::shared_ptr<const RouterInfo> router,
 		const i2p::tunnel::InboundTunnel * replyTunnel)
 	{
 		I2NPMessage * msg = i2p::CreateDatabaseLookupMsg (m_Destination, 
@@ -167,24 +167,27 @@ namespace data
 	
 	void NetDb::AddRouterInfo (const IdentHash& ident, const uint8_t * buf, int len)
 	{	
-		DeleteRequestedDestination (ident);
-		auto it = m_RouterInfos.find(ident);
-		if (it != m_RouterInfos.end ())
+		DeleteRequestedDestination (ident);	
+		auto r = FindRouter (ident);
+		if (r)
 		{
-			auto ts = it->second->GetTimestamp ();
-			it->second->Update (buf, len);
-			if (it->second->GetTimestamp () > ts)
+			auto ts = r->GetTimestamp ();
+			r->Update (buf, len);
+			if (r->GetTimestamp () > ts)
 				LogPrint ("RouterInfo updated");
 		}	
 		else	
 		{	
 			LogPrint ("New RouterInfo added");
-			auto r = std::make_shared<RouterInfo> (buf, len);
-			m_RouterInfos[r->GetIdentHash ()] = r;
-			if (r->IsFloodfill ())
+			auto newRouter = std::make_shared<RouterInfo> (buf, len);
+			{
+				std::unique_lock<std::mutex> l(m_RouterInfosMutex);
+				m_RouterInfos[newRouter->GetIdentHash ()] = newRouter;
+			}
+			if (newRouter->IsFloodfill ())
 			{
 				std::unique_lock<std::mutex> l(m_FloodfillsMutex);
-				m_Floodfills.push_back (r);
+				m_Floodfills.push_back (newRouter);
 			}	
 		}	
 	}	
@@ -209,11 +212,12 @@ namespace data
 		}	
 	}	
 
-	RouterInfo * NetDb::FindRouter (const IdentHash& ident) const
+	std::shared_ptr<RouterInfo> NetDb::FindRouter (const IdentHash& ident) const
 	{
+		std::unique_lock<std::mutex> l(m_RouterInfosMutex);
 		auto it = m_RouterInfos.find (ident);
 		if (it != m_RouterInfos.end ())
-			return it->second.get ();
+			return it->second;
 		else
 			return nullptr;
 	}
@@ -354,18 +358,36 @@ namespace data
 				
 				if (it.second->IsUnreachable ())
 				{	
+					// delete RI file
 					if (boost::filesystem::exists (GetFilePath (fullDirectory, it.second.get ())))
 					{    
 						boost::filesystem::remove (GetFilePath (fullDirectory, it.second.get ()));
 						deletedCount++;
 					}	
+					// delete from floodfills list
+					if (it.second->IsFloodfill ())
+					{
+						std::unique_lock<std::mutex> l(m_FloodfillsMutex);
+						m_Floodfills.remove (it.second);
+					}
 				}
 			}	
 		}	
 		if (count > 0)
 			LogPrint (count," new/updated routers saved");
 		if (deletedCount > 0)
+		{
 			LogPrint (deletedCount," routers deleted");
+			// clean up RouterInfos table
+			std::unique_lock<std::mutex> l(m_RouterInfosMutex);
+			for (auto it = m_RouterInfos.begin (); it != m_RouterInfos.end ();)
+			{
+				if (it->second->IsUnreachable ())
+					it = m_RouterInfos.erase (it);
+				else
+					it++;
+			}
+		}
 	}
 
 	void NetDb::RequestDestination (const IdentHash& destination, bool isLeaseSet, i2p::tunnel::TunnelPool * pool)
@@ -611,7 +633,7 @@ namespace data
 				LogPrint ("Requested RouterInfo ", key, " found");
 				router->LoadBuffer ();
 				if (router->GetBuffer ()) 
-					replyMsg = CreateDatabaseStoreMsg (router);
+					replyMsg = CreateDatabaseStoreMsg (router.get ());
 			}
 		}
 		if (!replyMsg)
@@ -633,7 +655,7 @@ namespace data
 				excludedRouters.insert (excluded);
 				excluded += 32;
 			}	
-			replyMsg = CreateDatabaseSearchReply (buf, GetClosestFloodfill (buf, excludedRouters));
+			replyMsg = CreateDatabaseSearchReply (buf, GetClosestFloodfill (buf, excludedRouters).get ());
 		}
 		else
 			excluded += numExcluded*32; // we don't care about exluded	
@@ -697,9 +719,9 @@ namespace data
 			rnd.GenerateBlock (randomHash, 32);
 			RequestedDestination * dest = CreateRequestedDestination (IdentHash (randomHash), false, true, exploratoryPool);
 			auto floodfill = GetClosestFloodfill (randomHash, dest->GetExcludedPeers ());
-			if (floodfill && !floodfills.count (floodfill)) // request floodfill only once
+			if (floodfill && !floodfills.count (floodfill.get ())) // request floodfill only once
 			{	
-				floodfills.insert (floodfill);
+				floodfills.insert (floodfill.get ());
 				if (throughTunnels)
 				{	
 					msgs.push_back (i2p::tunnel::TunnelMessageBlock 
@@ -787,22 +809,22 @@ namespace data
 			});
 	}	
 	
-	std::shared_ptr<const RouterInfo> NetDb::GetRandomRouter (const RouterInfo * compatibleWith) const
+	std::shared_ptr<const RouterInfo> NetDb::GetRandomRouter (std::shared_ptr<const RouterInfo> compatibleWith) const
 	{
 		return GetRandomRouter (
 			[compatibleWith](std::shared_ptr<const RouterInfo> router)->bool 
 			{ 
-				return !router->IsHidden () && router.get () != compatibleWith && 
+				return !router->IsHidden () && router != compatibleWith && 
 					router->IsCompatible (*compatibleWith); 
 			});
 	}	
 
-	std::shared_ptr<const RouterInfo> NetDb::GetHighBandwidthRandomRouter (const RouterInfo * compatibleWith) const
+	std::shared_ptr<const RouterInfo> NetDb::GetHighBandwidthRandomRouter (std::shared_ptr<const RouterInfo> compatibleWith) const
 	{
 		return GetRandomRouter (
 			[compatibleWith](std::shared_ptr<const RouterInfo> router)->bool 
 			{ 
-				return !router->IsHidden () && router.get () != compatibleWith &&
+				return !router->IsHidden () && router != compatibleWith &&
 					router->IsCompatible (*compatibleWith) && (router->GetCaps () & RouterInfo::eHighBandwidth); 
 			});
 	}	
@@ -815,6 +837,7 @@ namespace data
 		for (int j = 0; j < 2; j++)
 		{	
 			uint32_t i = 0;
+			std::unique_lock<std::mutex> l(m_RouterInfosMutex);
 			for (auto it: m_RouterInfos)
 			{	
 				if (i >= ind)
@@ -836,10 +859,10 @@ namespace data
 		if (msg) m_Queue.Put (msg);	
 	}	
 
-	const RouterInfo * NetDb::GetClosestFloodfill (const IdentHash& destination, 
+	std::shared_ptr<const RouterInfo> NetDb::GetClosestFloodfill (const IdentHash& destination, 
 		const std::set<IdentHash>& excluded) const
 	{
-		RouterInfo * r = nullptr;
+		std::shared_ptr<const RouterInfo> r;
 		XORMetric minMetric;
 		IdentHash destKey = CreateRoutingKey (destination);
 		minMetric.SetMax ();
@@ -852,7 +875,7 @@ namespace data
 				if (m < minMetric)
 				{
 					minMetric = m;
-					r = it.get ();
+					r = it;
 				}
 			}	
 		}	
