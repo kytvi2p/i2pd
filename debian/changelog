@@ -1,3 +1,34 @@
+i2pd (0.4.0-1) unstable; urgency=medium
+
+  [ orignal ]
+  * store shared pointer to RI in tunnel config
+  * use shared pointer for RI in requested destination
+  * use shared pointer of RI for transports
+  * delete dead floodfill
+  * delete delete routers from memory
+  * fixed typo
+  * shared pointers for SAM sockets
+  * fixed crash
+  * shared pointers for streams
+  * replaced boost::bind to std::bind
+  * shared pointer for I2PTunnelConnection
+  * move WaitForConnect away from constructor
+  * shared pointer for SSU
+  * handle EcDSA signatures
+  * ECDSA P384 and ECDSA P521 support
+  * fixed incorrect certificate length
+  * fixed excess data for P521
+  * use generic receive buffer for phase 4
+  * pass tsA to SendPhase4
+  * send Phase3 with proper identity
+  * handle Phase3 in two steps
+  * Update version.h
+
+  [ Kill Your TV ]
+  * New upstream release
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 25 Nov 2014 19:00:47 +0000
+
 i2pd (0.3.0-1) unstable; urgency=medium
 
   [ orignal ]
