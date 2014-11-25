@@ -102,8 +102,8 @@ namespace stream
 				{
 					m_IsAckSendScheduled = true;
 					m_AckSendTimer.expires_from_now (boost::posix_time::milliseconds(ACK_SEND_TIMEOUT));
-					m_AckSendTimer.async_wait (boost::bind (&Stream::HandleAckSendTimer,
-						this, boost::asio::placeholders::error));
+					m_AckSendTimer.async_wait (std::bind (&Stream::HandleAckSendTimer,
+						shared_from_this (), std::placeholders::_1));
 				}
 			}	
 			else if (isSyn)
@@ -309,7 +309,7 @@ namespace stream
 				size += sentLen; // payload
 			}	
 			p->len = size;
-			m_Service.post (boost::bind (&Stream::SendPacket, this, p));
+			m_Service.post (std::bind (&Stream::SendPacket, this, p));
 		}
 
 		return len;
@@ -460,8 +460,8 @@ namespace stream
 	{
 		m_ResendTimer.cancel ();
 		m_ResendTimer.expires_from_now (boost::posix_time::seconds(RESEND_TIMEOUT));
-		m_ResendTimer.async_wait (boost::bind (&Stream::HandleResendTimer,
-			this, boost::asio::placeholders::error));
+		m_ResendTimer.async_wait (std::bind (&Stream::HandleResendTimer,
+			shared_from_this (), std::placeholders::_1));
 	}
 		
 	void Stream::HandleResendTimer (const boost::system::error_code& ecode)
@@ -563,8 +563,6 @@ namespace stream
 		ResetAcceptor ();
 		{
 			std::unique_lock<std::mutex> l(m_StreamsMutex);
-			for (auto it: m_Streams)
-				delete it.second;	
 			m_Streams.clear ();
 		}	
 	}	
@@ -597,36 +595,30 @@ namespace stream
 		}	
 	}	
 
-	Stream * StreamingDestination::CreateNewOutgoingStream (const i2p::data::LeaseSet& remote, int port)
+	std::shared_ptr<Stream> StreamingDestination::CreateNewOutgoingStream (const i2p::data::LeaseSet& remote, int port)
 	{
-		Stream * s = new Stream (*m_Owner.GetService (), *this, remote, port);
+		auto s = std::make_shared<Stream> (*m_Owner.GetService (), *this, remote, port);
 		std::unique_lock<std::mutex> l(m_StreamsMutex);
 		m_Streams[s->GetRecvStreamID ()] = s;
 		return s;
 	}	
 
-	Stream * StreamingDestination::CreateNewIncomingStream ()
+	std::shared_ptr<Stream> StreamingDestination::CreateNewIncomingStream ()
 	{
-		Stream * s = new Stream (*m_Owner.GetService (), *this);
+		auto s = std::make_shared<Stream> (*m_Owner.GetService (), *this);
 		std::unique_lock<std::mutex> l(m_StreamsMutex);
 		m_Streams[s->GetRecvStreamID ()] = s;
 		return s;
 	}
 
-	void StreamingDestination::DeleteStream (Stream * stream)
+	void StreamingDestination::DeleteStream (std::shared_ptr<Stream> stream)
 	{
 		if (stream)
 		{	
 			std::unique_lock<std::mutex> l(m_StreamsMutex);
 			auto it = m_Streams.find (stream->GetRecvStreamID ());
 			if (it != m_Streams.end ())
-			{	
 				m_Streams.erase (it);
-				if (m_Owner.GetService ())
-					m_Owner.GetService ()->post ([stream](void) { delete stream; }); 
-				else
-					delete stream;
-			}	
 		}	
 	}		
 
@@ -651,7 +643,7 @@ namespace stream
 		}	
 	}
 
-	void DeleteStream (Stream * stream)
+	void DeleteStream (std::shared_ptr<Stream> stream)
 	{
 		if (stream)
 			stream->GetLocalDestination ().DeleteStream (stream);

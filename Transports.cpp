@@ -277,7 +277,7 @@ namespace transport
 			session->SendI2NPMessage (msg);
 		else
 		{
-			RouterInfo * r = netdb.FindRouter (ident);
+			auto r = netdb.FindRouter (ident);
 			if (r)
 			{	
 				auto ssuSession = m_SSUServer ? m_SSUServer->FindSession (r) : nullptr;
@@ -290,7 +290,7 @@ namespace transport
 					auto address = r->GetNTCPAddress (!context.SupportsV6 ()); 
 					if (address && !r->UsesIntroducer () && !r->IsUnreachable () && msg->GetLength () < NTCP_MAX_MESSAGE_SIZE)
 					{	
-						auto s = new NTCPClient (m_Service, address->host, address->port, *r);
+						auto s = new NTCPClient (m_Service, address->host, address->port, r);
 						AddNTCPSession (s);
 						s->SendI2NPMessage (msg);
 					}	
@@ -323,7 +323,7 @@ namespace transport
 	void Transports::HandleResendTimer (const boost::system::error_code& ecode, 
 		boost::asio::deadline_timer * timer, const i2p::data::IdentHash& ident, i2p::I2NPMessage * msg)
 	{
-		RouterInfo * r = netdb.FindRouter (ident);
+		auto r = netdb.FindRouter (ident);
 		if (r)
 		{
 			LogPrint ("Router found. Sending message");
@@ -337,13 +337,13 @@ namespace transport
 		delete timer;
 	}	
 		
-	void Transports::CloseSession (const i2p::data::RouterInfo * router)
+	void Transports::CloseSession (std::shared_ptr<const i2p::data::RouterInfo> router)
 	{
 		if (!router) return;
 		m_Service.post (boost::bind (&Transports::PostCloseSession, this, router));    
 	}	
 
-	void Transports::PostCloseSession (const i2p::data::RouterInfo * router)
+	void Transports::PostCloseSession (std::shared_ptr<const i2p::data::RouterInfo> router)
 	{
 		auto ssuSession = m_SSUServer ? m_SSUServer->FindSession (router) : nullptr;
 		if (ssuSession) // try SSU first
@@ -360,7 +360,7 @@ namespace transport
 		{
 			auto router = i2p::data::netdb.GetRandomRouter ();
 			if (router && router->IsSSU () && m_SSUServer)
-				m_SSUServer->GetSession (router.get (), true);  // peer test	
+				m_SSUServer->GetSession (router, true);  // peer test	
 		}	
 	}
 			

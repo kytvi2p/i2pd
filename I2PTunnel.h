@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <string>
 #include <set>
+#include <memory>
 #include <boost/asio.hpp>
 #include "Identity.h"
 #include "Destination.h"
@@ -18,16 +19,19 @@ namespace client
 	const int I2P_TUNNEL_DESTINATION_REQUEST_TIMEOUT = 10; // in seconds
 
 	class I2PTunnel;
-	class I2PTunnelConnection
+	class I2PTunnelConnection: public std::enable_shared_from_this<I2PTunnelConnection>
 	{
 		public:
 
 			I2PTunnelConnection (I2PTunnel * owner, boost::asio::ip::tcp::socket * socket,
 				const i2p::data::LeaseSet * leaseSet);
-			I2PTunnelConnection (I2PTunnel * owner, i2p::stream::Stream * stream,  boost::asio::ip::tcp::socket * socket, 
+			I2PTunnelConnection (I2PTunnel * owner, std::shared_ptr<i2p::stream::Stream> stream,  boost::asio::ip::tcp::socket * socket, 
 				const boost::asio::ip::tcp::endpoint& target); 
 			~I2PTunnelConnection ();
 
+			void I2PConnect ();
+			void Connect ();
+			
 		private:
 
 			void Terminate ();	
@@ -44,8 +48,9 @@ namespace client
 
 			uint8_t m_Buffer[I2P_TUNNEL_CONNECTION_BUFFER_SIZE], m_StreamBuffer[I2P_TUNNEL_CONNECTION_BUFFER_SIZE];
 			boost::asio::ip::tcp::socket * m_Socket;
-			i2p::stream::Stream * m_Stream;
+			std::shared_ptr<i2p::stream::Stream> m_Stream;
 			I2PTunnel * m_Owner;
+			boost::asio::ip::tcp::endpoint m_RemoteEndpoint;
 	};	
 
 	class I2PTunnel
@@ -56,8 +61,8 @@ namespace client
 				m_Service (service), m_LocalDestination (localDestination) {};
 			virtual ~I2PTunnel () { ClearConnections (); }; 
 
-			void AddConnection (I2PTunnelConnection * conn);
-			void RemoveConnection (I2PTunnelConnection * conn);	
+			void AddConnection (std::shared_ptr<I2PTunnelConnection> conn);
+			void RemoveConnection (std::shared_ptr<I2PTunnelConnection> conn);	
 			void ClearConnections ();
 			ClientDestination * GetLocalDestination () { return m_LocalDestination; };
 			void SetLocalDestination (ClientDestination * dest) { m_LocalDestination = dest; }; 			
@@ -68,7 +73,7 @@ namespace client
 
 			boost::asio::io_service& m_Service;
 			ClientDestination * m_LocalDestination;
-			std::set<I2PTunnelConnection *> m_Connections;
+			std::set<std::shared_ptr<I2PTunnelConnection> > m_Connections;
 	};	
 	
 	class I2PClientTunnel: public I2PTunnel
@@ -111,7 +116,7 @@ namespace client
 		private:
 
 			void Accept ();
-			void HandleAccept (i2p::stream::Stream * stream);
+			void HandleAccept (std::shared_ptr<i2p::stream::Stream> stream);
 
 		private:
 
