@@ -35,34 +35,19 @@ namespace transport
 			uint8_t filler[12];
 		} encrypted;	
 	};	
-
-	struct NTCPPhase3
-	{
-		uint16_t size;
-		i2p::data::Identity ident;
-		uint32_t timestamp; 
-		uint8_t padding[15];
-		uint8_t signature[40];
-	};
-
-
-	struct NTCPPhase4
-	{
-		uint8_t signature[40];
-		uint8_t padding[8];
-	};
 	
 #pragma pack()	
 
 	const size_t NTCP_MAX_MESSAGE_SIZE = 16384; 
 	const size_t NTCP_BUFFER_SIZE = 1040; // fits one tunnel message (1028)
 	const int NTCP_TERMINATION_TIMEOUT = 120; // 2 minutes
+	const size_t NTCP_DEFAULT_PHASE3_SIZE = 2/*size*/ + i2p::data::DEFAULT_IDENTITY_SIZE/*387*/ + 4/*ts*/ + 15/*padding*/ + 40/*signature*/; // 428 	
 
 	class NTCPSession: public TransportSession
 	{
 		public:
 
-			NTCPSession (boost::asio::io_service& service, const i2p::data::RouterInfo * in_RemoteRouter = nullptr);
+			NTCPSession (boost::asio::io_service& service, std::shared_ptr<const i2p::data::RouterInfo> in_RemoteRouter = nullptr);
 			~NTCPSession ();
 
 			boost::asio::ip::tcp::socket& GetSocket () { return m_Socket; };
@@ -95,10 +80,12 @@ namespace transport
 
 			//server
 			void SendPhase2 ();
-			void SendPhase4 (uint32_t tsB);
+			void SendPhase4 (uint32_t tsA, uint32_t tsB);
 			void HandlePhase1Received (const boost::system::error_code& ecode, std::size_t bytes_transferred);
 			void HandlePhase2Sent (const boost::system::error_code& ecode, std::size_t bytes_transferred, uint32_t tsB);
 			void HandlePhase3Received (const boost::system::error_code& ecode, std::size_t bytes_transferred, uint32_t tsB);
+			void HandlePhase3ExtraReceived (const boost::system::error_code& ecode, std::size_t bytes_transferred, uint32_t tsB, size_t paddingLen);
+			void HandlePhase3 (uint32_t tsB, size_t paddingLen);
 			void HandlePhase4Sent (const boost::system::error_code& ecode,  std::size_t bytes_transferred);
 			
 			// common
@@ -128,11 +115,10 @@ namespace transport
 			{	
 				NTCPPhase1 phase1;
 				NTCPPhase2 phase2;
-				NTCPPhase3 phase3;
-				NTCPPhase4 phase4;
 			} * m_Establisher;	
 			
-			uint8_t m_ReceiveBuffer[NTCP_BUFFER_SIZE + 16], m_TimeSyncBuffer[16];
+			i2p::crypto::AESAlignedBuffer<NTCP_BUFFER_SIZE + 16> m_ReceiveBuffer;
+			i2p::crypto::AESAlignedBuffer<16> m_TimeSyncBuffer;
 			int m_ReceiveBufferOffset; 
 
 			i2p::I2NPMessage * m_NextMessage;
@@ -146,7 +132,7 @@ namespace transport
 	{
 		public:
 
-			NTCPClient (boost::asio::io_service& service, const boost::asio::ip::address& address, int port, const i2p::data::RouterInfo& in_RouterInfo);
+			NTCPClient (boost::asio::io_service& service, const boost::asio::ip::address& address, int port, std::shared_ptr<const i2p::data::RouterInfo> in_RouterInfo);
 
 		private:
 

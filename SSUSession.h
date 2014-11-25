@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include <set>
 #include <list>
-#include <boost/asio.hpp>
+#include <memory>
 #include "aes.h"
 #include "hmac.h"
 #include "I2NPProtocol.h"
@@ -50,16 +50,17 @@ namespace transport
 	};	
 
 	class SSUServer;
-	class SSUSession: public TransportSession
+	class SSUSession: public TransportSession, public std::enable_shared_from_this<SSUSession>
 	{
 		public:
 
 			SSUSession (SSUServer& server, boost::asio::ip::udp::endpoint& remoteEndpoint,
-				const i2p::data::RouterInfo * router = nullptr, bool peerTest = false);
+				std::shared_ptr<const i2p::data::RouterInfo> router = nullptr, bool peerTest = false);
 			void ProcessNextMessage (uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& senderEndpoint);		
 			~SSUSession ();
 			
 			void Connect ();
+			void WaitForConnect ();
 			void Introduce (uint32_t iTag, const uint8_t * iKey);
 			void WaitForIntroduction ();
 			void Close ();
