@@ -1,3 +1,9 @@
+i2pd (0.4.0-1~trusty+1) trusty; urgency=medium
+
+  * Building for Trusty
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 25 Nov 2014 19:32:45 +0000
+
 i2pd (0.4.0-1) unstable; urgency=medium
 
   [ orignal ]
@@ -29,12 +35,6 @@ i2pd (0.4.0-1) unstable; urgency=medium
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 25 Nov 2014 19:00:47 +0000
 
-i2pd (0.3.0-1ubuntu1) trusty; urgency=medium
-
-  * Building for Trusty
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Fri, 21 Nov 2014 15:03:04 +0000
-
 i2pd (0.3.0-1) unstable; urgency=medium
 
   [ orignal ]
@@ -59,12 +59,6 @@ i2pd (0.3.0-1) unstable; urgency=medium
   * New upstream release
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Fri, 21 Nov 2014 14:21:08 +0000
-
-i2pd (0.2.1+git20141107.4b0001b-2ubuntu1) trusty; urgency=medium
-
-  * Building for Trusty
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Wed, 19 Nov 2014 00:18:17 +0000
 
 i2pd (0.2.1+git20141107.4b0001b-2) unstable; urgency=medium
 
