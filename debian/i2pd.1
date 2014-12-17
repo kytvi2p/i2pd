@@ -69,6 +69,14 @@ Port incoming trafic forward to. \fI80\fR by default
 .TP
 \fB\-\-samport=\fR
 Port of SAM bridge. Usually \fI7656\fR. SAM will not be enabled if this is not set. (default: unset)
+.TP
+\fB\-\-bobport=\fR
+Port of BOB command channel. Usually \fI2827\fR. BOB will not be enabled if this is not set. (default: unset)
+.TP
+\fB\-\-conf=\fR
+Config file (default: \fI~/.i2pd/i2p.conf\fR or \fI/var/lib/i2pd/i2p.conf\fR)
+This parameter will be silently ignored if the specified config file does not exist.
+Options specified on the command line take precedence over those in the config file.
 
 .SH FILES
 .PP
