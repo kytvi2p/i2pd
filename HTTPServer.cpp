@@ -514,14 +514,16 @@ namespace util
 
 	void HTTPConnection::Terminate ()
 	{
-		if (m_Stream)
-		{
-			m_Stream->Close ();
-			i2p::stream::DeleteStream (m_Stream);
-			m_Stream.reset ();
-		}
+		if (!m_Stream) return;
 		m_Socket->close ();
-		//delete this;
+		m_Stream->Close ();
+			
+		m_Socket->get_io_service ().post ([=](void)
+			{
+				m_Stream.reset ();
+				m_Stream = nullptr;
+				// delete this
+			});
 	}
 
 	void HTTPConnection::Receive ()
@@ -602,7 +604,10 @@ namespace util
 	void HTTPConnection::HandleWriteReply (const boost::system::error_code& ecode)
 	{
 		if (ecode != boost::asio::error::operation_aborted)
+		{
+			m_Socket->close ();
 			Terminate ();
+		}	
 	}
 
 	void HTTPConnection::HandleWrite (const boost::system::error_code& ecode)
@@ -744,8 +749,6 @@ namespace util
 		for (auto it: i2p::tunnel::tunnels.GetOutboundTunnels ())
 		{
 			it->GetTunnelConfig ()->Print (s);
-			if (it->GetTunnelPool () && !it->GetTunnelPool ()->IsExploratory ())
-				s << " " << "Pool";
 			auto state = it->GetState ();
 			if (state == i2p::tunnel::eTunnelStateFailed)
 				s << " " << "Failed";
@@ -758,8 +761,6 @@ namespace util
 		for (auto it: i2p::tunnel::tunnels.GetInboundTunnels ())
 		{
 			it.second->GetTunnelConfig ()->Print (s);
-			if (it.second->GetTunnelPool () && !it.second->GetTunnelPool ()->IsExploratory ())
-				s << " " << "Pool";
 			auto state = it.second->GetState ();
 			if (state == i2p::tunnel::eTunnelStateFailed)
 				s << " " << "Failed";
@@ -810,11 +811,21 @@ namespace util
 				for (auto it: pool->GetOutboundTunnels ())
 				{
 					it->GetTunnelConfig ()->Print (s);
+					auto state = it->GetState ();
+					if (state == i2p::tunnel::eTunnelStateFailed)
+						s << " " << "Failed";
+					else if (state == i2p::tunnel::eTunnelStateExpiring)
+						s << " " << "Exp";
 					s << "<br>" << std::endl;
 				}
 				for (auto it: pool->GetInboundTunnels ())
 				{
 					it->GetTunnelConfig ()->Print (s);
+					auto state = it->GetState ();
+					if (state == i2p::tunnel::eTunnelStateFailed)
+						s << " " << "Failed";
+					else if (state == i2p::tunnel::eTunnelStateExpiring)
+						s << " " << "Exp";
 					s << "<br>" << std::endl;
 				}
 			}	

@@ -29,8 +29,8 @@ namespace data
 		    &m_ExcludedPeers, m_IsLeaseSet, m_Pool);
 		if (m_IsLeaseSet) // wrap lookup message into garlic
 		{
-			if (m_Pool)
-				msg = m_Pool->GetGarlicDestination ().WrapMessage (*router, msg);
+			if (m_Pool && m_Pool->GetLocalDestination ())
+				msg = m_Pool->GetLocalDestination ()->WrapMessage (*router, msg);
 			else
 				LogPrint ("Can't create garlic message without destination");
 		}	
@@ -62,7 +62,7 @@ namespace data
 #endif			
 	NetDb netdb;
 
-	NetDb::NetDb (): m_IsRunning (false), m_ReseedRetries (0), m_Thread (0)
+	NetDb::NetDb (): m_IsRunning (false), m_Thread (0)
 	{
 	}
 	
@@ -78,12 +78,27 @@ namespace data
 	void NetDb::Start ()
 	{	
 		Load (m_NetDbPath);
-		while (m_RouterInfos.size () < 100 && m_ReseedRetries < 10)
-		{
+		if (m_RouterInfos.size () < 100) // reseed if # of router less than 100
+		{	
 			Reseeder reseeder;
-			reseeder.reseedNow();
-			m_ReseedRetries++;
-			Load (m_NetDbPath);
+			reseeder.LoadCertificates (); // we need certificates for SU3 verification
+
+			// try SU3 first
+			int reseedRetries = 0;
+			while (m_RouterInfos.size () < 100 && reseedRetries < 10)
+			{	
+				reseeder.ReseedNowSU3();
+				reseedRetries++;
+			}	
+
+			// if still not enough download .dat files
+			reseedRetries = 0;
+			while (m_RouterInfos.size () < 100 && reseedRetries < 10)
+			{
+				reseeder.reseedNow();
+				reseedRetries++;
+				Load (m_NetDbPath);
+			}
 		}	
 		m_Thread = new std::thread (std::bind (&NetDb::Run, this));
 	}
@@ -165,6 +180,13 @@ namespace data
 		}	
 	}	
 	
+	void NetDb::AddRouterInfo (const uint8_t * buf, int len)
+	{
+		IdentityEx identity;
+		if (identity.FromBuffer (buf, len))
+			AddRouterInfo (identity.GetIdentHash (), buf, len);	
+	}
+
 	void NetDb::AddRouterInfo (const IdentHash& ident, const uint8_t * buf, int len)
 	{	
 		DeleteRequestedDestination (ident);	
@@ -895,27 +917,6 @@ namespace data
 			else 
 				it++;
 		}
-	}
-
-	void NetDb::PublishLeaseSet (const LeaseSet * leaseSet, i2p::tunnel::TunnelPool * pool)
-	{
-		if (!leaseSet || !pool) return;
-		auto outbound = pool->GetNextOutboundTunnel ();
-		if (!outbound)
-		{
-			LogPrint ("Can't publish LeaseSet. No outbound tunnels");
-			return;
-		}
-		std::set<IdentHash> excluded; 
-		auto floodfill = GetClosestFloodfill (leaseSet->GetIdentHash (), excluded);	
-		if (!floodfill)
-		{
-			LogPrint ("Can't publish LeaseSet. No floodfills found");
-			return;
-		}	
-		uint32_t replyToken = i2p::context.GetRandomNumberGenerator ().GenerateWord32 ();
-		auto msg = pool->GetGarlicDestination ().WrapMessage (*floodfill, i2p::CreateDatabaseStoreMsg (leaseSet, replyToken));	
-		outbound->SendTunnelDataMsg (floodfill->GetIdentHash (), 0, msg);		
 	}
 }
 }

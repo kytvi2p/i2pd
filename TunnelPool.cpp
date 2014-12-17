@@ -10,9 +10,9 @@ namespace i2p
 {
 namespace tunnel
 {
-	TunnelPool::TunnelPool (i2p::garlic::GarlicDestination& localDestination, int numHops, int numTunnels):
-		m_LocalDestination (localDestination), m_NumHops (numHops), m_NumTunnels (numTunnels),
-		m_IsActive (true)
+	TunnelPool::TunnelPool (i2p::garlic::GarlicDestination * localDestination, int numInboundHops, int numOutboundHops, int numTunnels):
+		m_LocalDestination (localDestination), m_NumInboundHops (numInboundHops), m_NumOutboundHops (numOutboundHops),
+		m_NumTunnels (numTunnels), m_IsActive (true)
 	{
 	}
 
@@ -45,7 +45,8 @@ namespace tunnel
 			std::unique_lock<std::mutex> l(m_InboundTunnelsMutex);
 			m_InboundTunnels.insert (createdTunnel);
 		}
-		m_LocalDestination.SetLeaseSetUpdated ();
+		if (m_LocalDestination)
+			m_LocalDestination->SetLeaseSetUpdated ();
 	}
 
 	void TunnelPool::TunnelExpired (InboundTunnel * expiredTunnel)
@@ -183,13 +184,15 @@ namespace tunnel
 						std::unique_lock<std::mutex> l(m_InboundTunnelsMutex);
 						m_InboundTunnels.erase (it.second.second);
 					}
-					m_LocalDestination.SetLeaseSetUpdated ();
+					if (m_LocalDestination)
+						m_LocalDestination->SetLeaseSetUpdated ();
 				}	
 				else
 					it.second.second->SetState (eTunnelStateTestFailed);
 			}	
 		}
-		m_Tests.clear ();	
+		m_Tests.clear ();
+		// new tests	
 		auto it1 = m_OutboundTunnels.begin ();
 		auto it2 = m_InboundTunnels.begin ();
 		while (it1 != m_OutboundTunnels.end () && it2 != m_InboundTunnels.end ())
@@ -207,15 +210,26 @@ namespace tunnel
 			}
 			if (!failed)
 			{
-				uint32_t msgID = rnd.GenerateWord32 ();
-				m_Tests[msgID] = std::make_pair (*it1, *it2);
-				(*it1)->SendTunnelDataMsg ((*it2)->GetNextIdentHash (), (*it2)->GetNextTunnelID (),
+ 				uint32_t msgID = rnd.GenerateWord32 ();
+ 				m_Tests[msgID] = std::make_pair (*it1, *it2);
+ 				(*it1)->SendTunnelDataMsg ((*it2)->GetNextIdentHash (), (*it2)->GetNextTunnelID (),
 					CreateDeliveryStatusMsg (msgID));
 				it1++; it2++;
 			}	
 		}
 	}
 
+	void TunnelPool::ProcessGarlicMessage (I2NPMessage * msg)
+	{
+		if (m_LocalDestination)
+			m_LocalDestination->ProcessGarlicMessage (msg);
+		else
+		{
+			LogPrint (eLogWarning, "Local destination doesn't exist. Dropped");
+			DeleteI2NPMessage (msg);
+		}	
+	}	
+		
 	void TunnelPool::ProcessDeliveryStatus (I2NPMessage * msg)
 	{
 		I2NPDeliveryStatusMsg * deliveryStatus = (I2NPDeliveryStatusMsg *)msg->GetPayload ();
@@ -232,13 +246,23 @@ namespace tunnel
 			DeleteI2NPMessage (msg);
 		}
 		else
-			m_LocalDestination.ProcessDeliveryStatusMessage (msg);
+		{
+			if (m_LocalDestination)
+				m_LocalDestination->ProcessDeliveryStatusMessage (msg);
+			else
+			{	
+				LogPrint (eLogWarning, "Local destination doesn't exist. Dropped");
+				DeleteI2NPMessage (msg);
+			}	
+		}	
 	}
 
 	std::shared_ptr<const i2p::data::RouterInfo> TunnelPool::SelectNextHop (std::shared_ptr<const i2p::data::RouterInfo> prevHop) const
 	{
-		auto hop = m_NumHops >= 3 ? i2p::data::netdb.GetHighBandwidthRandomRouter (prevHop) :
-			i2p::data::netdb.GetRandomRouter (prevHop);
+		bool isExploratory = (m_LocalDestination == &i2p::context); // TODO: implement it better
+		auto hop =  isExploratory ? i2p::data::netdb.GetRandomRouter (prevHop): 
+			i2p::data::netdb.GetHighBandwidthRandomRouter (prevHop);
+			
 		if (!hop)
 			hop = i2p::data::netdb.GetRandomRouter ();
 		return hop;	
@@ -252,7 +276,7 @@ namespace tunnel
 		LogPrint ("Creating destination inbound tunnel...");
 		auto prevHop = i2p::context.GetSharedRouterInfo ();	
 		std::vector<std::shared_ptr<const i2p::data::RouterInfo> > hops;
-		int numHops = m_NumHops;
+		int numHops = m_NumInboundHops;
 		if (outboundTunnel)
 		{	
 			// last hop
@@ -296,7 +320,7 @@ namespace tunnel
 
 			auto prevHop = i2p::context.GetSharedRouterInfo ();
 			std::vector<std::shared_ptr<const i2p::data::RouterInfo> > hops;
-			for (int i = 0; i < m_NumHops; i++)
+			for (int i = 0; i < m_NumOutboundHops; i++)
 			{
 				auto hop = SelectNextHop (prevHop);
 				prevHop = hop;
