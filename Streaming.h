@@ -45,8 +45,8 @@ namespace stream
 	
 	struct Packet
 	{
-		uint8_t buf[MAX_PACKET_SIZE];	
 		size_t len, offset;
+		uint8_t buf[MAX_PACKET_SIZE];	
 		int numResendAttempts;
 		
 		Packet (): len (0), offset (0), numResendAttempts (0) {};
@@ -112,6 +112,7 @@ namespace stream
 
 			void SendQuickAck ();
 			bool SendPacket (Packet * packet);
+			void PostPackets (const std::vector<Packet *> packets);
 			void SendPackets (const std::vector<Packet *>& packets);
 
 			void SavePacket (Packet * packet);
@@ -141,6 +142,7 @@ namespace stream
 			const i2p::data::LeaseSet * m_RemoteLeaseSet;
 			i2p::garlic::GarlicRoutingSession * m_RoutingSession;
 			i2p::data::Lease m_CurrentRemoteLease;
+			i2p::tunnel::OutboundTunnel * m_CurrentOutboundTunnel;
 			std::queue<Packet *> m_ReceiveQueue;
 			std::set<Packet *, PacketCmp> m_SavedPackets;
 			std::set<Packet *, PacketCmp> m_SentPackets;
@@ -187,8 +189,6 @@ namespace stream
 			// for HTTP only
 			const decltype(m_Streams)& GetStreams () const { return m_Streams; };
 	};		
-
-	void DeleteStream (std::shared_ptr<Stream> stream);
 
 //-------------------------------------------------
 

@@ -56,6 +56,11 @@ namespace data
 				return std::string (str);
 			}	
 
+			void FromBase32 (const std::string& s)
+			{
+				i2p::data::Base32ToByteStream (s.c_str (), s.length (), m_Buf, sz);
+			}
+
 		private:
 
 			union // 8 bytes alignment
@@ -108,6 +113,9 @@ namespace data
 	const uint16_t SIGNING_KEY_TYPE_ECDSA_SHA256_P256 = 1;
 	const uint16_t SIGNING_KEY_TYPE_ECDSA_SHA384_P384 = 2;
 	const uint16_t SIGNING_KEY_TYPE_ECDSA_SHA512_P521 = 3;
+	const uint16_t SIGNING_KEY_TYPE_RSA_SHA256_2048 = 4;
+	const uint16_t SIGNING_KEY_TYPE_RSA_SHA384_3072 = 5;
+	const uint16_t SIGNING_KEY_TYPE_RSA_SHA512_4096 = 6;
 	typedef uint16_t SigningKeyType;
 	typedef uint16_t CryptoKeyType;	
 	
@@ -124,18 +132,21 @@ namespace data
 			IdentityEx& operator=(const IdentityEx& other);
 			IdentityEx& operator=(const Identity& standard);
 
-			size_t FromBase64(const std::string& s);
 			size_t FromBuffer (const uint8_t * buf, size_t len);
 			size_t ToBuffer (uint8_t * buf, size_t len) const;
+			size_t FromBase64(const std::string& s);
+			std::string ToBase64 () const;
 			const Identity& GetStandardIdentity () const { return m_StandardIdentity; };
 			const IdentHash& GetIdentHash () const { return m_IdentHash; };
 			size_t GetFullLen () const { return m_ExtendedLen + DEFAULT_IDENTITY_SIZE; };
 			size_t GetSigningPublicKeyLen () const;
+			size_t GetSigningPrivateKeyLen () const;
 			size_t GetSignatureLen () const;
 			bool Verify (const uint8_t * buf, size_t len, const uint8_t * signature) const;
 			SigningKeyType GetSigningKeyType () const;
 			CryptoKeyType GetCryptoKeyType () const;
-			
+			void DropVerifier (); // to save memory			
+
 		private:
 
 			void CreateVerifier () const;
@@ -165,9 +176,12 @@ namespace data
 			const uint8_t * GetSigningPrivateKey () const { return m_SigningPrivateKey; };
 			void Sign (const uint8_t * buf, int len, uint8_t * signature) const;
 
-			size_t GetFullLen () const { return m_Public.GetFullLen () + 256 + m_Public.GetSignatureLen ()/2; };			
+			size_t GetFullLen () const { return m_Public.GetFullLen () + 256 + m_Public.GetSigningPrivateKeyLen (); }; 		
 			size_t FromBuffer (const uint8_t * buf, size_t len);
 			size_t ToBuffer (uint8_t * buf, size_t len) const;
+
+			size_t FromBase64(const std::string& s);
+			std::string ToBase64 () const;
 
 			static PrivateKeys CreateRandomKeys (SigningKeyType type = SIGNING_KEY_TYPE_DSA_SHA1);
 	
@@ -179,7 +193,7 @@ namespace data
 
 			IdentityEx m_Public;
 			uint8_t m_PrivateKey[256];
-			uint8_t m_SigningPrivateKey[128]; // assume private key doesn't exceed 128 bytes
+			uint8_t m_SigningPrivateKey[1024]; // assume private key doesn't exceed 1024 bytes
 			i2p::crypto::Signer * m_Signer;
 	};
 

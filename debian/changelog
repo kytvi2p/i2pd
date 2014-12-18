@@ -1,3 +1,179 @@
+i2pd (0.5.0-1) unstable; urgency=medium
+
+  [ orignal ]
+  * eliminated NTCPServerConnection
+  * moved NTCP client code to Transports
+  * use shared pointer for NTCPSession
+  * drop verifier not used anymore
+  * 16 bytes alignmen of AES block
+  * adjust message length after alignment
+  * remember last outgoing tunnel per stream rather than per client destination
+  * filesytem-based addressbook
+  * naming lookup through addressbook
+  * send packets of a longer message at the that time
+  * alignment
+  * fixed crash
+  * store addresses in csv format
+  * load from addressbook first
+  * wait for confirmantion of publishing
+  * store SAM destinations if address book
+  * moved private keys creation to client context
+  * encypt tunnel test messages
+  * fixed API build error
+  * fixed crash
+  * send NACKs
+
+  [ Kill Your TV ]
+  * Fixed typo in manpage
+
+  [ orignal ]
+  * count NACKs in plain ack message size
+  * different tunnel length for IB and OB
+  * pass I2CP options to local destination. Process tunnel length
+  * handle ipv6 sessions in separate thread
+  * show local destination's tuunels state
+  * don't delete HTTP connection twice
+  * fixed memory leak
+  * from/to base64
+  * wait for all messages acked before termination of a stream
+  * delete stream from inside
+  * delete non-responding streams
+  * BOB added
+  * command channel acceptor
+  * BOB command parser
+  * send BOB message reply
+  * BOB outgoing tunnels
+  * return public key only for newkeys
+  * BOB inbound tunnel
+  * inbound tunnels
+  * handle stop command
+  * temporary disabled tunnel test encryption due instability
+  * send recived data after address from BOB inbound connection
+  * fixed memory corruption
+  * BOB setkeys/getkeys
+  * fixed crash on termination
+  * handle .i2p address for BOB inbound connections
+  * check identity buffer size
+  * populate session keys
+  * don't close session if unknown command
+  * BOB quiet command
+  * send base64 adress from outbound non-quiet BOB connections
+  * BOB lookup command
+  * BOB 'clear' command
+  * BOB 'list' command
+  * pass BOB options to destination
+  * pass BOB options to destination
+  * inbound and outbound BOB tunnels per destination
+  * AddressReceiver for inbound BOB tunnel
+
+  [ Igor Pavlov ]
+  * add SSUSession.cpp to CMakeList.txt
+  * change asm labels to temporarily labels to fix clang compilation
+
+  [ orignal ]
+  * fixed crash at startup
+  * don't publish to non-responding floodfill twice
+  * proper response to 'setkeys'
+  * Update README.md
+  * verify tag count field
+  * BOB 'clear' command
+  * BOB 'clear' command
+  * fixed typo
+  * add single tag from destination's tread
+  * pass instance of std::ostream for logging from API
+  * enale tunnl test encryption back
+  * fixed crash
+  * fxied build error for VS
+  * look for LeaseSet in local database
+  * process SU3 header
+  * fixed build error
+  * some cleanup
+  * fixed build error
+  * fixed fields length
+  * use Inflator instead Gunzip
+  * rolled back
+  * added RSA verifier
+  * RSA signatures
+  * copy private signing key of proper size
+
+  [ hagen ]
+  * * README.md : add -conf option
+  * * build library in the same tree as main binary
+  * * fix cmake build
+
+  [ orignal ]
+  * reaturned api folder back
+  * fixed tabs
+  * extend temporary buffer size to 1024
+  * pass RSA public key in constructor
+
+  [ Kill Your TV ]
+  * minor tweaks to the README
+
+  [ orignal ]
+  * pass params to destination
+  * reseed from SU3
+  * handle compression method field
+  * SU3 resseed first
+  * check for RI size
+  * check for data descriptor flag
+  * process SU3 files with data descriptor
+
+  [ Kill Your TV ]
+  * sync certificates with the java router
+
+  [ orignal ]
+  * initial parsin of X.509 certificate
+  * read certificate file
+
+  [ hagen ]
+  * * cleanup : remove 100% garbage in Makefile.osx
+  * * (1/3) update filelist.mk : 3 lists of sources: common, daemon-specific and library-specific
+  * * (2/3) update main Makefile
+  * * (3/3) 2nd try : drop api/ subdir
+  * * (1/3) cleanup : use $CXXFLAGS instead $CPU_FLAGS
+  * * (2/3) cleanup : use $CXXFLAGS instead $NEEDED_FLAGS
+  * * (3/3) cleanup : unused variable
+  * * Makefile.osx : exchange options
+  * * Makefile.linux : reorder checks
+  * * Makefile.linux : use idents with spaces
+  * * move USE_* to main Makefile
+  * * almost fixed static linking
+  * * Makefile : add dist target
+  * * update build/CMakeLists.txt
+
+  [ orignal ]
+  * extract issuer name
+
+  [ hagen ]
+  * * reorder makefile rules : fix depends on header
+
+  [ orignal ]
+  * don't make executable as shared
+  * extract public key from ceritificate
+  * load certificates and verify signatures
+  * extend LeaseSet buffer to fir RSA-4096 key and signature
+  * use RSA-raw for SU3 verification
+  * RSA raw verifier
+  * load certificates before reseed
+  * don't use AESNI if not supported
+  * some cleanup
+  * pass local destination by pointer
+  * create io_service together with destination
+  * CRC32 verification
+  * fixed compilation warning
+  * drop incoming garlic messages if local destination doesn't exist anymore
+  * check max version
+  * handle signature type for SAM 3.1
+  * fixed handshake
+  * delete local destination on session close
+  * version updated
+
+  [ Kill Your TV ]
+  * New upstream release
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Wed, 17 Dec 2014 15:28:23 +0000
+
 i2pd (0.4.0-1~deb7u+1) stable; urgency=medium
 
   * Backport to Wheezy
@@ -32,7 +208,6 @@ i2pd (0.4.0-1) unstable; urgency=medium
 
   [ Kill Your TV ]
   * New upstream release
-
 i2pd (0.3.0-1) unstable; urgency=medium
 
   [ orignal ]

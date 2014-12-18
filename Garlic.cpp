@@ -83,6 +83,7 @@ namespace garlic
 	I2NPMessage * GarlicRoutingSession::WrapSingleMessage (I2NPMessage * msg)
 	{
 		I2NPMessage * m = NewI2NPMessage ();
+		m->Align (12); // in order to get buf aligned to 16 (12 + 4)
 		size_t len = 0;
 		uint8_t * buf = m->GetPayload () + 4; // 4 bytes for length
 
@@ -278,7 +279,7 @@ namespace garlic
 					uint8_t key[32], tag[32];
 					m_Rnd.GenerateBlock (key, 32); // random session key 
 					m_Rnd.GenerateBlock (tag, 32); // random session tag
-					m_Owner->AddSessionKey (key, tag);
+					m_Owner->SubmitSessionKey (key, tag);
 					GarlicRoutingSession garlic (key, tag);
 					msg = garlic.WrapSingleMessage (msg);		
 				}
@@ -319,6 +320,12 @@ namespace garlic
 			decryption->SetKey (key);
 			m_Tags[SessionTag(tag, ts)] = decryption;
 		}
+	}
+
+	bool GarlicDestination::SubmitSessionKey (const uint8_t * key, const uint8_t * tag) 
+	{
+		AddSessionKey (key, tag);
+		return true;
 	}
 
 	void GarlicDestination::HandleGarlicMessage (I2NPMessage * msg)
@@ -383,18 +390,24 @@ namespace garlic
 		i2p::tunnel::InboundTunnel * from)
 	{
 		uint16_t tagCount = be16toh (*(uint16_t *)buf);
-		buf += 2;	
+		buf += 2; len -= 2;	
 		if (tagCount > 0)
 		{	
+			if (tagCount*32 > len) 
+			{
+				LogPrint (eLogError, "Tag count ", tagCount, " exceeds length ", len);
+				return ;
+			}	
 			uint32_t ts = i2p::util::GetSecondsSinceEpoch ();
 			for (int i = 0; i < tagCount; i++)
 				m_Tags[SessionTag(buf + i*32, ts)] = decryption;	
 		}	
 		buf += tagCount*32;
+		len -= tagCount*32;
 		uint32_t payloadSize = be32toh (*(uint32_t *)buf);
 		if (payloadSize > len)
 		{
-			LogPrint ("Unexpected payload size ", payloadSize);
+			LogPrint (eLogError, "Unexpected payload size ", payloadSize);
 			return;
 		}	
 		buf += 4;
