@@ -1,5 +1,7 @@
+#include <fstream>
 #include "util.h"
 #include "Log.h"
+#include "Identity.h"
 #include "ClientContext.h"
 
 namespace i2p
@@ -10,7 +12,7 @@ namespace client
 
 	ClientContext::ClientContext (): m_SharedLocalDestination (nullptr),
 		m_HttpProxy (nullptr), m_SocksProxy (nullptr), m_IrcTunnel (nullptr),
-		m_ServerTunnel (nullptr), m_SamBridge (nullptr)	
+		m_ServerTunnel (nullptr), m_SamBridge (nullptr), m_BOBCommandChannel (nullptr)
 	{
 	}
 	
@@ -21,13 +23,14 @@ namespace client
 		delete m_IrcTunnel;
 		delete m_ServerTunnel;
 		delete m_SamBridge;
+		delete m_BOBCommandChannel;
 	}
 	
 	void ClientContext::Start ()
 	{
 		if (!m_SharedLocalDestination)
 		{	
-			m_SharedLocalDestination = new ClientDestination (false, i2p::data::SIGNING_KEY_TYPE_DSA_SHA1); // non-public, DSA
+			m_SharedLocalDestination = CreateNewLocalDestination (); // non-public, DSA
 			m_Destinations[m_SharedLocalDestination->GetIdentity ().GetIdentHash ()] = m_SharedLocalDestination;
 			m_SharedLocalDestination->Start ();
 		}
@@ -44,7 +47,7 @@ namespace client
 			ClientDestination * localDestination = nullptr;
 			std::string ircKeys = i2p::util::config::GetArg("-irckeys", "");	
 			if (ircKeys.length () > 0)
-				localDestination = i2p::client::context.LoadLocalDestination (ircKeys, false);
+				localDestination = LoadLocalDestination (ircKeys, false);
 			m_IrcTunnel = new I2PClientTunnel (m_SocksProxy->GetService (), ircDestination,
 				i2p::util::config::GetArg("-ircport", 6668), localDestination);
 			m_IrcTunnel->Start ();
@@ -53,7 +56,7 @@ namespace client
 		std::string eepKeys = i2p::util::config::GetArg("-eepkeys", "");
 		if (eepKeys.length () > 0) // eepkeys file is presented
 		{
-			auto localDestination = i2p::client::context.LoadLocalDestination (eepKeys, true);
+			auto localDestination = LoadLocalDestination (eepKeys, true);
 			m_ServerTunnel = new I2PServerTunnel (m_SocksProxy->GetService (), 
 				i2p::util::config::GetArg("-eephost", "127.0.0.1"), i2p::util::config::GetArg("-eepport", 80),
 				localDestination);
@@ -66,6 +69,13 @@ namespace client
 			m_SamBridge = new SAMBridge (samPort);
 			m_SamBridge->Start ();
 			LogPrint("SAM bridge started");
+		} 
+		int bobPort = i2p::util::config::GetArg("-bobport", 0);
+		if (bobPort)
+		{
+			m_BOBCommandChannel = new BOBCommandChannel (bobPort);
+			m_BOBCommandChannel->Start ();
+			LogPrint("BOB command channel started");
 		} 
 	}
 		
@@ -100,7 +110,14 @@ namespace client
 			m_SamBridge = nullptr;
 			LogPrint("SAM brdige stoped");	
 		}		
-		
+		if (m_BOBCommandChannel)
+		{
+			m_BOBCommandChannel->Stop ();
+			delete m_BOBCommandChannel; 
+			m_BOBCommandChannel = nullptr;
+			LogPrint("BOB command channel stoped");	
+		}			
+
 		for (auto it: m_Destinations)
 		{	
 			it.second->Stop ();
@@ -109,43 +126,49 @@ namespace client
 		m_Destinations.clear ();
 		m_SharedLocalDestination = 0; // deleted through m_Destination
 	}	
-
-	void ClientContext::LoadLocalDestinations ()
-	{
-		int numDestinations = 0;
-		boost::filesystem::path p (i2p::util::filesystem::GetDataDir());
-		boost::filesystem::directory_iterator end;
-		for (boost::filesystem::directory_iterator it (p); it != end; ++it)
-		{
-			if (boost::filesystem::is_regular_file (*it) && it->path ().extension () == ".dat")
-			{
-				auto fullPath =
-#if BOOST_VERSION > 10500
-				it->path().string();
-#else
-				it->path();
-#endif
-				auto localDestination = new ClientDestination (fullPath, true);
-				m_Destinations[localDestination->GetIdentHash ()] = localDestination;
-				numDestinations++;
-			}	
-		}	
-		if (numDestinations > 0)
-			LogPrint (numDestinations, " local destinations loaded");
-	}	
 	
 	ClientDestination * ClientContext::LoadLocalDestination (const std::string& filename, bool isPublic)
 	{
-		auto localDestination = new ClientDestination (i2p::util::filesystem::GetFullPath (filename), isPublic);
+		i2p::data::PrivateKeys keys;
+		std::string fullPath = i2p::util::filesystem::GetFullPath (filename);
+		std::ifstream s(fullPath.c_str (), std::ifstream::binary);
+		if (s.is_open ())	
+		{	
+			s.seekg (0, std::ios::end);
+			size_t len = s.tellg();
+			s.seekg (0, std::ios::beg);
+			uint8_t * buf = new uint8_t[len];
+			s.read ((char *)buf, len);
+			keys.FromBuffer (buf, len);
+			delete[] buf;
+			LogPrint ("Local address ", keys.GetPublic ().GetIdentHash ().ToBase32 (), ".b32.i2p loaded");
+		}	
+		else
+		{
+			LogPrint ("Can't open file ", fullPath, " Creating new one");
+			keys = i2p::data::PrivateKeys::CreateRandomKeys (i2p::data::SIGNING_KEY_TYPE_DSA_SHA1); 
+			std::ofstream f (fullPath, std::ofstream::binary | std::ofstream::out);
+			size_t len = keys.GetFullLen ();
+			uint8_t * buf = new uint8_t[len];
+			len = keys.ToBuffer (buf, len);
+			f.write ((char *)buf, len);
+			delete[] buf;
+			
+			LogPrint ("New private keys file ", fullPath, " for ", keys.GetPublic ().GetIdentHash ().ToBase32 (), ".b32.i2p created");
+		}	
+
+		auto localDestination = new ClientDestination (keys, isPublic);
 		std::unique_lock<std::mutex> l(m_DestinationsMutex);	
 		m_Destinations[localDestination->GetIdentHash ()] = localDestination;
 		localDestination->Start ();
 		return localDestination;
 	}
 
-	ClientDestination * ClientContext::CreateNewLocalDestination (bool isPublic, i2p::data::SigningKeyType sigType)
+	ClientDestination * ClientContext::CreateNewLocalDestination (bool isPublic, i2p::data::SigningKeyType sigType,
+		const std::map<std::string, std::string> * params)
 	{
-		auto localDestination = new ClientDestination (isPublic, sigType);
+		i2p::data::PrivateKeys keys = i2p::data::PrivateKeys::CreateRandomKeys (sigType);
+		auto localDestination = new ClientDestination (keys, isPublic, params);
 		std::unique_lock<std::mutex> l(m_DestinationsMutex);
 		m_Destinations[localDestination->GetIdentHash ()] = localDestination;
 		localDestination->Start ();
@@ -168,7 +191,8 @@ namespace client
 		}
 	}
 
-	ClientDestination * ClientContext::CreateNewLocalDestination (const i2p::data::PrivateKeys& keys, bool isPublic)
+	ClientDestination * ClientContext::CreateNewLocalDestination (const i2p::data::PrivateKeys& keys, bool isPublic,
+		const std::map<std::string, std::string> * params)
 	{
 		auto it = m_Destinations.find (keys.GetPublic ().GetIdentHash ());
 		if (it != m_Destinations.end ())
@@ -181,7 +205,7 @@ namespace client
 			}	
 			return nullptr;
 		}	
-		auto localDestination = new ClientDestination (keys, isPublic);
+		auto localDestination = new ClientDestination (keys, isPublic, params);
 		std::unique_lock<std::mutex> l(m_DestinationsMutex);
 		m_Destinations[keys.GetPublic ().GetIdentHash ()] = localDestination;
 		localDestination->Start ();

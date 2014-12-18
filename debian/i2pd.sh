@@ -12,4 +12,10 @@ if [ ! -r $_HOME/hosts.txt ]; then
     zcat $HOSTS > $_HOME/hosts.txt
 fi
 
+if [ ! -d $_HOME/certificates ]; then
+   rm -rf $_HOME/certificates
+   cp -Rp /usr/lib/i2pd/certificates $_HOME
+fi
+
+
 exec /usr/lib/i2pd/i2p "$@"

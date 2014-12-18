@@ -14,7 +14,7 @@ override_dh_auto_clean:
 	dh_auto_clean
 
 override_dh_auto_build:
-	$(FT) make USE_AESNI=no CXXFLAGS="$(shell dpkg-buildflags --get CXXFLAGS)" LDFLAGS="$(shell dpkg-buildflags --get LDFLAGS)"
+	$(FT) make USE_AESNI=no obj i2p
 
 override_dh_auto_build-arch:
 	$(FT) dh_auto_build -a
@@ -22,6 +22,7 @@ override_dh_auto_build-arch:
 
 override_dh_install:
 	install -d $(CURDIR)/debian/i2pd/usr/lib/i2pd
+	cp -Rp $(CURDIR)/contrib/certificates $(CURDIR)/debian/i2pd/usr/lib/i2pd/certificates
 	install i2p $(CURDIR)/debian/i2pd/usr/lib/i2pd/i2p
 	install debian/i2pd.sh $(CURDIR)/debian/i2pd/usr/bin/i2pd
 

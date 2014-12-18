@@ -1,3 +1,925 @@
+2014-12-17  orignal <i2porignal@yandex.ru>
+
+	* version.h: version updated
+
+2014-12-16  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp: delete local destination on session close
+
+2014-12-16  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp: fixed handshake
+
+2014-12-16  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h: handle signature type for SAM 3.1
+
+2014-12-16  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h: check max version
+
+2014-12-16  orignal <i2porignal@yandex.ru>
+
+	* I2NPProtocol.cpp: drop incoming garlic messages if local
+	destination doesn't exist anymore
+
+2014-12-16  orignal <i2porignal@yandex.ru>
+
+	* Signature.h: fixed compilation warning
+
+2014-12-16  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp: CRC32 verification
+
+2014-12-15  orignal <i2porignal@yandex.ru>
+
+	* Datagram.cpp, Destination.cpp, Destination.h, Streaming.cpp: 
+	create io_service together with destination
+
+2014-12-15  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, I2NPProtocol.cpp, LeaseSet.cpp, NetDb.cpp,
+	Tunnel.cpp, Tunnel.h, TunnelPool.cpp, TunnelPool.h: pass local
+	destination by pointer
+
+2014-12-15  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, TunnelPool.h: some cleanup
+
+2014-12-15  orignal <i2porignal@yandex.ru>
+
+	* Makefile.linux: don't use AESNI if not supported
+
+2014-12-15  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp: load certificates before reseed
+
+2014-12-15  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp, Signature.h: RSA raw verifier
+
+2014-12-14  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp: use RSA-raw for SU3 verification
+
+2014-12-13  orignal <i2porignal@yandex.ru>
+
+	* LeaseSet.h: extend LeaseSet buffer to fir RSA-4096 key and
+	signature
+
+2014-12-13  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp, Reseed.h, util.cpp, util.h: load certificates and
+	verify signatures
+
+2014-12-13  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp, Reseed.h, Signature.h: extract public key from
+	ceritificate
+
+2014-12-13  orignal <i2porignal@yandex.ru>
+
+	* Makefile, Makefile.linux: don't make executable as shared
+
+2014-12-13  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #117 from hagen-i2p/library-build-2 Library build 2
+
+2014-12-13  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp: extract issuer name
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* build/CMakeLists.txt: * update build/CMakeLists.txt
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* Makefile: * Makefile : add dist target
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* Makefile, Makefile.linux: * almost fixed static linking
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* Makefile, Makefile.linux, Makefile.osx: * move USE_* to main Makefile
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* Makefile.linux: * Makefile.linux : use idents with spaces
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* Makefile.linux: * Makefile.linux : reorder checks
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* Makefile.osx: * Makefile.osx : exchange options
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* Makefile, Makefile.bsd, Makefile.linux, Makefile.osx: * (3/3)
+	cleanup : unused variable
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* Makefile, Makefile.bsd, Makefile.linux: * (2/3) cleanup : use
+	$CXXFLAGS instead $NEEDED_FLAGS
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* Makefile, Makefile.linux: * (1/3) cleanup : use $CXXFLAGS instead
+	$CPU_FLAGS
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* api/Makefile, api/filelist.mk: * (3/3) 2nd try : drop api/ subdir
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* Makefile: * (2/3) update main Makefile
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* Makefile, Makefile.bsd, Makefile.linux, Makefile.osx, filelist.mk: 
+	* (1/3) update filelist.mk : 3 lists of sources: common,
+	daemon-specific and library-specific
+
+2014-12-12  hagen <hagen@mail.i2p>
+
+	* Makefile.osx: * cleanup : remove 100% garbage in Makefile.osx
+
+2014-12-12  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp: read certificate file
+
+2014-12-12  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp, Reseed.h: initial parsin of X.509 certificate
+
+2014-12-12  Kill Your TV <killyourtv@i2pmail.org>
+
+	* contrib/certificates/reseed/bugme_at_mail.i2p.crt,
+	contrib/certificates/ssl/ieb9oopo.mooo.com2.crt,
+	contrib/certificates/ssl/link.mx24.eu.crt,
+	contrib/certificates/ssl/www.cacert.org.crt: sync certificates with
+	the java router
+
+2014-12-12  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp, Reseed.h: process SU3 files with data descriptor
+
+2014-12-12  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp, Reseed.h: check for data descriptor flag
+
+2014-12-11  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, Reseed.cpp: check for RI size
+
+2014-12-11  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, NetDb.h, Reseed.cpp: SU3 resseed first
+
+2014-12-11  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp: handle compression method field
+
+2014-12-11  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, NetDb.h, Reseed.cpp, Reseed.h: reseed from SU3
+
+2014-12-11  orignal <i2porignal@yandex.ru>
+
+	* : commit 7e52f8af5e0ac9f58b9f486023f40de9f070a3bc Author: orignal
+	<i2porignal@yandex.ru> Date:   Thu Dec 11 13:28:37 2014 -0500
+
+2014-12-11  Kill Your TV <killyourtv@i2pmail.org>
+
+	* README.md: minor tweaks to the README
+
+2014-12-11  orignal <i2porignal@yandex.ru>
+
+	* Signature.h: pass RSA public key in constructor
+
+2014-12-11  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp: extend temporary buffer size to 1024
+
+2014-12-11  orignal <i2porignal@yandex.ru>
+
+	* api/Makefile: fixed tabs
+
+2014-12-11  orignal <i2porignal@yandex.ru>
+
+	* api/Makefile, api/filelist.mk: reaturned api folder back
+
+2014-12-11  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #116 from hagen-i2p/library-build update buildsystem (cleanup and library build for cmake)
+
+2014-12-11  hagen <hagen@mail.i2p>
+
+	* build/CMakeLists.txt: * fix cmake build
+
+2014-12-11  hagen <hagen@mail.i2p>
+
+	* Makefile, Makefile.linux, api.cpp, api.h, api/Makefile,
+	api/api.cpp, api/api.h, api/filelist.mk: * build library in the same tree as main binary
+
+2014-12-11  hagen <hagen@mail.i2p>
+
+	* README.md: * README.md : add -conf option
+
+2014-12-10  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp: copy private signing key of proper size
+
+2014-12-10  orignal <i2porignal@yandex.ru>
+
+	* CryptoConst.h, Identity.cpp, Identity.h, Signature.h: RSA
+	signatures
+
+2014-12-10  orignal <i2porignal@yandex.ru>
+
+	* Identity.h, Signature.h: added RSA verifier
+
+2014-12-10  orignal <i2porignal@yandex.ru>
+
+	* i2p.cpp: rolled back
+
+2014-12-10  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp, i2p.cpp: use Inflator instead Gunzip
+
+2014-12-10  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp: fixed fields length
+
+2014-12-10  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h, NetDb.cpp: fixed build error
+
+2014-12-09  orignal <i2porignal@yandex.ru>
+
+	* I2NPProtocol.cpp, Tunnel.cpp, Tunnel.h, TunnelPool.h: some cleanup
+
+2014-12-09  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp: fixed build error
+
+2014-12-09  orignal <i2porignal@yandex.ru>
+
+	* Reseed.cpp: process SU3 header
+
+2014-12-09  orignal <i2porignal@yandex.ru>
+
+	* api/api.cpp: look for LeaseSet in local database
+
+2014-12-09  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp: fxied build error for VS
+
+2014-12-08  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, TunnelPool.cpp: fixed crash
+
+2014-12-08  orignal <i2porignal@yandex.ru>
+
+	* TunnelPool.cpp: enale tunnl test encryption back
+
+2014-12-08  orignal <i2porignal@yandex.ru>
+
+	* Log.cpp, Log.h, api/api.cpp, api/api.h: pass instance of
+	std::ostream for logging from API
+
+2014-12-08  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, Garlic.cpp, Garlic.h,
+	I2NPProtocol.cpp: add single tag from destination's tread
+
+2014-12-08  orignal <i2porignal@yandex.ru>
+
+	* api/api.h: fixed typo
+
+2014-12-07  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: BOB 'clear' command
+
+2014-12-07  orignal <i2porignal@yandex.ru>
+
+	* : commit 8f128811627d21a1f559aa8554e2b441f1bef3ed Author: orignal
+	<i2porignal@yandex.ru> Date:   Sun Dec 7 21:04:02 2014 -0500
+
+2014-12-07  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp: verify tag count field
+
+2014-12-07  orignal <i2porignal@yandex.ru>
+
+	* README.md: Update README.md -bobport added
+
+2014-12-07  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp: proper response to 'setkeys'
+
+2014-12-07  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h: don't publish to non-responding
+	floodfill twice
+
+2014-12-07  orignal <i2porignal@yandex.ru>
+
+	* : Merge pull request #113 from arabesc/master Fix build under FreeBSD 10.1 + Clang
+
+2014-12-07  Igor Pavlov <igor.arabesc.pavlov@gmail.com>
+
+	* aes.cpp: change asm labels to temporarily labels to fix clang
+	compilation
+
+2014-12-07  Igor Pavlov <igor.arabesc.pavlov@gmail.com>
+
+	* build/CMakeLists.txt: add SSUSession.cpp to CMakeList.txt
+
+2014-12-07  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: AddressReceiver for inbound BOB tunnel
+
+2014-12-06  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: inbound and outbound BOB tunnels per destination
+
+2014-12-06  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: pass BOB options to destination
+
+2014-12-06  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: pass BOB options to destination
+
+2014-12-05  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h, I2PTunnel.h: BOB 'list' command
+
+2014-12-05  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: BOB 'clear' command
+
+2014-12-05  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: BOB lookup command
+
+2014-12-05  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, I2PTunnel.cpp, I2PTunnel.h: send base64 adress from
+	outbound non-quiet BOB connections
+
+2014-12-05  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: BOB quiet command
+
+2014-12-05  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp: don't close session if unknown command
+
+2014-12-04  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp: populate session keys
+
+2014-12-04  orignal <i2porignal@yandex.ru>
+
+	* AddressBook.cpp, Identity.cpp, base64.cpp: check identity buffer
+	size
+
+2014-12-04  orignal <i2porignal@yandex.ru>
+
+	* AddressBook.cpp, BOB.cpp: handle .i2p address for BOB inbound
+	connections
+
+2014-12-04  orignal <i2porignal@yandex.ru>
+
+	* SAM.h: fixed crash on termination
+
+2014-12-03  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: BOB setkeys/getkeys
+
+2014-12-03  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp: fixed memory corruption
+
+2014-12-03  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h, I2PTunnel.cpp, I2PTunnel.h: send recived data
+	after address from BOB inbound connection
+
+2014-12-03  orignal <i2porignal@yandex.ru>
+
+	* TunnelPool.cpp: temporary disabled tunnel test encryption due
+	instability
+
+2014-12-03  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: handle stop command
+
+2014-12-03  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h, I2PTunnel.h: inbound tunnels
+
+2014-12-03  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: BOB inbound tunnel
+
+2014-12-02  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp: return public key only for newkeys
+
+2014-12-02  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: BOB outgoing tunnels
+
+2014-12-02  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: send BOB message reply
+
+2014-12-02  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h, ClientContext.cpp: BOB command parser
+
+2014-12-02  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h: command channel acceptor
+
+2014-12-02  orignal <i2porignal@yandex.ru>
+
+	* BOB.cpp, BOB.h, ClientContext.cpp, ClientContext.h,
+	Win32/i2pd.vcxproj, build/CMakeLists.txt,
+	build/autotools/Makefile.in, filelist.mk: BOB added
+
+2014-12-02  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp: delete non-responding streams
+
+2014-12-01  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, HTTPServer.cpp, I2PTunnel.cpp, SAM.cpp,
+	Streaming.cpp, Streaming.h, api/api.cpp: delete stream from inside
+
+2014-12-01  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp: wait for all messages acked before termination of a
+	stream
+
+2014-12-01  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp, Identity.h, SAM.cpp: from/to base64
+
+2014-11-30  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp: fixed memory leak
+
+2014-11-30  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp: don't delete HTTP connection twice
+
+2014-11-30  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp: show local destination's tuunels state
+
+2014-11-30  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h: handle ipv6 sessions in separate thread
+
+2014-11-30  orignal <i2porignal@yandex.ru>
+
+	* ClientContext.cpp, ClientContext.h, Destination.cpp,
+	Destination.h, SAM.cpp, SAM.h: pass I2CP options to local
+	destination. Process tunnel length
+
+2014-11-29  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Tunnel.cpp, Tunnel.h, TunnelPool.cpp,
+	TunnelPool.h: different tunnel length for IB and OB
+
+2014-11-29  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp: count NACKs in plain ack message size
+
+2014-11-29  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp: send NACKs
+
+2014-11-29  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp: fixed crash
+
+2014-11-28  orignal <i2porignal@yandex.ru>
+
+	* api/api.cpp: fixed API build error
+
+2014-11-28  orignal <i2porignal@yandex.ru>
+
+	* TunnelPool.cpp: encypt tunnel test messages
+
+2014-11-28  orignal <i2porignal@yandex.ru>
+
+	* ClientContext.cpp, ClientContext.h, Destination.cpp,
+	Destination.h: moved private keys creation to client context
+
+2014-11-28  orignal <i2porignal@yandex.ru>
+
+	* AddressBook.cpp, SAM.cpp, SAM.h: store SAM destinations if address
+	book
+
+2014-11-28  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, NetDb.cpp, NetDb.h: wait for
+	confirmantion of publishing
+
+2014-11-28  orignal <i2porignal@yandex.ru>
+
+	* AddressBook.cpp, AddressBook.h: load from addressbook first
+
+2014-11-27  orignal <i2porignal@yandex.ru>
+
+	* AddressBook.cpp, AddressBook.h, Identity.h: store addresses in csv
+	format
+
+2014-11-26  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp: fixed crash
+
+2014-11-26  orignal <i2porignal@yandex.ru>
+
+	* Streaming.h, TunnelGateway.cpp: alignment
+
+2014-11-26  orignal <i2porignal@yandex.ru>
+
+	* Streaming.cpp, Streaming.h: send packets of a longer message at
+	the that time
+
+2014-11-26  orignal <i2porignal@yandex.ru>
+
+	* AddressBook.cpp, AddressBook.h, SAM.cpp, SAM.h: naming lookup
+	through addressbook
+
+2014-11-26  orignal <i2porignal@yandex.ru>
+
+	* AddressBook.cpp, AddressBook.h: filesytem-based addressbook
+
+2014-11-26  orignal <i2porignal@yandex.ru>
+
+	* Datagram.cpp, Destination.cpp, Destination.h, Streaming.cpp,
+	Streaming.h: remember last outgoing tunnel per stream rather than
+	per client destination
+
+2014-11-26  orignal <i2porignal@yandex.ru>
+
+	* I2NPProtocol.h: adjust message length after alignment
+
+2014-11-26  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp, I2NPProtocol.h, aes.h: 16 bytes alignmen of AES block
+
+2014-11-26  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp, Identity.h, RouterInfo.cpp: drop verifier not used
+	anymore
+
+2014-11-25  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h, Transports.cpp, Transports.h: use
+	shared pointer for NTCPSession
+
+2014-11-25  orignal <i2porignal@yandex.ru>
+
+	* : commit 0ccb66476e2a3349a869ac206fa76d3e95c8355c Author: orignal
+	<i2porignal@yandex.ru> Date:   Tue Nov 25 15:16:03 2014 -0500
+
+2014-11-25  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h, Transports.cpp, Transports.h: 
+	eliminated NTCPServerConnection
+
+2014-11-25  orignal <i2porignal@yandex.ru>
+
+	* version.h: Update version.h version 0.4.0
+
+2014-11-25  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h: handle Phase3 in two steps
+
+2014-11-25  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp: send Phase3 with proper identity
+
+2014-11-25  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h: pass tsA to SendPhase4
+
+2014-11-25  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h: use generic receive buffer for
+	phase 4
+
+2014-11-24  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp: fixed excess data for P521
+
+2014-11-24  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp: fixed incorrect certificate length
+
+2014-11-24  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp, Identity.h, Signature.h: ECDSA P384 and ECDSA P521
+	support
+
+2014-11-24  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h: handle EcDSA signatures
+
+2014-11-24  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h, SSUData.cpp, SSUSession.cpp, SSUSession.h,
+	Transports.cpp, Transports.h: shared pointer for SSU
+
+2014-11-24  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSUSession.cpp, SSUSession.h: move WaitForConnect away
+	from constructor
+
+2014-11-23  orignal <i2porignal@yandex.ru>
+
+	* I2PTunnel.cpp, I2PTunnel.h: shared pointer for I2PTunnelConnection
+
+2014-11-23  orignal <i2porignal@yandex.ru>
+
+	* Datagram.cpp, Destination.cpp, SAM.cpp, Streaming.cpp,
+	Streaming.h: replaced boost::bind to std::bind
+
+2014-11-23  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, HTTPServer.cpp, HTTPServer.h,
+	I2PTunnel.cpp, I2PTunnel.h, SAM.cpp, SAM.h, SOCKS.cpp, SOCKS.h,
+	Streaming.cpp, Streaming.h, api/api.cpp, api/api.h: shared pointers
+	for streams
+
+2014-11-22  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h: fixed crash
+
+2014-11-22  Mikal Villa <meeh@sigterm.no>
+
+	* : commit fa461b125415c15e52dac7d0a7e54bac182db64e Author: Mikal
+	Villa <meeh@sigterm.no> Date:   Sat Nov 22 23:12:05 2014 +0100
+
+2014-11-22  orignal <i2porignal@yandex.ru>
+
+	* SAM.cpp, SAM.h: shared pointers for SAM sockets
+
+2014-11-21  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp: fixed typo
+
+2014-11-21  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: delete delete routers from memory
+
+2014-11-21  orignal <i2porignal@yandex.ru>
+
+	* HTTPServer.cpp, NetDb.cpp, NetDb.h: delete dead floodfill
+
+2014-11-21  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, NTCPSession.h, SSU.cpp, SSU.h, SSUSession.cpp,
+	SSUSession.h, TransportSession.h, Transports.cpp: use shared pointer
+	of RI for transports
+
+2014-11-21  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, NetDb.h, Transports.cpp: use shared pointer for RI in
+	requested destination
+
+2014-11-21  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, NetDb.h, Tunnel.cpp, Tunnel.h, TunnelConfig.h,
+	TunnelPool.cpp, TunnelPool.h: store shared pointer to RI in tunnel
+	config
+
+2014-11-21  Mikal <mikal@sigterm.no>
+
+	* Win32/PurpleI2P.nsi: Updated NSI file Forgot to update version in NSI installer script
+
+2014-11-20  Mikal <mikal@sigterm.no>
+
+	* Reseed.cpp: MSVC13 Fix Fixed build issue on MSVC13. Bumping to v0.3.0 as we release
+	binaries and SU3 is added.
+
+2014-11-20  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, NetDb.h, Transports.cpp, Tunnel.cpp, TunnelPool.cpp: 
+	return shared_ptr to RI
+
+2014-11-20  orignal <i2porignal@yandex.ru>
+
+	* RouterContext.h: shared pointer for local RI
+
+2014-11-20  orignal <i2porignal@yandex.ru>
+
+	* I2PEndian.h, Reseed.cpp, Reseed.h: SU3 file parser
+
+2014-11-20  orignal <i2porignal@yandex.ru>
+
+	* Identity.cpp, Identity.h, RouterContext.cpp, RouterInfo.cpp,
+	RouterInfo.h, version.h: support of RI with EcDSA
+
+2014-11-19  orignal <i2porignal@yandex.ru>
+
+	* RouterInfo.cpp: read RI from buffer
+
+2014-11-19  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp: encrypted delivery status
+
+2014-11-19  orignal <i2porignal@yandex.ru>
+
+	* aes.h: fixed misalignment
+
+2014-11-18  orignal <i2porignal@yandex.ru>
+
+	* SSU.h: receive buffers aligned to 16
+
+2014-11-18  orignal <i2porignal@yandex.ru>
+
+	* aes.cpp, aes.h: AES buffer aligned to 16 bytes
+
+2014-11-18  orignal <i2porignal@yandex.ru>
+
+	* NetDb.cpp, NetDb.h: store RIs as shared pointers
+
+2014-11-18  orignal <i2porignal@yandex.ru>
+
+	* Destination.cpp, Destination.h, Streaming.h, api/api.cpp,
+	api/api.h: streaming api functions added
+
+2014-11-17  orignal <i2porignal@yandex.ru>
+
+	* api/api.cpp, api/api.h: create local destination through API
+
+2014-11-17  orignal <i2porignal@yandex.ru>
+
+	* api/api.cpp, util.cpp, util.h: specify application name
+
+2014-11-17  orignal <i2porignal@yandex.ru>
+
+	* api/api.cpp, api/api.h, api/filelist.mk: start/stop/init through
+	api
+
+2014-11-17  orignal <i2porignal@yandex.ru>
+
+	* api/Makefile, api/api.cpp, api/api.h, api/filelist.mk: api added
+
+2014-11-16  orignal <i2porignal@yandex.ru>
+
+	* Garlic.cpp: delete single message routing session immediately
+
+2014-11-11  Mikal <mikal@sigterm.no>
+
+	* Win32/i2pd.sln, Win32/i2pd.vcxproj, Win32/i2pd.vcxproj.filters: 
+	Adding Icon for windows Adding icon for windows executable.
+
+2014-11-11  Mikal <mikal@sigterm.no>
+
+	* Win32/PurpleI2P.nsi, Win32/nsi/helper_readme.nsh,
+	Win32/nsi/servicelib.nsh: Adding windows installer
+
+2014-11-09  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Win32/README-Build.txt: Remove "DLL-Output" from README's example This is not required to build i2pd.
+
+2014-11-08  Kill Your TV <killyourtv@i2pmail.org>
+
+	* : commit d636d55cc888454e3d7ae0ed0fe4dee92c993724 Author: Kill
+	Your TV <killyourtv@i2pmail.org> Date:   Sat Nov 8 13:29:15 2014
+	+0000
+
+2014-11-08  apekatten <ads+github@tty.no>
+
+	* Win32/i2pd.vcxproj, Win32/i2pd.vcxproj.filters: Removed required
+	admin-level for running
+
+2014-11-06  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Win32/inno_installer.iss: innosetup: Add i2pd to PATH
+
+2014-11-04  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Win32/inno_installer.iss: updates to innosetup script * support installation of both x64 and x86 binaries * add readme * add function to convert line endings. The README.md file currently
+	  has Windows line endings, but if that ever changes this function
+	  will automatically make the file "Windows friendly".
+
+2014-11-04  Kill Your TV <killyourtv@i2pmail.org>
+
+	* README.md: minor updates to readme * grammar fixes * note working VS2013 version * change tabs to spaces to ensure proper viewing on systems with * different tab settings
+
+2014-11-04  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Win32/i2pd.vcxproj.filters: update vcxproj.filters
+
+2014-11-03  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Win32/i2pd.sln, Win32/i2pd.vcxproj: Various changes to Windows
+	build - No hard coded dependency paths. These are better set with
+	  environment variables or property pages.  - Don't require admin rights to run - Add support for running on Windows XP (note that Boost and
+	  Crypto++ *also* need to be built targetting XP).  - Explicitly set type to console application - Initial stubs for building x64 version - Turn off sending error reports to Microsoft - spaces, not tabs (matches the default when saved by VS2013 itself) - disable multibyte - re-enable SDL checks
+
+2014-11-06  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Log.cpp: Revert "fixed typo" and "fixed crash for Windows" This reverts commits c8a80a497d6b7f0f98841b72febb0dba9fabec28 and
+	f7791e5289ef61860e0fca024f86c31e448982f1 This didn't actually fix Windows crash problem. In fact, it still
+	crashed without --log=0 being set. Changes to the i2pd.vcxproj file
+	fixed the crashes with VS 2013 > update 1.  i2pd now works with VS
+	2013 Update 3 and Update 4 RC.  Since these changes didn't have the intended effect, let's remove
+	them.
+
+2014-11-07  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Makefile.linux: easier static builds (STATIC=yes) This will also disable AESNI
+
+2014-11-07  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Makefile.linux: Allow setting the LIBDIR at build time
+
+2014-10-31  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Makefile.linux: allow AESNI to be disabled
+
+2014-10-30  Kill Your TV <killyourtv@i2pmail.org>
+
+	* Makefile, Makefile.bsd, Makefile.linux, Makefile.osx: allow
+	LDFLAGS to be set by user Move old LDFLAGS variable to LDLIBS. By doing ths, a user can set
+	their own LDFLAGS without breaking the build. A case in which this
+	can be useful is hardening with debian, e.g.      $ dpkg-buildflags --get LDFLAGS     -Wl,-z,relro
+
+2014-11-03  orignal <i2porignal@yandex.ru>
+
+	* SSUData.cpp: check for SSU packet size
+
+2014-11-02  orignal <i2porignal@yandex.ru>
+
+	* Log.cpp: fixed typo
+
+2014-11-01  orignal <i2porignal@yandex.ru>
+
+	* Garlic.h, NTCPSession.cpp, NTCPSession.h, aes.cpp, aes.h: aligned
+	AES keys
+
+2014-11-01  orignal <i2porignal@yandex.ru>
+
+	* Log.cpp: fixed crash for Windows
+
+2014-11-01  orignal <i2porignal@yandex.ru>
+
+	* NTCPSession.cpp, version.h: fixed double deletion
+
+2014-11-01  orignal <i2porignal@yandex.ru>
+
+	* SSUSession.cpp, SSUSession.h, aes.h, hmac.h: aligned AES and MAC
+	keys
+
+2014-10-31  orignal <i2porignal@yandex.ru>
+
+	* RouterContext.cpp, util.cpp: specify actual mtu in our RI for
+	i2pv6
+
+2014-10-31  orignal <i2porignal@yandex.ru>
+
+	* Datagram.cpp, Datagram.h, Destination.cpp, Destination.h,
+	SAM.cpp, SAM.h: DATAGRAM RECEIVED message
+
+2014-10-31  orignal <i2porignal@yandex.ru>
+
+	* util.cpp: get local MTU for Linux
+
+2014-10-31  orignal <i2porignal@yandex.ru>
+
+	* util.cpp, util.h: get local MTU for Linux
+
+2014-10-30  orignal <i2porignal@yandex.ru>
+
+	* version.h: 0.2.0
+
+2014-10-30  orignal <i2porignal@yandex.ru>
+
+	* SSUSession.cpp, SSUSession.h: split SSU to SSU and SSUSession
+
+2014-10-30  orignal <i2porignal@yandex.ru>
+
+	* SSU.cpp, SSU.h, Win32/i2pd.vcxproj, build/autotools/Makefile.in,
+	filelist.mk: split SSU to SSU and SSUSession
+
 2014-10-30  orignal <i2porignal@yandex.ru>
 
 	* : Merge pull request #106 from kytvi2p/fix_makefiles Makefile updates

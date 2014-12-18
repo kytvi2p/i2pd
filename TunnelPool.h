@@ -26,14 +26,11 @@ namespace tunnel
 	{
 		public:
 
-			TunnelPool (i2p::garlic::GarlicDestination& localDestination, int numHops, int numTunnels = 5);
+			TunnelPool (i2p::garlic::GarlicDestination * localDestination, int numInboundHops, int numOutboundHops, int numTunnels = 5);
 			~TunnelPool ();
-
-			const uint8_t * GetEncryptionPrivateKey () const { return m_LocalDestination.GetEncryptionPrivateKey (); };
-			const uint8_t * GetEncryptionPublicKey () const { return m_LocalDestination.GetEncryptionPublicKey (); };
-			const i2p::data::LocalDestination& GetLocalDestination () const { return m_LocalDestination; };			
-			i2p::garlic::GarlicDestination& GetGarlicDestination () const { return m_LocalDestination; };	
-			bool IsExploratory () const { return GetIdentHash () == i2p::context.GetIdentHash (); };		
+		
+			i2p::garlic::GarlicDestination * GetLocalDestination () const { return m_LocalDestination; };
+			void SetLocalDestination (i2p::garlic::GarlicDestination * destination) { m_LocalDestination = destination; };
 
 			void CreateTunnels ();
 			void TunnelCreated (InboundTunnel * createdTunnel);
@@ -42,10 +39,10 @@ namespace tunnel
 			void TunnelExpired (OutboundTunnel * expiredTunnel);
 			std::vector<InboundTunnel *> GetInboundTunnels (int num) const;
 			OutboundTunnel * GetNextOutboundTunnel (OutboundTunnel * suggested = nullptr) const;
-			InboundTunnel * GetNextInboundTunnel (InboundTunnel * suggested = nullptr) const;
-			const i2p::data::IdentHash& GetIdentHash () const { return m_LocalDestination.GetIdentHash (); };			
+			InboundTunnel * GetNextInboundTunnel (InboundTunnel * suggested = nullptr) const;		
 
 			void TestTunnels ();
+			void ProcessGarlicMessage (I2NPMessage * msg);
 			void ProcessDeliveryStatus (I2NPMessage * msg);
 
 			bool IsActive () const { return m_IsActive; };
@@ -65,8 +62,8 @@ namespace tunnel
 			
 		private:
 
-			i2p::garlic::GarlicDestination& m_LocalDestination;
-			int m_NumHops, m_NumTunnels;
+			i2p::garlic::GarlicDestination * m_LocalDestination;
+			int m_NumInboundHops, m_NumOutboundHops, m_NumTunnels;
 			mutable std::mutex m_InboundTunnelsMutex;
 			std::set<InboundTunnel *, TunnelCreationTimeCmp> m_InboundTunnels; // recent tunnel appears first
 			mutable std::mutex m_OutboundTunnelsMutex;

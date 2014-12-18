@@ -3,7 +3,7 @@
 
 #include <inttypes.h>
 #include <list>
-#include <boost/asio.hpp>
+#include <memory>
 #include <cryptopp/modes.h>
 #include <cryptopp/aes.h>
 #include <cryptopp/adler32.h>
@@ -41,14 +41,15 @@ namespace transport
 	const size_t NTCP_MAX_MESSAGE_SIZE = 16384; 
 	const size_t NTCP_BUFFER_SIZE = 1040; // fits one tunnel message (1028)
 	const int NTCP_TERMINATION_TIMEOUT = 120; // 2 minutes
-	const size_t NTCP_DEFAULT_PHASE3_SIZE = 2/*size*/ + i2p::data::DEFAULT_IDENTITY_SIZE/*387*/ + 4/*ts*/ + 15/*padding*/ + 40/*signature*/; // 428 	
+	const size_t NTCP_DEFAULT_PHASE3_SIZE = 2/*size*/ + i2p::data::DEFAULT_IDENTITY_SIZE/*387*/ + 4/*ts*/ + 15/*padding*/ + 40/*signature*/; // 448 	
 
-	class NTCPSession: public TransportSession
+	class NTCPSession: public TransportSession, public std::enable_shared_from_this<NTCPSession>
 	{
 		public:
 
 			NTCPSession (boost::asio::io_service& service, std::shared_ptr<const i2p::data::RouterInfo> in_RemoteRouter = nullptr);
 			~NTCPSession ();
+			void Terminate ();
 
 			boost::asio::ip::tcp::socket& GetSocket () { return m_Socket; };
 			bool IsEstablished () const { return m_IsEstablished; };
@@ -62,8 +63,7 @@ namespace transport
 			
 		protected:
 
-			void Terminate ();
-			virtual void Connected ();
+			void Connected ();
 			void SendTimeSyncMessage ();
 			void SetIsEstablished (bool isEstablished) { m_IsEstablished = isEstablished; }
 			
@@ -126,34 +126,6 @@ namespace transport
 			size_t m_NextMessageOffset;
 
 			size_t m_NumSentBytes, m_NumReceivedBytes;
-	};	
-
-	class NTCPClient: public NTCPSession
-	{
-		public:
-
-			NTCPClient (boost::asio::io_service& service, const boost::asio::ip::address& address, int port, std::shared_ptr<const i2p::data::RouterInfo> in_RouterInfo);
-
-		private:
-
-			void Connect ();
-			void HandleConnect (const boost::system::error_code& ecode);
-			
-		private:
-
-			boost::asio::ip::tcp::endpoint m_Endpoint;
-	};	
-
-	class NTCPServerConnection: public NTCPSession
-	{
-		public:
-
-			NTCPServerConnection (boost::asio::io_service& service): 
-				NTCPSession (service) {};
-			
-		protected:
-
-			virtual void Connected ();
 	};	
 }	
 }	
