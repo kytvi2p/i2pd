@@ -3,12 +3,23 @@ Date: Wed, 17 Dec 2014 15:30:52 +0000
 Subject: fix package build
 
 ---
- Makefile | 3 +++
- 1 file changed, 3 insertions(+)
+ Makefile | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
 
+diff --git a/Makefile b/Makefile
+index 7e512cb..1f22eb8 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -26,17 +26,17 @@
+@@ -10,7 +10,7 @@ USE_STATIC := no
+ ifeq ($(UNAME),Darwin)
+   DAEMON_SRC += DaemonLinux.cpp
+ 	include Makefile.osx
+-else ifeq ($(UNAME),FreeBSD)
++else ifeq ($(shell echo $(UNAME) | $(GREP) -c FreeBSD),1)
+   DAEMON_SRC += DaemonLinux.cpp
+ 	include Makefile.bsd
+ else ifeq ($(UNAME),Linux)
+@@ -26,17 +26,17 @@ obj:
  	mkdir -p obj
  
  obj/%.o : %.cpp %.h
