@@ -118,6 +118,15 @@ namespace tunnel
 		uint8_t * GetBuffer () { return buf + offset; };
 		const uint8_t * GetBuffer () const { return buf + offset; };
 		size_t GetLength () const { return len - offset; };
+		void Align (size_t alignment) 
+		{
+			size_t rem = ((size_t)GetBuffer ()) % alignment;
+			if (rem)
+			{
+				offset += (alignment - rem);
+				len += (alignment - rem);
+			}	
+		}
 
 		I2NPMessage& operator=(const I2NPMessage& other)
 		{

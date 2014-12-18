@@ -34,6 +34,10 @@ do_start()
   if [ ! -e ${DAEMON_HOME}/hosts.txt ]; then
       zcat /usr/share/doc/i2pd/examples/hosts.txt.gz > $DAEMON_HOME/hosts.txt
   fi
+  if [ ! -d ${DAEMON_HOME}/certificates ]; then
+    rm -rf ${DAEMON_HOME}/certificates
+    cp -Rp /usr/lib/i2pd/certificates ${DAEMON_HOME}
+  fi
   touch $PIDFILE
   chown ${USER}:${USER} $PIDFILE
   start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --chuid "$USER" -- \

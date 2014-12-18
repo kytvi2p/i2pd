@@ -7,6 +7,7 @@
 #include "SOCKS.h"
 #include "I2PTunnel.h"
 #include "SAM.h"
+#include "BOB.h"
 #include "AddressBook.h"
 
 namespace i2p
@@ -24,17 +25,15 @@ namespace client
 			void Stop ();
 
 			ClientDestination * GetSharedLocalDestination () const { return m_SharedLocalDestination; };
-			ClientDestination * CreateNewLocalDestination (bool isPublic = true, i2p::data::SigningKeyType sigType = i2p::data::SIGNING_KEY_TYPE_DSA_SHA1); // transient
-			ClientDestination * CreateNewLocalDestination (const i2p::data::PrivateKeys& keys, bool isPublic = true);
+			ClientDestination * CreateNewLocalDestination (bool isPublic = false, i2p::data::SigningKeyType sigType = i2p::data::SIGNING_KEY_TYPE_DSA_SHA1,
+			    const std::map<std::string, std::string> * params = nullptr); // transient
+			ClientDestination * CreateNewLocalDestination (const i2p::data::PrivateKeys& keys, bool isPublic = true, 
+				const std::map<std::string, std::string> * params = nullptr);
 			void DeleteLocalDestination (ClientDestination * destination);
 			ClientDestination * FindLocalDestination (const i2p::data::IdentHash& destination) const;		
 			ClientDestination * LoadLocalDestination (const std::string& filename, bool isPublic);
 
 			AddressBook& GetAddressBook () { return m_AddressBook; };
-
-		private:	
-
-			void LoadLocalDestinations ();
 			
 		private:
 
@@ -49,6 +48,7 @@ namespace client
 			I2PClientTunnel * m_IrcTunnel;
 			I2PServerTunnel * m_ServerTunnel;
 			SAMBridge * m_SamBridge;
+			BOBCommandChannel * m_BOBCommandChannel;
 
 		public:
 			// for HTTP

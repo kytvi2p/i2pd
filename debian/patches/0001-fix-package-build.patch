@@ -1,0 +1,32 @@
+From: Kill Your TV <killyourtv@i2pmail.org>
+Date: Wed, 17 Dec 2014 15:30:52 +0000
+Subject: fix package build
+
+---
+ Makefile | 3 +++
+ 1 file changed, 3 insertions(+)
+
+--- a/Makefile
++++ b/Makefile
+@@ -26,17 +26,17 @@
+ 	mkdir -p obj
+ 
+ obj/%.o : %.cpp %.h
+-	$(CXX) $(CXXFLAGS) $(INCFLAGS) -c -o $@ $<
++	$(CXX) $(CXXFLAGS) $(shell dpkg-buildflags --get CXXFLAGS) $(INCFLAGS) -c -o $@ $<
+ 
+ # weaker rule for building files without headers
+ obj/%.o : %.cpp
+-	$(CXX) $(CXXFLAGS) $(INCFLAGS) -c -o $@ $<
++	$(CXX) $(CXXFLAGS) $(shell dpkg-buildflags --get CXXFLAGS) $(INCFLAGS) -c -o $@ $<
+ 
+ $(I2PD):  $(patsubst %.cpp,obj/%.o,$(DAEMON_SRC))
+-	$(CXX) -o $@ $^ $(LDFLAGS)  $(LDLIBS)
++	$(CXX) -o $@ $^ $(LDFLAGS)  $(shell dpkg-buildflags --get LDFLAGS) $(LDLIBS)
+ 
+ $(SHLIB): $(patsubst %.cpp,obj/%.o,$(LIB_SRC))
+-	$(CXX) -o  $@ $^ $(LDFLAGS)  $(LDLIBS) -shared 
++	$(CXX) -o  $@ $^ $(LDFLAGS)  $(shell dpkg-buildflags --get LDFLAGS) $(LDLIBS) -shared
+ 
+ clean:
+ 	rm -fr obj $(I2PD) $(SHLIB)
