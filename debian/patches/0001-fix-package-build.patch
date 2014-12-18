@@ -3,14 +3,20 @@ Date: Wed, 17 Dec 2014 15:30:52 +0000
 Subject: fix package build
 
 ---
- Makefile | 10 +++++-----
- 1 file changed, 5 insertions(+), 5 deletions(-)
+ Makefile | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index 7e512cb..1f22eb8 100644
+index 7e512cb..6646aed 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -10,7 +10,7 @@ USE_STATIC := no
+@@ -1,4 +1,5 @@
+ UNAME := $(shell uname -s)
++GREP := fgrep
+ SHLIB := libi2pd.so
+ I2PD  := i2p
+ 
+@@ -10,7 +11,7 @@ USE_STATIC := no
  ifeq ($(UNAME),Darwin)
    DAEMON_SRC += DaemonLinux.cpp
  	include Makefile.osx
@@ -19,7 +25,7 @@ index 7e512cb..1f22eb8 100644
    DAEMON_SRC += DaemonLinux.cpp
  	include Makefile.bsd
  else ifeq ($(UNAME),Linux)
-@@ -26,17 +26,17 @@ obj:
+@@ -26,17 +27,17 @@ obj:
  	mkdir -p obj
  
  obj/%.o : %.cpp %.h

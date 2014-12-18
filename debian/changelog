@@ -1,3 +1,9 @@
+i2pd (0.5.0-1~deb7u+2) stable; urgency=medium
+
+  * fix building in kFreeBSD
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 18 Dec 2014 10:40:25 +0000
+
 i2pd (0.5.0-1~deb7u+1) stable; urgency=medium
 
   * Backport to Wheezy
