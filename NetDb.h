@@ -62,12 +62,12 @@ namespace data
 			void Start ();
 			void Stop ();
 			
+			void AddRouterInfo (const uint8_t * buf, int len);
 			void AddRouterInfo (const IdentHash& ident, const uint8_t * buf, int len);
 			void AddLeaseSet (const IdentHash& ident, const uint8_t * buf, int len, i2p::tunnel::InboundTunnel * from);
 			std::shared_ptr<RouterInfo> FindRouter (const IdentHash& ident) const;
 			LeaseSet * FindLeaseSet (const IdentHash& destination) const;
 
-			void PublishLeaseSet (const LeaseSet * leaseSet, i2p::tunnel::TunnelPool * pool);
 			void RequestDestination (const IdentHash& destination, bool isLeaseSet = false, 
 				i2p::tunnel::TunnelPool * pool = nullptr);			
 			
@@ -78,6 +78,7 @@ namespace data
 			std::shared_ptr<const RouterInfo> GetRandomRouter () const;
 			std::shared_ptr<const RouterInfo> GetRandomRouter (std::shared_ptr<const RouterInfo> compatibleWith) const;
 			std::shared_ptr<const RouterInfo> GetHighBandwidthRandomRouter (std::shared_ptr<const RouterInfo> compatibleWith) const;
+			std::shared_ptr<const RouterInfo> GetClosestFloodfill (const IdentHash& destination, const std::set<IdentHash>& excluded) const;
 			void SetUnreachable (const IdentHash& ident, bool unreachable);			
 
 			void PostI2NPMsg (I2NPMessage * msg);
@@ -95,7 +96,6 @@ namespace data
 			void Run (); // exploratory thread
 			void Explore (int numDestinations);
 			void Publish ();
-			std::shared_ptr<const RouterInfo> GetClosestFloodfill (const IdentHash& destination, const std::set<IdentHash>& excluded) const;
 			void ManageLeaseSets ();
 
 			RequestedDestination * CreateRequestedDestination (const IdentHash& dest, 
@@ -117,7 +117,6 @@ namespace data
 			std::map<IdentHash, RequestedDestination *> m_RequestedDestinations;
 			
 			bool m_IsRunning;
-			int m_ReseedRetries;
 			std::thread * m_Thread;	
 			i2p::util::Queue<I2NPMessage> m_Queue; // of I2NPDatabaseStoreMsg
 
