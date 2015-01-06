@@ -48,8 +48,7 @@ namespace client
 			std::string ircKeys = i2p::util::config::GetArg("-irckeys", "");	
 			if (ircKeys.length () > 0)
 				localDestination = LoadLocalDestination (ircKeys, false);
-			m_IrcTunnel = new I2PClientTunnel (m_SocksProxy->GetService (), ircDestination,
-				i2p::util::config::GetArg("-ircport", 6668), localDestination);
+			m_IrcTunnel = new I2PClientTunnel (ircDestination, i2p::util::config::GetArg("-ircport", 6668), localDestination);
 			m_IrcTunnel->Start ();
 			LogPrint("IRC tunnel started");
 		}	
@@ -57,9 +56,8 @@ namespace client
 		if (eepKeys.length () > 0) // eepkeys file is presented
 		{
 			auto localDestination = LoadLocalDestination (eepKeys, true);
-			m_ServerTunnel = new I2PServerTunnel (m_SocksProxy->GetService (), 
-				i2p::util::config::GetArg("-eephost", "127.0.0.1"), i2p::util::config::GetArg("-eepport", 80),
-				localDestination);
+			m_ServerTunnel = new I2PServerTunnel (i2p::util::config::GetArg("-eephost", "127.0.0.1"),
+ 				i2p::util::config::GetArg("-eepport", 80), localDestination);
 			m_ServerTunnel->Start ();
 			LogPrint("Server tunnel started");
 		}
@@ -77,10 +75,12 @@ namespace client
 			m_BOBCommandChannel->Start ();
 			LogPrint("BOB command channel started");
 		} 
+		m_AddressBook.StartSubscriptions ();
 	}
 		
 	void ClientContext::Stop ()
 	{
+		m_AddressBook.StopSubscriptions ();	
 		m_HttpProxy->Stop();
 		delete m_HttpProxy;
 		m_HttpProxy = nullptr;
@@ -141,7 +141,7 @@ namespace client
 			s.read ((char *)buf, len);
 			keys.FromBuffer (buf, len);
 			delete[] buf;
-			LogPrint ("Local address ", keys.GetPublic ().GetIdentHash ().ToBase32 (), ".b32.i2p loaded");
+			LogPrint ("Local address ", m_AddressBook.ToAddress(keys.GetPublic ().GetIdentHash ()), " loaded");
 		}	
 		else
 		{
@@ -154,7 +154,7 @@ namespace client
 			f.write ((char *)buf, len);
 			delete[] buf;
 			
-			LogPrint ("New private keys file ", fullPath, " for ", keys.GetPublic ().GetIdentHash ().ToBase32 (), ".b32.i2p created");
+			LogPrint ("New private keys file ", fullPath, " for ", m_AddressBook.ToAddress(keys.GetPublic ().GetIdentHash ()), " created");
 		}	
 
 		auto localDestination = new ClientDestination (keys, isPublic);
@@ -197,7 +197,7 @@ namespace client
 		auto it = m_Destinations.find (keys.GetPublic ().GetIdentHash ());
 		if (it != m_Destinations.end ())
 		{
-			LogPrint ("Local destination ", keys.GetPublic ().GetIdentHash ().ToBase32 (), ".b32.i2p exists");
+			LogPrint ("Local destination ", m_AddressBook.ToAddress(keys.GetPublic ().GetIdentHash ()), " exists");
 			if (!it->second->IsRunning ())
 			{	
 				it->second->Start ();

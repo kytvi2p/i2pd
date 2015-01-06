@@ -255,11 +255,10 @@ namespace transport
 			
 			m_Decryption.Decrypt((uint8_t *)&m_Establisher->phase2.encrypted, sizeof(m_Establisher->phase2.encrypted), (uint8_t *)&m_Establisher->phase2.encrypted);
 			// verify
-			uint8_t xy[512], hxy[32];
+			uint8_t xy[512];
 			memcpy (xy, m_DHKeysPair->publicKey, 256);
 			memcpy (xy + 256, m_Establisher->phase2.pubKey, 256);
-			CryptoPP::SHA256().CalculateDigest(hxy, xy, 512); 
-			if (memcmp (hxy, m_Establisher->phase2.encrypted.hxy, 32))
+			if (!CryptoPP::SHA256().VerifyDigest(m_Establisher->phase2.encrypted.hxy, xy, 512)) 
 			{
 				LogPrint (eLogError, "Incorrect hash");
 				transports.ReuseDHKeysPair (m_DHKeysPair);
@@ -275,11 +274,11 @@ namespace transport
 	{
 		auto keys = i2p::context.GetPrivateKeys ();
 		uint8_t * buf = m_ReceiveBuffer; 
-		*(uint16_t *)buf = htobe16 (keys.GetPublic ().GetFullLen ());
+		htobe16buf (buf, keys.GetPublic ().GetFullLen ());
 		buf += 2;
 		buf += i2p::context.GetIdentity ().ToBuffer (buf, NTCP_BUFFER_SIZE);
 		uint32_t tsA = htobe32 (i2p::util::GetSecondsSinceEpoch ());
-		*(uint32_t *)buf = tsA;
+		htobuf32(buf,tsA);
 		buf += 4;		
 		size_t signatureLen = keys.GetPublic ().GetSignatureLen ();
 		size_t len = (buf - m_ReceiveBuffer) + signatureLen;
@@ -339,7 +338,7 @@ namespace transport
 			LogPrint (eLogDebug, "Phase 3 received: ", bytes_transferred);
 			m_Decryption.Decrypt (m_ReceiveBuffer, bytes_transferred, m_ReceiveBuffer);
 			uint8_t * buf = m_ReceiveBuffer;
-			uint16_t size = be16toh (*(uint16_t *)buf);
+			uint16_t size = bufbe16toh (buf);
 			m_RemoteIdentity.FromBuffer (buf + 2, size);
 			size_t expectedSize = size + 2/*size*/ + 4/*timestamp*/ + m_RemoteIdentity.GetSignatureLen ();
 			size_t paddingLen = expectedSize & 0x0F;
@@ -377,7 +376,7 @@ namespace transport
 	void NTCPSession::HandlePhase3 (uint32_t tsB, size_t paddingLen)
 	{
 		uint8_t * buf = m_ReceiveBuffer + m_RemoteIdentity.GetFullLen () + 2 /*size*/;
-		uint32_t tsA = *(uint32_t *)buf; 
+		uint32_t tsA = buf32toh(buf); 
 		buf += 4;
 		buf += paddingLen;	
 
@@ -527,7 +526,7 @@ namespace transport
 			m_NextMessageOffset = 0;
 			
 			m_Decryption.Decrypt (encrypted, m_NextMessage->buf);
-			uint16_t dataSize = be16toh (*(uint16_t *)m_NextMessage->buf);
+			uint16_t dataSize = bufbe16toh (m_NextMessage->buf);
 			if (dataSize)
 			{
 				// new message
@@ -581,15 +580,15 @@ namespace transport
 			}	
 			sendBuffer = msg->GetBuffer () - 2; 
 			len = msg->GetLength ();
-			*((uint16_t *)sendBuffer) = htobe16 (len);
+			htobe16buf (sendBuffer, len);
 		}	
 		else
 		{
 			// prepare timestamp
 			sendBuffer = m_TimeSyncBuffer;
 			len = 4;
-			*((uint16_t *)sendBuffer) = 0;
-			*((uint32_t *)(sendBuffer + 2)) = htobe32 (time (0));
+			htobuf16(sendBuffer, 0);
+			htobe32buf (sendBuffer + 2, time (0));
 		}	
 		int rem = (len + 6) & 0x0F; // %16
 		int padding = 0;

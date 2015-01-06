@@ -17,6 +17,7 @@ namespace client
 	const size_t I2P_TUNNEL_CONNECTION_BUFFER_SIZE = 8192;
 	const int I2P_TUNNEL_CONNECTION_MAX_IDLE = 3600; // in seconds	
 	const int I2P_TUNNEL_DESTINATION_REQUEST_TIMEOUT = 10; // in seconds
+	const i2p::data::SigningKeyType I2P_TUNNEL_DEFAULT_KEY_TYPE = i2p::data::SIGNING_KEY_TYPE_ECDSA_SHA256_P256;
 
 	class I2PTunnel;
 	class I2PTunnelConnection: public std::enable_shared_from_this<I2PTunnelConnection>
@@ -25,6 +26,8 @@ namespace client
 
 			I2PTunnelConnection (I2PTunnel * owner, boost::asio::ip::tcp::socket * socket,
 				const i2p::data::LeaseSet * leaseSet); // to I2P
+			I2PTunnelConnection (I2PTunnel * owner, boost::asio::ip::tcp::socket * socket,
+				std::shared_ptr<i2p::stream::Stream> stream); // to I2P using simplified API :)
 			I2PTunnelConnection (I2PTunnel * owner, std::shared_ptr<i2p::stream::Stream> stream,  boost::asio::ip::tcp::socket * socket, 
 				const boost::asio::ip::tcp::endpoint& target, bool quiet = true); // from I2P
 			~I2PTunnelConnection ();
@@ -58,8 +61,7 @@ namespace client
 	{
 		public:
 
-			I2PTunnel (boost::asio::io_service& service, ClientDestination * localDestination): 
-				m_Service (service), m_LocalDestination (localDestination) {};
+			I2PTunnel (ClientDestination * localDestination  = nullptr);
 			virtual ~I2PTunnel () { ClearConnections (); }; 
 
 			void AddConnection (std::shared_ptr<I2PTunnelConnection> conn);
@@ -68,11 +70,10 @@ namespace client
 			ClientDestination * GetLocalDestination () { return m_LocalDestination; };
 			void SetLocalDestination (ClientDestination * dest) { m_LocalDestination = dest; }; 			
 
-			boost::asio::io_service& GetService () { return m_Service; };
+			boost::asio::io_service& GetService () { return m_LocalDestination->GetService (); };
 			
 		private:
 
-			boost::asio::io_service& m_Service;
 			ClientDestination * m_LocalDestination;
 			std::set<std::shared_ptr<I2PTunnelConnection> > m_Connections;
 	};	
@@ -81,8 +82,7 @@ namespace client
 	{
 		public:
 
-			I2PClientTunnel (boost::asio::io_service& service, const std::string& destination, int port,
-				ClientDestination * localDestination = nullptr);
+			I2PClientTunnel (const std::string& destination, int port, ClientDestination * localDestination = nullptr);
 			~I2PClientTunnel ();				
 	
 			void Start ();
@@ -90,10 +90,10 @@ namespace client
 
 		private:
 
+			const i2p::data::IdentHash * GetIdentHash ();
 			void Accept ();
 			void HandleAccept (const boost::system::error_code& ecode, boost::asio::ip::tcp::socket * socket);
-			void HandleDestinationRequestTimer (const boost::system::error_code& ecode, boost::asio::ip::tcp::socket * socket);
-			void CreateConnection (boost::asio::ip::tcp::socket * socket);				
+			void HandleStreamRequestComplete (std::shared_ptr<i2p::stream::Stream> stream, boost::asio::ip::tcp::socket * socket);
 
 		private:
 
@@ -101,15 +101,13 @@ namespace client
 			boost::asio::deadline_timer m_Timer;
 			std::string m_Destination;
 			const i2p::data::IdentHash * m_DestinationIdentHash;
-			const i2p::data::LeaseSet * m_RemoteLeaseSet;
 	};	
 
 	class I2PServerTunnel: public I2PTunnel
 	{
 		public:
 
-			I2PServerTunnel (boost::asio::io_service& service, const std::string& address, int port, 
-				ClientDestination * localDestination);	
+			I2PServerTunnel (const std::string& address, int port, ClientDestination * localDestination);	
 
 			void Start ();
 			void Stop ();
