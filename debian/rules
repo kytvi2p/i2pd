@@ -14,7 +14,7 @@ override_dh_auto_clean:
 	dh_auto_clean
 
 override_dh_auto_build:
-	$(FT) make USE_AESNI=no obj i2p
+	$(FT) make USE_AESNI=no CXXFLAGS="$(shell dpkg-buildflags --get CXXFLAGS)" LDFLAGS="$(shell dpkg-buildflags --get LDFLAGS)" i2p
 
 override_dh_auto_build-arch:
 	$(FT) dh_auto_build -a
