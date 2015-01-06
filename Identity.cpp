@@ -5,6 +5,7 @@
 #include <cryptopp/dsa.h>
 #include "base64.h"
 #include "CryptoConst.h"
+#include "ElGamal.h"
 #include "RouterContext.h"
 #include "Identity.h"
 #include "I2PEndian.h"
@@ -101,8 +102,8 @@ namespace data
 			m_StandardIdentity.certificate.length = htobe16 (m_ExtendedLen); 
 			// fill extended buffer
 			m_ExtendedBuffer = new uint8_t[m_ExtendedLen];
-			*(uint16_t *)m_ExtendedBuffer = htobe16 (type);
-			*(uint16_t *)(m_ExtendedBuffer + 2) = htobe16 (CRYPTO_KEY_TYPE_ELGAMAL);
+			htobe16buf (m_ExtendedBuffer, type);
+			htobe16buf (m_ExtendedBuffer + 2, CRYPTO_KEY_TYPE_ELGAMAL);
 			if (excessLen && excessBuf)
 			{
 				memcpy (m_ExtendedBuffer + 4, excessBuf, excessLen);
@@ -275,14 +276,14 @@ namespace data
 	SigningKeyType IdentityEx::GetSigningKeyType () const
 	{
 		if (m_StandardIdentity.certificate.type == CERTIFICATE_TYPE_KEY && m_ExtendedBuffer)				
-			return be16toh (*(const uint16_t *)m_ExtendedBuffer); // signing key
+			return bufbe16toh (m_ExtendedBuffer); // signing key
 		return SIGNING_KEY_TYPE_DSA_SHA1;
 	}	
 
 	CryptoKeyType IdentityEx::GetCryptoKeyType () const
 	{
 		if (m_StandardIdentity.certificate.type == CERTIFICATE_TYPE_KEY && m_ExtendedBuffer)				
-			return be16toh (*(const uint16_t *)(m_ExtendedBuffer + 2)); // crypto key
+			return bufbe16toh (m_ExtendedBuffer + 2); // crypto key
 		return CRYPTO_KEY_TYPE_ELGAMAL;
 	}	
 		
@@ -509,8 +510,7 @@ namespace data
 		Keys keys;		
 		auto& rnd = i2p::context.GetRandomNumberGenerator ();
 		// encryption
-		CryptoPP::DH dh (i2p::crypto::elgp, i2p::crypto::elgg);
-		dh.GenerateKeyPair(rnd, keys.privateKey, keys.publicKey);
+		i2p::crypto::GenerateElGamalKeyPair(rnd, keys.privateKey, keys.publicKey);
 		// signing
 		i2p::crypto::CreateDSARandomKeys (rnd, keys.signingPrivateKey, keys.signingKey);	
 		return keys;

@@ -26,7 +26,7 @@ namespace tunnel
 		{	
 			if (block.deliveryType == eDeliveryTypeTunnel)
 			{
-				*(uint32_t *)(di + diLen) = htobe32 (block.tunnelID);
+				htobe32buf (di + diLen, block.tunnelID);
 				diLen += 4; // tunnelID
 			}
 			
@@ -41,7 +41,7 @@ namespace tunnel
 		if (fullMsgLen <= m_RemainingSize)
 		{
 			// message fits. First and last fragment
-			*(uint16_t *)(di + diLen) = htobe16 (msg->GetLength ());
+			htobe16buf (di + diLen, msg->GetLength ());
 			diLen += 2; // size
 			memcpy (m_CurrentTunnelDataMsg->buf + m_CurrentTunnelDataMsg->len, di, diLen);
 			memcpy (m_CurrentTunnelDataMsg->buf + m_CurrentTunnelDataMsg->len + diLen, msg->GetBuffer (), msg->GetLength ());
@@ -68,14 +68,15 @@ namespace tunnel
 			if (diLen + 6 <= m_RemainingSize)
 			{
 				// delivery instructions fit
-				uint32_t msgID = msg->GetHeader ()->msgID; // in network bytes order
+				uint32_t msgID;
+				memcpy (&msgID, msg->GetHeader () + I2NP_HEADER_MSGID_OFFSET, 4); // in network bytes order
 				size_t size = m_RemainingSize - diLen - 6; // 6 = 4 (msgID) + 2 (size)
 
 				// first fragment
 				di[0] |= 0x08; // fragmented
-				*(uint32_t *)(di + diLen) = msgID;
+				htobuf32 (di + diLen, msgID);
 				diLen += 4; // Message ID
-				*(uint16_t *)(di + diLen) = htobe16 (size);
+				htobe16buf (di + diLen, size);
 				diLen += 2; // size
 				memcpy (m_CurrentTunnelDataMsg->buf + m_CurrentTunnelDataMsg->len, di, diLen);
 				memcpy (m_CurrentTunnelDataMsg->buf + m_CurrentTunnelDataMsg->len + diLen, msg->GetBuffer (), size);
@@ -96,9 +97,9 @@ namespace tunnel
 					{	
 						buf[0] |= 0x01;
 						isLastFragment = true;
-					}	
-					*(uint32_t *)(buf + 1) = msgID; //Message ID
-					*(uint16_t *)(buf + 5) = htobe16 (s); // size
+					}
+					htobuf32 (buf + 1, msgID); //Message ID
+					htobe16buf (buf + 5, s); // size
 					memcpy (buf + 7, msg->GetBuffer () + size, s);
 					m_CurrentTunnelDataMsg->len += s+7;
 					if (isLastFragment)
@@ -134,7 +135,7 @@ namespace tunnel
 		m_CurrentTunnelDataMsg = NewI2NPMessage ();
 		m_CurrentTunnelDataMsg->Align (12);
 		// we reserve space for padding
-		m_CurrentTunnelDataMsg->offset += TUNNEL_DATA_MSG_SIZE + sizeof (I2NPHeader);
+		m_CurrentTunnelDataMsg->offset += TUNNEL_DATA_MSG_SIZE + I2NP_HEADER_SIZE;
 		m_CurrentTunnelDataMsg->len = m_CurrentTunnelDataMsg->offset;
 		m_RemainingSize = TUNNEL_DATA_MAX_PAYLOAD_SIZE;
 	}	
@@ -145,9 +146,9 @@ namespace tunnel
 		uint8_t * payload = m_CurrentTunnelDataMsg->GetBuffer ();
 		size_t size = m_CurrentTunnelDataMsg->len - m_CurrentTunnelDataMsg->offset;
 		
-		m_CurrentTunnelDataMsg->offset = m_CurrentTunnelDataMsg->len - TUNNEL_DATA_MSG_SIZE - sizeof (I2NPHeader);
+		m_CurrentTunnelDataMsg->offset = m_CurrentTunnelDataMsg->len - TUNNEL_DATA_MSG_SIZE - I2NP_HEADER_SIZE;
 		uint8_t * buf = m_CurrentTunnelDataMsg->GetPayload ();
-		*(uint32_t *)(buf) = htobe32 (m_TunnelID);
+		htobe32buf (buf, m_TunnelID);
 		CryptoPP::RandomNumberGenerator& rnd = i2p::context.GetRandomNumberGenerator ();
 		rnd.GenerateBlock (buf + 4, 16); // original IV	
 		memcpy (payload + size, buf + 4, 16); // copy IV for checksum 

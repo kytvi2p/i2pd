@@ -138,7 +138,7 @@ namespace garlic
 		}	
 		// AES block
 		len += CreateAESBlock (buf, msg);
-		*(uint32_t *)(m->GetPayload ()) = htobe32 (len);
+		htobe32buf (m->GetPayload (), len);
 		m->len += len + 4;
 		FillI2NPMessageHeader (m, eI2NPGarlic);
 		if (msg)
@@ -151,7 +151,7 @@ namespace garlic
 		size_t blockSize = 0;
 		bool createNewTags = m_Owner && m_NumTags && ((int)m_SessionTags.size () <= m_NumTags/2);
 		UnconfirmedTags * newTags = createNewTags ? GenerateSessionTags () : nullptr;
-		*(uint16_t *)buf = newTags ? htobe16 (newTags->numTags) : 0; // tag count
+		htobuf16 (buf, newTags ? htobe16 (newTags->numTags) : 0); // tag count
 		blockSize += 2;
 		if (newTags) // session tags recreated
 		{	
@@ -168,7 +168,7 @@ namespace garlic
 		buf[blockSize] = 0; // flag
 		blockSize++;
 		size_t len = CreateGarlicPayload (buf + blockSize, msg, newTags);
-		*payloadSize = htobe32 (len);
+		htobe32buf (payloadSize, len);
 		CryptoPP::SHA256().CalculateDigest(payloadHash, buf + blockSize, len);
 		blockSize += len;
 		size_t rem = blockSize % 16;
@@ -220,9 +220,9 @@ namespace garlic
 		
 		memset (payload + size, 0, 3); // certificate of message
 		size += 3;
-		*(uint32_t *)(payload + size) = htobe32 (msgID); // MessageID
+		htobe32buf (payload + size, msgID); // MessageID
 		size += 4;
-		*(uint64_t *)(payload + size) = htobe64 (ts); // Expiration of message
+		htobe64buf (payload + size, ts); // Expiration of message
 		size += 8;
 		return size;
 	}	
@@ -246,9 +246,9 @@ namespace garlic
 		
 		memcpy (buf + size, msg->GetBuffer (), msg->GetLength ());
 		size += msg->GetLength ();
-		*(uint32_t *)(buf + size) = htobe32 (m_Rnd.GenerateWord32 ()); // CloveID
+		htobe32buf (buf + size, m_Rnd.GenerateWord32 ()); // CloveID
 		size += 4;
-		*(uint64_t *)(buf + size) = htobe64 (ts); // Expiration of clove
+		htobe64buf (buf + size, ts); // Expiration of clove
 		size += 8;
 		memset (buf + size, 0, 3); // certificate of clove
 		size += 3;
@@ -269,7 +269,7 @@ namespace garlic
 				// hash and tunnelID sequence is reversed for Garlic 
 				memcpy (buf + size, leases[i].tunnelGateway, 32); // To Hash
 				size += 32;
-				*(uint32_t *)(buf + size) = htobe32 (leases[i].tunnelID); // tunnelID
+				htobe32buf (buf + size, leases[i].tunnelID); // tunnelID
 				size += 4; 	
 				// create msg 
 				I2NPMessage * msg = CreateDeliveryStatusMsg (msgID);
@@ -288,9 +288,9 @@ namespace garlic
 				DeleteI2NPMessage (msg);
 				// fill clove
 				uint64_t ts = i2p::util::GetMillisecondsSinceEpoch () + 5000; // 5 sec
-				*(uint32_t *)(buf + size) = htobe32 (m_Rnd.GenerateWord32 ()); // CloveID
+				htobe32buf (buf + size, m_Rnd.GenerateWord32 ()); // CloveID
 				size += 4;
-				*(uint64_t *)(buf + size) = htobe64 (ts); // Expiration of clove
+				htobe64buf (buf + size, ts); // Expiration of clove
 				size += 8;
 				memset (buf + size, 0, 3); // certificate of clove
 				size += 3;
@@ -331,7 +331,7 @@ namespace garlic
 	void GarlicDestination::HandleGarlicMessage (I2NPMessage * msg)
 	{
 		uint8_t * buf = msg->GetPayload ();
-		uint32_t length = be32toh (*(uint32_t *)buf);
+		uint32_t length = bufbe32toh (buf);
 		buf += 4; // length
 		auto it = m_Tags.find (SessionTag(buf));
 		if (it != m_Tags.end ())
@@ -389,7 +389,7 @@ namespace garlic
 	void GarlicDestination::HandleAESBlock (uint8_t * buf, size_t len, std::shared_ptr<i2p::crypto::CBCDecryption> decryption,
 		i2p::tunnel::InboundTunnel * from)
 	{
-		uint16_t tagCount = be16toh (*(uint16_t *)buf);
+		uint16_t tagCount = bufbe16toh (buf);
 		buf += 2; len -= 2;	
 		if (tagCount > 0)
 		{	
@@ -404,7 +404,7 @@ namespace garlic
 		}	
 		buf += tagCount*32;
 		len -= tagCount*32;
-		uint32_t payloadSize = be32toh (*(uint32_t *)buf);
+		uint32_t payloadSize = bufbe32toh (buf);
 		if (payloadSize > len)
 		{
 			LogPrint (eLogError, "Unexpected payload size ", payloadSize);
@@ -418,9 +418,7 @@ namespace garlic
 		buf++; // flag
 
 		// payload
-		uint8_t hash[32];
-		CryptoPP::SHA256().CalculateDigest(hash, buf, payloadSize);
-		if (memcmp (hash, payloadHash, 32)) // payload hash doesn't match
+		if (!CryptoPP::SHA256().VerifyDigest (payloadHash, buf, payloadSize)) // payload hash doesn't match
 		{
 			LogPrint ("Wrong payload hash");
 			return;
@@ -462,7 +460,7 @@ namespace garlic
 					// gwHash and gwTunnel sequence is reverted
 					uint8_t * gwHash = buf;
 					buf += 32;
-					uint32_t gwTunnel = be32toh (*(uint32_t *)buf);
+					uint32_t gwTunnel = bufbe32toh (buf);
 					buf += 4;
 					i2p::tunnel::OutboundTunnel * tunnel = nullptr;
 					if (from && from->GetTunnelPool ())
@@ -528,8 +526,7 @@ namespace garlic
 
 	void GarlicDestination::HandleDeliveryStatusMessage (I2NPMessage * msg)
 	{
-		I2NPDeliveryStatusMsg * deliveryStatus = (I2NPDeliveryStatusMsg *)msg->GetPayload ();
-		uint32_t msgID = be32toh (deliveryStatus->msgID);
+		uint32_t msgID = bufbe32toh (msg->GetPayload ());
 		{
 			auto it = m_CreatedSessions.find (msgID);
 			if (it != m_CreatedSessions.end ())			
