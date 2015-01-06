@@ -1,18 +1,25 @@
 CXXFLAGS = -g -Wall -fPIC
 INCFLAGS =
 
+## NOTE: The NEEDED_CXXFLAGS are here so that custom CXXFLAGS can be specified at build time
+## **without** overwriting the CXXFLAGS which we need in order to build.
+## For example, when adding 'hardening flags' to the build
+## (e.g. -fstack-protector-strong -Wformat -Werror=format-security), we do not want to remove
+## -std=c++11. If you want to remove this variable please do so in a way that allows setting
+## custom FLAGS to work at build-time.
+
 # detect proper flag for c++11 support by gcc
 CXXVER := $(shell $(CXX) -dumpversion)
 ifeq ($(shell expr match ${CXXVER} "4\.[0-9][0-9]"),4) # >= 4.10
-  CXXFLAGS += -std=c++11
+	NEEDED_CXXFLAGS += -std=c++11
 else ifeq ($(shell expr match ${CXXVER} "4\.[7-9]"),3) # >= 4.7
-  CXXFLAGS += -std=c++11
+	NEEDED_CXXFLAGS += -std=c++11
 else ifeq ($(shell expr match ${CXXVER} "4\.6"),3) # = 4.6
-  CXXFLAGS += -std=c++0x
+	NEEDED_CXXFLAGS += -std=c++0x
 else ifeq ($(shell expr match $(CXX) 'clang'),5)
-  CXXFLAGS += -std=c++11
+	NEEDED_CXXFLAGS += -std=c++11
 else # not supported
-  $(error Compiler too old)
+	$(error Compiler too old)
 endif
 
 ifeq ($(USE_STATIC),yes)
@@ -29,15 +36,18 @@ else
   LDLIBS = -lcryptopp -lboost_system -lboost_date_time -lboost_filesystem -lboost_regex -lboost_program_options -lpthread
 endif
 
-GREP = fgrep
+# UPNP Support (miniupnpc 1.5 or 1.6)
+ifeq ($(USE_UPNP),1)
+  LDFLAGS += -ldl
+  CXXFLAGS += -DUSE_UPNP
+endif
+
 IS_64 := $(shell $(CXX) -dumpmachine 2>&1 | $(GREP) -c "64")
 ifeq ($(USE_AESNI),yes)
 ifeq ($(IS_64),1)
 #check if AES-NI is supported by CPU
-ifneq ($(shell $(GREP) -c aes /proc/cpuinfo),0)
-  CXXFLAGS += -maes -DAESNI
-else
-  $(warning "AESNI support enabled requested but not supported by this CPU")
+ifneq ($(shell grep -c aes /proc/cpuinfo),0)
+	CPU_FLAGS = -maes -DAESNI
 endif
 endif
 endif

@@ -19,9 +19,7 @@ namespace i2p
 namespace client
 {
 	const size_t SAM_SOCKET_BUFFER_SIZE = 4096;
-	const int SAM_SOCKET_CONNECTION_MAX_IDLE = 3600; // in seconds	
-	const int SAM_CONNECT_TIMEOUT = 5; // in seconds
-	const int SAM_NAMING_LOOKUP_TIMEOUT = 5; // in seconds
+	const int SAM_SOCKET_CONNECTION_MAX_IDLE = 3600; // in seconds
 	const int SAM_SESSION_READINESS_CHECK_INTERVAL = 20; // in seconds	
 	const char SAM_HANDSHAKE[] = "HELLO VERSION";
 	const char SAM_HANDSHAKE_REPLY[] = "HELLO REPLY RESULT=OK VERSION=%s\n";
@@ -69,7 +67,7 @@ namespace client
 	};
 
 	class SAMBridge;
-	class SAMSession;
+	struct SAMSession;
 	class SAMSocket: public std::enable_shared_from_this<SAMSocket>
 	{
 		public:
@@ -107,7 +105,7 @@ namespace client
 			void ExtractParams (char * buf, size_t len, std::map<std::string, std::string>& params);
 
 			void Connect (const i2p::data::LeaseSet& remote);
-			void HandleStreamDestinationRequestTimer (const boost::system::error_code& ecode, i2p::data::IdentHash ident);
+			void HandleLeaseSetRequestComplete (bool success, i2p::data::IdentHash ident);
 			void SendNamingLookupReply (const i2p::data::LeaseSet * leaseSet);
 			void SendNamingLookupReply (const i2p::data::IdentityEx& identity);
 			void HandleSessionReadinessCheckTimer (const boost::system::error_code& ecode);
@@ -131,12 +129,11 @@ namespace client
 	{
 		ClientDestination * localDestination;
 		std::list<std::shared_ptr<SAMSocket> > sockets;
-				
-		~SAMSession ()
-		{
-			for (auto it: sockets)
-				it->SetSocketType (eSAMSocketTypeTerminated);
-		}		
+		
+		SAMSession (ClientDestination * localDestination);		
+		~SAMSession ();
+
+		void CloseStreams ();
 	};
 
 	class SAMBridge
@@ -174,7 +171,7 @@ namespace client
 			boost::asio::ip::udp::endpoint m_DatagramEndpoint, m_SenderEndpoint;
 			boost::asio::ip::udp::socket m_DatagramSocket;
 			std::mutex m_SessionsMutex;
-			std::map<std::string, SAMSession> m_Sessions;
+			std::map<std::string, SAMSession *> m_Sessions;
 			uint8_t m_DatagramReceiveBuffer[i2p::datagram::MAX_DATAGRAM_SIZE+1];
 	};		
 }

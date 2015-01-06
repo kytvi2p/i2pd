@@ -53,15 +53,15 @@ namespace stream
 		uint8_t * GetBuffer () { return buf + offset; };
 		size_t GetLength () const { return len - offset; };
 
-		uint32_t GetSendStreamID () const { return be32toh (*(uint32_t *)buf); };
-		uint32_t GetReceiveStreamID () const { return be32toh (*(uint32_t *)(buf + 4)); };
-		uint32_t GetSeqn () const { return be32toh (*(uint32_t *)(buf + 8)); };
-		uint32_t GetAckThrough () const { return be32toh (*(uint32_t *)(buf + 12)); };
+		uint32_t GetSendStreamID () const { return bufbe32toh (buf); };
+		uint32_t GetReceiveStreamID () const { return bufbe32toh (buf + 4); };
+		uint32_t GetSeqn () const { return bufbe32toh (buf + 8); };
+		uint32_t GetAckThrough () const { return bufbe32toh (buf + 12); };
 		uint8_t GetNACKCount () const { return buf[16]; };
-		uint32_t GetNACK (int i) const { return be32toh (((uint32_t *)(buf + 17))[i]); };
+		uint32_t GetNACK (int i) const { return bufbe32toh (buf + 17 + 4 * i); };
 		const uint8_t * GetOption () const { return buf + 17 + GetNACKCount ()*4 + 3; }; // 3 = resendDelay + flags
-		uint16_t GetFlags () const { return be16toh (*(uint16_t *)(GetOption () - 2)); };
-		uint16_t GetOptionSize () const { return be16toh (*(uint16_t *)GetOption ()); };
+		uint16_t GetFlags () const { return bufbe16toh (GetOption () - 2); };
+		uint16_t GetOptionSize () const { return bufbe16toh (GetOption ()); };
 		const uint8_t * GetOptionData () const { return GetOption () + 2; };
 		const uint8_t * GetPayload () const { return GetOptionData () + GetOptionSize (); };
 
@@ -100,8 +100,10 @@ namespace stream
 			
 			template<typename Buffer, typename ReceiveHandler>
 			void AsyncReceive (const Buffer& buffer, ReceiveHandler handler, int timeout = 0);
-
+			size_t ReadSome (uint8_t * buf, size_t len) { return ConcatenatePackets (buf, len); };
+			
 			void Close ();
+			void Cancel () { m_ReceiveTimer.cancel (); };
 
 			size_t GetNumSentBytes () const { return m_NumSentBytes; };
 			size_t GetNumReceivedBytes () const { return m_NumReceivedBytes; };
@@ -224,7 +226,7 @@ namespace stream
 			else
 				// socket closed
 				handler (m_IsReset ? boost::asio::error::make_error_code (boost::asio::error::connection_reset) :
-					boost::asio::error::make_error_code (boost::asio::error::operation_aborted), 0);
+					boost::asio::error::make_error_code (boost::asio::error::operation_aborted), received);
 		}	
 		else
 			// timeout expired

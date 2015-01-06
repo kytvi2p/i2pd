@@ -121,6 +121,7 @@ namespace transport
 
 	void SSUSession::ProcessMessage (uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& senderEndpoint)
 	{
+		//TODO: since we are accessing a uint8_t this is unlikely to crash due to alignment but should be improved
 		SSUHeader * header = (SSUHeader *)buf;
 		switch (header->GetPayloadType ())
 		{
@@ -210,7 +211,7 @@ namespace transport
 		}	
 		s.Insert (ourAddress, addressSize); // our IP 
 		payload += addressSize; // address
-		uint16_t ourPort = be16toh (*(uint16_t *)payload);
+		uint16_t ourPort = bufbe16toh (payload);
 		s.Insert (payload, 2); // our port
 		payload += 2; // port
 		LogPrint ("Our external address is ", ourIP.to_string (), ":", ourPort);
@@ -221,13 +222,14 @@ namespace transport
 			s.Insert (m_RemoteEndpoint.address ().to_v6 ().to_bytes ().data (), 16); // remote IP v6
 		s.Insert (htobe16 (m_RemoteEndpoint.port ())); // remote port
 		s.Insert (payload, 8); // relayTag and signed on time 
-		m_RelayTag = be32toh (*(uint32_t *)payload);
+		m_RelayTag = bufbe32toh (payload);
 		payload += 4; // relayTag
 		payload += 4; // signed on time
 		// decrypt signature
 		size_t signatureLen = m_RemoteIdentity.GetSignatureLen ();
 		size_t paddingSize = signatureLen & 0x0F; // %16
 		if (paddingSize > 0) signatureLen += (16 - paddingSize);
+		//TODO: since we are accessing a uint8_t this is unlikely to crash due to alignment but should be improved
 		m_SessionKeyDecryption.SetIV (((SSUHeader *)buf)->iv);
 		m_SessionKeyDecryption.Decrypt (payload, signatureLen, payload);
 		// verify
@@ -242,7 +244,7 @@ namespace transport
 		LogPrint (eLogDebug, "Session confirmed received");	
 		uint8_t * payload = buf + sizeof (SSUHeader);
 		payload++; // identity fragment info
-		uint16_t identitySize = be16toh (*(uint16_t *)payload);	
+		uint16_t identitySize = bufbe16toh (payload);	
 		payload += 2; // size of identity fragment
 		m_RemoteIdentity.FromBuffer (payload, identitySize);
 		m_Data.UpdatePacketSize (m_RemoteIdentity.GetIdentHash ());
@@ -299,18 +301,18 @@ namespace transport
 	
 		uint8_t buf[96 + 18]; 
 		uint8_t * payload = buf + sizeof (SSUHeader);
-		*(uint32_t *)payload = htobe32 (iTag);
+		htobe32buf (payload, iTag);
 		payload += 4;
 		*payload = 0; // no address
 		payload++;
-		*(uint16_t *)payload = 0; // port = 0
+		htobuf16(payload, 0); // port = 0
 		payload += 2;
 		*payload = 0; // challenge
 		payload++;	
 		memcpy (payload, (const uint8_t *)address->key, 32);
 		payload += 32;
 		CryptoPP::RandomNumberGenerator& rnd = i2p::context.GetRandomNumberGenerator ();
-		*(uint32_t *)payload = htobe32 (rnd.GenerateWord32 ()); // nonce	
+		htobe32buf (payload, rnd.GenerateWord32 ()); // nonce	
 
 		uint8_t iv[16];
 		rnd.GenerateBlock (iv, 16); // random iv
@@ -358,7 +360,7 @@ namespace transport
 			s.Insert (payload, 16); // remote endpoint IP V6
 			payload += 16;
 		}
-		*(uint16_t *)(payload) = htobe16 (m_RemoteEndpoint.port ());
+		htobe16buf (payload, m_RemoteEndpoint.port ());
 		s.Insert (payload, 2); // remote port
 		payload += 2;
 		if (address->host.is_v4 ())
@@ -373,9 +375,9 @@ namespace transport
 			if (!relayTag) relayTag = 1;
 			m_Server.AddRelay (relayTag, m_RemoteEndpoint);
 		}
-		*(uint32_t *)(payload) = htobe32 (relayTag); 
+		htobe32buf (payload, relayTag); 
 		payload += 4; // relay tag 
-		*(uint32_t *)(payload) = htobe32 (i2p::util::GetSecondsSinceEpoch ()); // signed on time
+		htobe32buf (payload, i2p::util::GetSecondsSinceEpoch ()); // signed on time
 		payload += 4;
 		s.Insert (payload - 8, 8); // relayTag and signed on time 
 		s.Sign (i2p::context.GetPrivateKeys (), payload); // DSA signature
@@ -404,12 +406,12 @@ namespace transport
 		*payload = 1; // 1 fragment
 		payload++; // info
 		size_t identLen = i2p::context.GetIdentity ().GetFullLen (); // 387+ bytes
-		*(uint16_t *)(payload) = htobe16 (identLen);
+		htobe16buf (payload, identLen);
 		payload += 2; // cursize
 		i2p::context.GetIdentity ().ToBuffer (payload, identLen);
 		payload += identLen;
 		uint32_t signedOnTime = i2p::util::GetSecondsSinceEpoch ();
-		*(uint32_t *)(payload) = htobe32 (signedOnTime); // signed on time
+		htobe32buf (payload, signedOnTime); // signed on time
 		payload += 4;
 		auto signatureLen = i2p::context.GetIdentity ().GetSignatureLen ();
 		size_t paddingSize = ((payload - buf) + signatureLen)%16;
@@ -443,7 +445,7 @@ namespace transport
 
 	void SSUSession::ProcessRelayRequest (uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& from)
 	{
-		uint32_t relayTag = be32toh (*(uint32_t *)buf);
+		uint32_t relayTag = bufbe32toh (buf);
 		auto session = m_Server.FindRelaySession (relayTag);
 		if (session)
 		{
@@ -457,7 +459,7 @@ namespace transport
 			buf += challengeSize;
 			uint8_t * introKey = buf;
 			buf += 32; // introkey
-			uint32_t nonce = be32toh (*(uint32_t *)buf);
+			uint32_t nonce = bufbe32toh (buf);
 			SendRelayResponse (nonce, from, introKey, session->m_RemoteEndpoint);
 			SendRelayIntro (session.get (), from);
 		}	
@@ -476,9 +478,9 @@ namespace transport
 		}
 		*payload = 4;
 		payload++; // size
-		*(uint32_t *)payload = htobe32 (to.address ().to_v4 ().to_ulong ()); // Charlie's IP
+		htobe32buf (payload, to.address ().to_v4 ().to_ulong ()); // Charlie's IP
 		payload += 4; // address	
-		*(uint16_t *)payload = htobe16 (to.port ()); // Charlie's port
+		htobe16buf (payload, to.port ()); // Charlie's port
 		payload += 2; // port
 		// Alice
 		bool isV4 = from.address ().is_v4 (); // Alice's
@@ -496,9 +498,9 @@ namespace transport
 			memcpy (payload, from.address ().to_v6 ().to_bytes ().data (), 16); // Alice's IP V6
 			payload += 16; // address	
 		}
-		*(uint16_t *)payload = htobe16 (from.port ()); // Alice's port
+		htobe16buf (payload, from.port ()); // Alice's port
 		payload += 2; // port
-		*(uint32_t *)payload = htobe32 (nonce);		
+		htobe32buf (payload, nonce);		
 
 		if (m_State == eSessionStateEstablished)
 		{	
@@ -531,9 +533,9 @@ namespace transport
 		uint8_t * payload = buf + sizeof (SSUHeader);
 		*payload = 4;
 		payload++; // size
-		*(uint32_t *)payload = htobe32 (from.address ().to_v4 ().to_ulong ()); // Alice's IP
+		htobe32buf (payload, from.address ().to_v4 ().to_ulong ()); // Alice's IP
 		payload += 4; // address	
-		*(uint16_t *)payload = htobe16 (from.port ()); // Alice's port
+		htobe16buf (payload, from.port ()); // Alice's port
 		payload += 2; // port
 		*payload = 0; // challenge size	
 		uint8_t iv[16];
@@ -550,9 +552,9 @@ namespace transport
 		uint8_t * payload = buf + sizeof (SSUHeader);
 		uint8_t remoteSize = *payload; 
 		payload++; // remote size
-		//boost::asio::ip::address_v4 remoteIP (be32toh (*(uint32_t* )(payload)));
+		//boost::asio::ip::address_v4 remoteIP (bufbe32toh (payload));
 		payload += remoteSize; // remote address
-		//uint16_t remotePort = be16toh (*(uint16_t *)(payload));
+		//uint16_t remotePort = bufbe16toh (payload);
 		payload += 2; // remote port
 		uint8_t ourSize = *payload; 
 		payload++; // our size
@@ -570,7 +572,7 @@ namespace transport
 			ourIP = boost::asio::ip::address_v6 (bytes);
 		}
 		payload += ourSize; // our address
-		uint16_t ourPort = be16toh (*(uint16_t *)(payload));
+		uint16_t ourPort = bufbe16toh (payload);
 		payload += 2; // our port
 		LogPrint ("Our external address is ", ourIP.to_string (), ":", ourPort);
 		i2p::context.UpdateAddress (ourIP);
@@ -582,9 +584,9 @@ namespace transport
 		if (size == 4)
 		{
 			buf++; // size
-			boost::asio::ip::address_v4 address (be32toh (*(uint32_t* )buf));
+			boost::asio::ip::address_v4 address (bufbe32toh (buf));
 			buf += 4; // address
-			uint16_t port = be16toh (*(uint16_t *)buf);
+			uint16_t port = bufbe16toh (buf);
 			// send hole punch of 1 byte
 			m_Server.Send (buf, 0, boost::asio::ip::udp::endpoint (address, port));
 		}
@@ -600,10 +602,11 @@ namespace transport
 			LogPrint (eLogError, "Unexpected SSU packet length ", len);
 			return;
 		}
+		//TODO: we are using a dirty solution here but should work for now
 		SSUHeader * header = (SSUHeader *)buf;
 		memcpy (header->iv, iv, 16);
 		header->flag = payloadType << 4; // MSB is 0
-		header->time = htobe32 (i2p::util::GetSecondsSinceEpoch ());
+		htobe32buf (&(header->time), i2p::util::GetSecondsSinceEpoch ());
 		uint8_t * encrypted = &header->flag;
 		uint16_t encryptedLen = len - (encrypted - buf);
 		i2p::crypto::CBCEncryption encryption;
@@ -612,7 +615,7 @@ namespace transport
 		encryption.Encrypt (encrypted, encryptedLen, encrypted);
 		// assume actual buffer size is 18 (16 + 2) bytes more
 		memcpy (buf + len, iv, 16);
-		*(uint16_t *)(buf + len + 16) = htobe16 (encryptedLen);
+		htobe16buf (buf + len + 16, encryptedLen);
 		i2p::crypto::HMACMD5Digest (encrypted, encryptedLen + 18, macKey, header->mac);
 	}
 
@@ -623,17 +626,18 @@ namespace transport
 			LogPrint (eLogError, "Unexpected SSU packet length ", len);
 			return;
 		}
+		//TODO: we are using a dirty solution here but should work for now
 		SSUHeader * header = (SSUHeader *)buf;
 		i2p::context.GetRandomNumberGenerator ().GenerateBlock (header->iv, 16); // random iv
 		m_SessionKeyEncryption.SetIV (header->iv);
 		header->flag = payloadType << 4; // MSB is 0
-		header->time = htobe32 (i2p::util::GetSecondsSinceEpoch ());
+		htobe32buf (&(header->time), i2p::util::GetSecondsSinceEpoch ());
 		uint8_t * encrypted = &header->flag;
 		uint16_t encryptedLen = len - (encrypted - buf);
 		m_SessionKeyEncryption.Encrypt (encrypted, encryptedLen, encrypted);
 		// assume actual buffer size is 18 (16 + 2) bytes more
 		memcpy (buf + len, header->iv, 16);
-		*(uint16_t *)(buf + len + 16) = htobe16 (encryptedLen);
+		htobe16buf (buf + len + 16, encryptedLen);
 		i2p::crypto::HMACMD5Digest (encrypted, encryptedLen + 18, m_MacKey, header->mac);
 	}	
 		
@@ -644,6 +648,7 @@ namespace transport
 			LogPrint (eLogError, "Unexpected SSU packet length ", len);
 			return;
 		}
+		//TODO: since we are accessing a uint8_t this is unlikely to crash due to alignment but should be improved
 		SSUHeader * header = (SSUHeader *)buf;
 		uint8_t * encrypted = &header->flag;
 		uint16_t encryptedLen = len - (encrypted - buf);	
@@ -660,6 +665,7 @@ namespace transport
 			LogPrint (eLogError, "Unexpected SSU packet length ", len);
 			return;
 		}
+		//TODO: since we are accessing a uint8_t this is unlikely to crash due to alignment but should be improved
 		SSUHeader * header = (SSUHeader *)buf;
 		uint8_t * encrypted = &header->flag;
 		uint16_t encryptedLen = len - (encrypted - buf);	
@@ -677,12 +683,13 @@ namespace transport
 			LogPrint (eLogError, "Unexpected SSU packet length ", len);
 			return false;
 		}
+		//TODO: since we are accessing a uint8_t this is unlikely to crash due to alignment but should be improved
 		SSUHeader * header = (SSUHeader *)buf;
 		uint8_t * encrypted = &header->flag;
 		uint16_t encryptedLen = len - (encrypted - buf);
 		// assume actual buffer size is 18 (16 + 2) bytes more
 		memcpy (buf + len, header->iv, 16);
-		*(uint16_t *)(buf + len + 16) = htobe16 (encryptedLen);
+		htobe16buf (buf + len + 16, encryptedLen);
 		uint8_t digest[16];
 		i2p::crypto::HMACMD5Digest (encrypted, encryptedLen + 18, macKey, digest);
 		return !memcmp (header->mac, digest, 16);
@@ -844,13 +851,14 @@ namespace transport
 	void SSUSession::ProcessPeerTest (uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& senderEndpoint)
 	{
 		uint8_t * buf1 = buf;
-		uint32_t nonce = be32toh (*(uint32_t *)buf);
+		uint32_t nonce = bufbe32toh (buf);
 		buf += 4; // nonce
 		uint8_t size = *buf;
 		buf++; // size
-		uint32_t address = (size == 4) ? *(uint32_t *)buf : 0; // use it as is
+		
+		uint32_t address = (size == 4) ? buf32toh(buf) : 0; // use it as is
 		buf += size; // address
-		uint16_t port = *(uint16_t *)buf; // use it as is
+		uint16_t port = buf16toh(buf); // use it as is
 		buf += 2; // port
 		uint8_t * introKey = buf;
 		if (port && !address)
@@ -914,13 +922,13 @@ namespace transport
 		uint8_t buf[80 + 18];
 		uint8_t iv[16];
 		uint8_t * payload = buf + sizeof (SSUHeader);
-		*(uint32_t *)payload = htobe32 (nonce);
+		htobe32buf (payload, nonce);
 		payload += 4; // nonce	
 		if (address)
 		{					
 			*payload = 4;
 			payload++; // size
-			*(uint32_t *)payload = htobe32 (address);
+			htobe32buf (payload, address);
 			payload += 4; // address
 		}
 		else
@@ -928,7 +936,7 @@ namespace transport
 			*payload = 0;
 			payload++; //size
 		}
-		*(uint16_t *)payload = htobe16 (port);
+		htobe16buf (payload, port);
 		payload += 2; // port
 		memcpy (payload, introKey, 32); // intro key
 

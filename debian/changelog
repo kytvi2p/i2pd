@@ -1,3 +1,188 @@
+i2pd (0.6.0-1) unstable; urgency=medium
+
+  * New upstream release
+
+  [ orignal ]
+  * fixed typo
+  * terminate acceptor and sessions on stop
+  * Cancel added
+  * store SAMSession by pointer
+  * delete local destination on session close
+  * fixed crash at shutdown
+  * send request to addressbook link directly without proxy
+  * fixed crash
+  * process addressbook request response
+
+  [ Kill Your TV ]
+  * Revert the 'clean-up' commits so that custom build-time flags can be set
+  * add explanatory comments to Makefiles
+  * Fix building in kFreeBSD
+  * Don't build the lib when making static binaries
+  * Add api target
+  * slightly stricter use of mkdir/rm -rf
+
+  [ orignal ]
+  * look for LeaseSet in shared local destination
+  * fixed build error
+  * download hosts.txt without proxy
+
+  [ Kill Your TV ]
+  * typo fix
+
+  [ orignal ]
+  * delete useless field
+  * use VerifyDigest for verification
+
+  [ Kill Your TV ]
+  * fetch with HTTP/1.1
+
+  [ orignal ]
+  * load subscriptions
+  * reduce minimal # of routers to 50
+  * rolled back to HTTP 1.0 since chunked is not implemented
+  * parse HTTP header fields
+  * fixed typo
+  * merge chunked responses
+  * check and update addressbook subscriptions
+  * HTTP 1.1 for addressbook
+
+  [ hagen ]
+  * * new makefile target: deps
+
+  [ orignal ]
+  * check status code 304
+  * send if-none-match
+  * manage non-reponded database requests
+  * wait until download complete
+  * read incoming data util it's available
+  * request and handle LeaseSets through local destination only
+  * main netdb can request router info only
+  * read reamaining data from closed stream
+  * LeaseSet request complete callback
+  * wait until LeaseSet request complete instead timeout
+  * wait from LeaseSet request comlete
+  * take tunnels from exploratory pool only
+  * fixed crash
+  * report about termination after actual processing
+
+  [ Torkel Bjørnson-Langen ]
+  * Fixed building on OS X.
+  * Minor: fixed clang compile warning [-Wmismatched-tags]
+  * Minor: Makefile - added mk_build_dir to .PHONY target
+
+  [ orignal ]
+  * always use destination's thread to avoid race conditions
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Avoid aliasing problems by using special buf endian handling functions
+    wrapping memcpy
+
+  [ Kill Your TV ]
+  * fix calling individual targets
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Fix any remaning aliasing rules with propper memcpy wrappers
+  * Use htobuf16 for 0 value instead of htobe16buf
+
+  [ orignal ]
+  * fixed windows build
+  * LeaseSet database lookup
+  * fixed misalignment
+  * invoke accepter after receiving remote identity
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Fix library compilation
+  * Use better install paths
+  * Allow disabling binary compilation (useful for multilib builds in Gentoo)
+  * Fix even more alignment problems
+
+  [ orignal ]
+  * copy request to buffer if LeaseSet is requested
+  * print out number of NACKs
+  * destroy local destination on 'clear'
+  * rollback
+  * methods for I2NP header access
+  * eliminated TunnelGatewayHeader
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Allow for I2PTunnels without LocalDestination
+  * Allow for easy stream creation at LocalDestination (for now it's only
+    synchronous)
+
+  [ orignal ]
+  * more fixes of misalignment
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Use i2p::data::SigningKeyType instead of uint16_t
+  * Allow for asynchronous creation of streams
+
+  [ orignal ]
+  * process follow-on packets with zero send stream id
+  * eliminated cast to DeliveryStatus struct
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Fix a memory leak in ClientConnection
+  * Simplify and merge the identHash caching codepath on I2PClientTunnel
+  * Use the new asynchronous API on I2PClientTunnel and clean up after
+    ourselves
+
+  [ orignal ]
+  * eliminated cast to DatabaseStoreMsg
+  * request failed in destination is not ready
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Fix strange indentation.
+  * Remove unnecessary RemoteLeaseSet
+  * Rewrite SOCKS proxy so it uses I2PTunnelConnection and  I2PTunnel
+  * Rewrite SOCKS proxy parsing to allow for SOCKS5, also fix any remaining logs
+
+  [ orignal ]
+  * eliminated cast to BuildResponse Record
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Handle port correctly
+
+  [ orignal ]
+  * fixed race condition
+
+  [ Mikal Villa ]
+  * Fix Mac OSX build error.
+  * Following BSD standards
+  * Libminiupnpc library support (v1.5 and v1.6), dynamic runtime linking.
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Add Initial SOCKS5 support
+  * Clean up SOCKS a bit
+
+  [ orignal ]
+  * eliminated cast to ecnryptted build record
+
+  [ Mikal Villa ]
+  * Updating UPnP code for windows. (untested)
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Use enums instead of magic numbers on SOCKS
+  * Merge SOCKS4a and SOCKS5 request parsers, add stub support for SOCKS4 and
+    IPv4 and IPv6 addresses on SOCKS5
+
+  [ orignal ]
+  * fill clear text buffer of BuildRequestRecord
+  * elimimated cast to ClearText
+  * DatabaseLookup for RouterInfo
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Use the address book for conversion into .b32.i2p
+  * Return adequate SOCKS replies
+  * Reduce memory usage a bit
+  * Reduce the parsing to a single state machine, automatic removal of objects
+    and destruction of sockets/streams
+
+  [ orignal ]
+  * long ElGamal private key
+  * Update version.h
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 06 Jan 2015 13:10:35 +0000
+
 i2pd (0.5.0-1~trusty+1) trusty; urgency=medium
 
   * Building for Trusty
