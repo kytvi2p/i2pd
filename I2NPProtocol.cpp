@@ -1,7 +1,6 @@
 #include <string.h>
 #include <atomic>
 #include "I2PEndian.h"
-#include <cryptopp/sha.h>
 #include <cryptopp/gzip.h>
 #include "ElGamal.h"
 #include "Timestamp.h"
@@ -40,31 +39,26 @@ namespace i2p
 	static std::atomic<uint32_t> I2NPmsgID(0); // TODO: create class
 	void FillI2NPMessageHeader (I2NPMessage * msg, I2NPMessageType msgType, uint32_t replyMsgID)
 	{
-		I2NPHeader * header = msg->GetHeader ();
-		header->typeID = msgType;
+		msg->SetTypeID (msgType);
 		if (replyMsgID) // for tunnel creation
-			header->msgID = htobe32 (replyMsgID); 
+			msg->SetMsgID (replyMsgID); 
 		else
 		{	
-			header->msgID = htobe32 (I2NPmsgID);
+			msg->SetMsgID (I2NPmsgID);
 			I2NPmsgID++;
 		}	
-		header->expiration = htobe64 (i2p::util::GetMillisecondsSinceEpoch () + 5000); // TODO: 5 secs is a magic number
-		int len = msg->GetLength () - sizeof (I2NPHeader);
-		header->size = htobe16 (len);
-		uint8_t hash[32];
-		CryptoPP::SHA256().CalculateDigest(hash, msg->GetPayload (), len);
-		header->chks = hash[0];
-	}	
-
+		msg->SetExpiration (i2p::util::GetMillisecondsSinceEpoch () + 5000); // TODO: 5 secs is a magic number
+		msg->UpdateSize ();
+		msg->UpdateChks ();
+	}		
+	
 	void RenewI2NPMessageHeader (I2NPMessage * msg)
 	{
 		if (msg)
 		{
-			I2NPHeader * header = msg->GetHeader ();
-			header->msgID = htobe32 (I2NPmsgID);
+			msg->SetMsgID (I2NPmsgID);
 			I2NPmsgID++;
-			header->expiration = htobe64 (i2p::util::GetMillisecondsSinceEpoch () + 5000); 		
+			msg->SetExpiration (i2p::util::GetMillisecondsSinceEpoch () + 5000); 		
 		}
 	}
 
@@ -88,23 +82,25 @@ namespace i2p
 	
 	I2NPMessage * CreateDeliveryStatusMsg (uint32_t msgID)
 	{
-		I2NPDeliveryStatusMsg msg;
+		I2NPMessage * m = NewI2NPMessage ();
+		uint8_t * buf = m->GetPayload ();
 		if (msgID)
 		{
-			msg.msgID = htobe32 (msgID);
-			msg.timestamp = htobe64 (i2p::util::GetMillisecondsSinceEpoch ());
+			htobe32buf (buf + DELIVERY_STATUS_MSGID_OFFSET, msgID);
+			htobe64buf (buf + DELIVERY_STATUS_TIMESTAMP_OFFSET, i2p::util::GetMillisecondsSinceEpoch ());
 		}
 		else // for SSU establishment
 		{
-			msg.msgID = htobe32 (i2p::context.GetRandomNumberGenerator ().GenerateWord32 ());
-			msg.timestamp = htobe64 (2); // netID = 2
- 		}
-		return CreateI2NPMessage (eI2NPDeliveryStatus, (uint8_t *)&msg, sizeof (msg));
+			htobe32buf (buf + DELIVERY_STATUS_MSGID_OFFSET, i2p::context.GetRandomNumberGenerator ().GenerateWord32 ());
+			htobe64buf (buf + DELIVERY_STATUS_TIMESTAMP_OFFSET, 2); // netID = 2
+		}	
+		m->len += DELIVERY_STATUS_SIZE;
+		FillI2NPMessageHeader (m, eI2NPDeliveryStatus);
+		return m;
 	}
 
-	I2NPMessage * CreateDatabaseLookupMsg (const uint8_t * key, const uint8_t * from, 
-		uint32_t replyTunnelID, bool exploratory, std::set<i2p::data::IdentHash> * excludedPeers,
-	    bool encryption, i2p::tunnel::TunnelPool * pool)
+	I2NPMessage * CreateRouterInfoDatabaseLookupMsg (const uint8_t * key, const uint8_t * from, 
+		uint32_t replyTunnelID, bool exploratory, std::set<i2p::data::IdentHash> * excludedPeers)
 	{
 		I2NPMessage * m = NewI2NPMessage ();
 		uint8_t * buf = m->GetPayload ();
@@ -112,64 +108,80 @@ namespace i2p
 		buf += 32;
 		memcpy (buf, from, 32); // from
 		buf += 32;
+		uint8_t flag = exploratory ? 0x0C : 0x08; // 1000 - RI, 1100 -exporatory	
 		if (replyTunnelID)
 		{
-			*buf = encryption ? 0x03: 0x01; // set delivery flag
-			*(uint32_t *)(buf+1) = htobe32 (replyTunnelID);
+			*buf = flag | 0x01; // set delivery flag
+			htobe32buf (buf+1, replyTunnelID);
 			buf += 5;
 		}
 		else
 		{	
-			encryption = false; // encryption can we set for tunnels only
-			*buf = 0; // flag
+			*buf = flag; // flag
 			buf++;
 		}	
-		
-		if (exploratory)
+				
+		if (excludedPeers)
 		{
-			*(uint16_t *)buf = htobe16 (1); // one exlude record
+			int cnt = excludedPeers->size ();
+			htobe16buf (buf, cnt);
 			buf += 2;
-			// reply with non-floodfill routers only
-			memset (buf, 0, 32);
-			buf += 32;
+			for (auto& it: *excludedPeers)
+			{
+				memcpy (buf, it, 32);
+				buf += 32;
+			}	
 		}
 		else
-		{
-			if (excludedPeers)
-			{
-				int cnt = excludedPeers->size ();
-				*(uint16_t *)buf = htobe16 (cnt);
-				buf += 2;
-				for (auto& it: *excludedPeers)
-				{
-					memcpy (buf, it, 32);
-					buf += 32;
-				}	
-			}
-			else
-			{	
-				// nothing to exclude
-				*(uint16_t *)buf = htobe16 (0);
-				buf += 2;
-			}	
-		}	
-		if (encryption)
-		{
-			// session key and tag for reply
-			auto& rnd = i2p::context.GetRandomNumberGenerator ();
-			rnd.GenerateBlock (buf, 32); // key
-			buf[32] = 1; // 1 tag
-			rnd.GenerateBlock (buf + 33, 32); // tag
-			if (pool && pool->GetLocalDestination ())
-				pool->GetLocalDestination ()->SubmitSessionKey (buf, buf + 33); // introduce new key-tag to garlic engine
-			else
-				LogPrint ("Destination for encrypteed reply not specified");
-			buf += 65;
-		}	
+		{	
+			// nothing to exclude
+			htobuf16 (buf, 0);
+			buf += 2;
+		}		
+		
 		m->len += (buf - m->GetPayload ()); 
 		FillI2NPMessageHeader (m, eI2NPDatabaseLookup);
 		return m; 
 	}	
+
+	I2NPMessage * CreateLeaseSetDatabaseLookupMsg (const i2p::data::IdentHash& dest, 
+		const std::set<i2p::data::IdentHash>& excludedFloodfills,
+		const i2p::tunnel::InboundTunnel * replyTunnel, const uint8_t * replyKey, const uint8_t * replyTag)
+	{
+		I2NPMessage * m = NewI2NPMessage ();
+		uint8_t * buf = m->GetPayload ();
+		memcpy (buf, dest, 32); // key
+		buf += 32;
+		memcpy (buf, replyTunnel->GetNextIdentHash (), 32); // reply tunnel GW
+		buf += 32;
+		*buf = 7; // flags (01 - tunnel, 10 - encrypted, 0100 - LS lookup
+		htobe32buf (buf + 1, replyTunnel->GetNextTunnelID ()); // reply tunnel ID
+		buf += 5;
+		
+		// excluded
+		int cnt = excludedFloodfills.size ();
+		htobe16buf (buf, cnt);
+		buf += 2;
+		if (cnt > 0)
+		{
+			for (auto& it: excludedFloodfills)
+			{
+				memcpy (buf, it, 32);
+				buf += 32;
+			}
+		}	
+		// encryption
+		memcpy (buf, replyKey, 32);
+		buf[32] = 1; // 1 tag
+		memcpy (buf + 33, replyTag, 32);
+		buf += 65;
+
+		m->len += (buf - m->GetPayload ()); 
+		FillI2NPMessageHeader (m, eI2NPDatabaseLookup);
+		return m; 		  			
+	}		
+			
+	
 
 	I2NPMessage * CreateDatabaseSearchReply (const i2p::data::IdentHash& ident, 
 		const i2p::data::RouterInfo * floodfill)
@@ -199,22 +211,22 @@ namespace i2p
 			router = &context.GetRouterInfo ();
 
 		I2NPMessage * m = NewI2NPShortMessage ();
-		I2NPDatabaseStoreMsg * msg = (I2NPDatabaseStoreMsg *)m->GetPayload ();		
+		uint8_t * payload = m->GetPayload ();		
 
-		memcpy (msg->key, router->GetIdentHash (), 32);
-		msg->type = 0;
-		msg->replyToken = 0;
+		memcpy (payload + DATABASE_STORE_KEY_OFFSET, router->GetIdentHash (), 32);
+		payload[DATABASE_STORE_TYPE_OFFSET] = 0;
+		htobe32buf (payload + DATABASE_STORE_REPLY_TOKEN_OFFSET, 0);
 		
 		CryptoPP::Gzip compressor;
 		compressor.Put (router->GetBuffer (), router->GetBufferLen ());
 		compressor.MessageEnd();
 		auto size = compressor.MaxRetrievable ();
-		uint8_t * buf = m->GetPayload () + sizeof (I2NPDatabaseStoreMsg);
-		*(uint16_t *)buf = htobe16 (size); // size
+		uint8_t * buf = payload + DATABASE_STORE_HEADER_SIZE;
+		htobe16buf (buf, size); // size
 		buf += 2;
 		// TODO: check if size doesn't exceed buffer
 		compressor.Get (buf, size); 
-		m->len += sizeof (I2NPDatabaseStoreMsg) + 2 + size; // payload size
+		m->len += DATABASE_STORE_HEADER_SIZE + 2 + size; // payload size
 		FillI2NPMessageHeader (m, eI2NPDatabaseStore);
 		
 		return m;
@@ -225,23 +237,22 @@ namespace i2p
 		if (!leaseSet) return nullptr;
 		I2NPMessage * m = NewI2NPShortMessage ();
 		uint8_t * payload = m->GetPayload ();	
-		I2NPDatabaseStoreMsg * msg = (I2NPDatabaseStoreMsg *)payload;
-		memcpy (msg->key, leaseSet->GetIdentHash (), 32);
-		msg->type = 1; // LeaseSet
-		msg->replyToken = htobe32 (replyToken);
-		size_t size = sizeof (I2NPDatabaseStoreMsg);
+		memcpy (payload + DATABASE_STORE_KEY_OFFSET, leaseSet->GetIdentHash (), 32);
+		payload[DATABASE_STORE_TYPE_OFFSET] = 1; // LeaseSet
+		htobe32buf (payload + DATABASE_STORE_REPLY_TOKEN_OFFSET, replyToken);
+		size_t size = DATABASE_STORE_HEADER_SIZE;
 		if (replyToken)
 		{
 			auto leases = leaseSet->GetNonExpiredLeases ();
 			if (leases.size () > 0)
 			{
-				*(uint32_t *)(payload + size) = htobe32 (leases[0].tunnelID);
+				htobe32buf (payload + size, leases[0].tunnelID);
 				size += 4; // reply tunnelID
 				memcpy (payload + size, leases[0].tunnelGateway, 32);
 				size += 32; // reply tunnel gateway
 			}
 			else
-				msg->replyToken = 0;
+				htobe32buf (payload + DATABASE_STORE_REPLY_TOKEN_OFFSET, 0);
 		}
 		memcpy (payload + size, leaseSet->GetBuffer (), leaseSet->GetBufferLen ());
 		size += leaseSet->GetBufferLen ();
@@ -249,73 +260,46 @@ namespace i2p
 		FillI2NPMessageHeader (m, eI2NPDatabaseStore);
 		return m;
 	}
-
-	I2NPBuildRequestRecordClearText CreateBuildRequestRecord (
-		const uint8_t * ourIdent, uint32_t receiveTunnelID, 
-	    const uint8_t * nextIdent, uint32_t nextTunnelID, 
-	    const uint8_t * layerKey,const uint8_t * ivKey,                                                                 
-	    const uint8_t * replyKey, const uint8_t * replyIV, uint32_t nextMessageID,
-	          bool isGateway, bool isEndpoint)
-	{
-		I2NPBuildRequestRecordClearText clearText;	
-		clearText.receiveTunnel = htobe32 (receiveTunnelID); 		
-		clearText.nextTunnel = htobe32(nextTunnelID);
-		memcpy (clearText.layerKey, layerKey, 32);
-		memcpy (clearText.ivKey, ivKey, 32);
-		memcpy (clearText.replyKey, replyKey, 32);
-		memcpy (clearText.replyIV, replyIV, 16);
-		clearText.flag = 0;
-		if (isGateway) clearText.flag |= 0x80;
-		if (isEndpoint) clearText.flag |= 0x40;
-		memcpy (clearText.ourIdent, ourIdent, 32);
-		memcpy (clearText.nextIdent, nextIdent, 32);
-		clearText.requestTime = htobe32 (i2p::util::GetHoursSinceEpoch ()); 
-		clearText.nextMessageID = htobe32(nextMessageID);
-		return clearText;
-	}	
-
-	void EncryptBuildRequestRecord (const i2p::data::RouterInfo& router, 
-		const I2NPBuildRequestRecordClearText& clearText,
-	    I2NPBuildRequestRecordElGamalEncrypted& record)
-	{
-		router.GetElGamalEncryption ()->Encrypt ((uint8_t *)&clearText, sizeof(clearText), record.encrypted);
-		memcpy (record.toPeer, (const uint8_t *)router.GetIdentHash (), 16);
-	}	
 	
-	bool HandleBuildRequestRecords (int num, I2NPBuildRequestRecordElGamalEncrypted * records, I2NPBuildRequestRecordClearText& clearText)
+	bool HandleBuildRequestRecords (int num, uint8_t * records, uint8_t * clearText)
 	{
 		for (int i = 0; i < num; i++)
 		{	
-			if (!memcmp (records[i].toPeer, (const uint8_t *)i2p::context.GetRouterInfo ().GetIdentHash (), 16))
+			uint8_t * record = records + i*TUNNEL_BUILD_RECORD_SIZE;
+			if (!memcmp (record + BUILD_REQUEST_RECORD_TO_PEER_OFFSET, (const uint8_t *)i2p::context.GetRouterInfo ().GetIdentHash (), 16))
 			{	
 				LogPrint ("Record ",i," is ours");	
 			
-				i2p::crypto::ElGamalDecrypt (i2p::context.GetEncryptionPrivateKey (), records[i].encrypted, (uint8_t *)&clearText);
-				// replace record to reply
-				I2NPBuildResponseRecord * reply = (I2NPBuildResponseRecord *)(records + i);				
+				i2p::crypto::ElGamalDecrypt (i2p::context.GetEncryptionPrivateKey (), record + BUILD_REQUEST_RECORD_ENCRYPTED_OFFSET, clearText);
+				// replace record to reply			
 				if (i2p::context.AcceptsTunnels ())
 				{	
 					i2p::tunnel::TransitTunnel * transitTunnel = 
 						i2p::tunnel::CreateTransitTunnel (
-							be32toh (clearText.receiveTunnel), 
-							clearText.nextIdent, be32toh (clearText.nextTunnel),
-							clearText.layerKey, clearText.ivKey, 
-							clearText.flag & 0x80, clearText.flag & 0x40);
+							bufbe32toh (clearText + BUILD_REQUEST_RECORD_RECEIVE_TUNNEL_OFFSET), 
+							clearText + BUILD_REQUEST_RECORD_NEXT_IDENT_OFFSET, 
+						    bufbe32toh (clearText + BUILD_REQUEST_RECORD_NEXT_TUNNEL_OFFSET),
+							clearText + BUILD_REQUEST_RECORD_LAYER_KEY_OFFSET, 
+						    clearText + BUILD_REQUEST_RECORD_IV_KEY_OFFSET, 
+							clearText[BUILD_REQUEST_RECORD_FLAG_OFFSET] & 0x80, 
+						    clearText[BUILD_REQUEST_RECORD_FLAG_OFFSET ] & 0x40);
 					i2p::tunnel::tunnels.AddTransitTunnel (transitTunnel);
-					reply->ret = 0;
+					record[BUILD_RESPONSE_RECORD_RET_OFFSET] = 0;
 				}
 				else
-					reply->ret = 30; // always reject with bandwidth reason (30)
+					record[BUILD_RESPONSE_RECORD_RET_OFFSET] = 30; // always reject with bandwidth reason (30)
 				
 				//TODO: fill filler
-				CryptoPP::SHA256().CalculateDigest(reply->hash, reply->padding, sizeof (reply->padding) + 1); // + 1 byte of ret
+				CryptoPP::SHA256().CalculateDigest(record + BUILD_RESPONSE_RECORD_HASH_OFFSET, 
+					record + BUILD_RESPONSE_RECORD_PADDING_OFFSET, BUILD_RESPONSE_RECORD_PADDING_SIZE + 1); // + 1 byte of ret
 				// encrypt reply
 				i2p::crypto::CBCEncryption encryption;
 				for (int j = 0; j < num; j++)
 				{
-					encryption.SetKey (clearText.replyKey);
-					encryption.SetIV (clearText.replyIV);
-					encryption.Encrypt((uint8_t *)(records + j), sizeof (records[j]), (uint8_t *)(records + j)); 
+					encryption.SetKey (clearText + BUILD_REQUEST_RECORD_REPLY_KEY_OFFSET);
+					encryption.SetIV (clearText + BUILD_REQUEST_RECORD_REPLY_IV_OFFSET);
+					uint8_t * reply = records + j*TUNNEL_BUILD_RECORD_SIZE;
+					encryption.Encrypt(reply, TUNNEL_BUILD_RECORD_SIZE, reply); 
 				}
 				return true;
 			}	
@@ -347,41 +331,42 @@ namespace i2p
 		}
 		else
 		{
-			I2NPBuildRequestRecordElGamalEncrypted * records = (I2NPBuildRequestRecordElGamalEncrypted *)(buf+1); 
-			I2NPBuildRequestRecordClearText clearText;	
-			if (HandleBuildRequestRecords (num, records, clearText))
+			uint8_t clearText[BUILD_REQUEST_RECORD_CLEAR_TEXT_SIZE];	
+			if (HandleBuildRequestRecords (num, buf + 1, clearText))
 			{
-				if (clearText.flag & 0x40) // we are endpoint of outboud tunnel
+				if (clearText[BUILD_REQUEST_RECORD_FLAG_OFFSET] & 0x40) // we are endpoint of outboud tunnel
 				{
 					// so we send it to reply tunnel 
-					transports.SendMessage (clearText.nextIdent, 
-						CreateTunnelGatewayMsg (be32toh (clearText.nextTunnel),
+					transports.SendMessage (clearText + BUILD_REQUEST_RECORD_NEXT_IDENT_OFFSET, 
+						CreateTunnelGatewayMsg (bufbe32toh (clearText + BUILD_REQUEST_RECORD_NEXT_TUNNEL_OFFSET),
 							eI2NPVariableTunnelBuildReply, buf, len, 
-						    be32toh (clearText.nextMessageID)));                         
+						    bufbe32toh (clearText + BUILD_REQUEST_RECORD_SEND_MSG_ID_OFFSET)));                         
 				}	
 				else	
-					transports.SendMessage (clearText.nextIdent, 
-						CreateI2NPMessage (eI2NPVariableTunnelBuild, buf, len, be32toh (clearText.nextMessageID)));
+					transports.SendMessage (clearText + BUILD_REQUEST_RECORD_NEXT_IDENT_OFFSET, 
+						CreateI2NPMessage (eI2NPVariableTunnelBuild, buf, len, 
+							bufbe32toh (clearText + BUILD_REQUEST_RECORD_SEND_MSG_ID_OFFSET)));
 			}	
 		}	
 	}
 
 	void HandleTunnelBuildMsg (uint8_t * buf, size_t len)
 	{
-		I2NPBuildRequestRecordClearText clearText;	
-		if (HandleBuildRequestRecords (NUM_TUNNEL_BUILD_RECORDS, (I2NPBuildRequestRecordElGamalEncrypted *)buf, clearText))
+		uint8_t clearText[BUILD_REQUEST_RECORD_CLEAR_TEXT_SIZE];	
+		if (HandleBuildRequestRecords (NUM_TUNNEL_BUILD_RECORDS, buf, clearText))
 		{
-			if (clearText.flag & 0x40) // we are endpoint of outbound tunnel
+			if (clearText[BUILD_REQUEST_RECORD_FLAG_OFFSET] & 0x40) // we are endpoint of outbound tunnel
 			{
 				// so we send it to reply tunnel 
-				transports.SendMessage (clearText.nextIdent, 
-					CreateTunnelGatewayMsg (be32toh (clearText.nextTunnel),
+				transports.SendMessage (clearText + BUILD_REQUEST_RECORD_NEXT_IDENT_OFFSET, 
+					CreateTunnelGatewayMsg (bufbe32toh (clearText + BUILD_REQUEST_RECORD_NEXT_TUNNEL_OFFSET),
 						eI2NPTunnelBuildReply, buf, len, 
-					    be32toh (clearText.nextMessageID)));                         
+					    bufbe32toh (clearText + BUILD_REQUEST_RECORD_SEND_MSG_ID_OFFSET)));                         
 			}	
 			else	
-				transports.SendMessage (clearText.nextIdent, 
-					CreateI2NPMessage (eI2NPTunnelBuild, buf, len, be32toh (clearText.nextMessageID)));
+				transports.SendMessage (clearText + BUILD_REQUEST_RECORD_NEXT_IDENT_OFFSET, 
+					CreateI2NPMessage (eI2NPTunnelBuild, buf, len, 
+						bufbe32toh (clearText + BUILD_REQUEST_RECORD_SEND_MSG_ID_OFFSET)));
 		} 
 	}
 
@@ -422,7 +407,7 @@ namespace i2p
 	{
 		I2NPMessage * msg = NewI2NPMessage ();
 		memcpy (msg->GetPayload () + 4, payload, i2p::tunnel::TUNNEL_DATA_MSG_SIZE - 4);
-		*(uint32_t *)(msg->GetPayload ()) = htobe32 (tunnelID);
+		htobe32buf (msg->GetPayload (), tunnelID);
 		msg->len += i2p::tunnel::TUNNEL_DATA_MSG_SIZE; 
 		FillI2NPMessageHeader (msg, eI2NPTunnelData);
 		return msg;
@@ -431,26 +416,26 @@ namespace i2p
 	I2NPMessage * CreateTunnelGatewayMsg (uint32_t tunnelID, const uint8_t * buf, size_t len)
 	{
 		I2NPMessage * msg = NewI2NPMessage (len);
-		TunnelGatewayHeader * header = (TunnelGatewayHeader *)msg->GetPayload ();
-		header->tunnelID = htobe32 (tunnelID);
-		header->length = htobe16 (len);
-		memcpy (msg->GetPayload () + sizeof (TunnelGatewayHeader), buf, len);
-		msg->len += sizeof (TunnelGatewayHeader) + len;
+		uint8_t * payload = msg->GetPayload ();
+		htobe32buf (payload + TUNNEL_GATEWAY_HEADER_TUNNELID_OFFSET, tunnelID);
+		htobe16buf (payload + TUNNEL_GATEWAY_HEADER_LENGTH_OFFSET, len);
+		memcpy (payload + TUNNEL_GATEWAY_HEADER_SIZE, buf, len);
+		msg->len += TUNNEL_GATEWAY_HEADER_SIZE + len;
 		FillI2NPMessageHeader (msg, eI2NPTunnelGateway);
 		return msg;
 	}	
 
 	I2NPMessage * CreateTunnelGatewayMsg (uint32_t tunnelID, I2NPMessage * msg)
 	{
-		if (msg->offset >= sizeof (I2NPHeader) + sizeof (TunnelGatewayHeader))
+		if (msg->offset >= I2NP_HEADER_SIZE + TUNNEL_GATEWAY_HEADER_SIZE)
 		{
 			// message is capable to be used without copying
-			TunnelGatewayHeader * header = (TunnelGatewayHeader *)(msg->GetBuffer () - sizeof (TunnelGatewayHeader));
-			header->tunnelID = htobe32 (tunnelID);
+			uint8_t * payload = msg->GetBuffer () - TUNNEL_GATEWAY_HEADER_SIZE;
+			htobe32buf (payload + TUNNEL_GATEWAY_HEADER_TUNNELID_OFFSET, tunnelID);
 			int len = msg->GetLength ();
-			header->length = htobe16 (len);
-			msg->offset -= (sizeof (I2NPHeader) + sizeof (TunnelGatewayHeader));
-			msg->len = msg->offset + sizeof (I2NPHeader) + sizeof (TunnelGatewayHeader) +len;
+			htobe16buf (payload + TUNNEL_GATEWAY_HEADER_LENGTH_OFFSET, len);
+			msg->offset -= (I2NP_HEADER_SIZE + TUNNEL_GATEWAY_HEADER_SIZE);
+			msg->len = msg->offset + I2NP_HEADER_SIZE + TUNNEL_GATEWAY_HEADER_SIZE +len;
 			FillI2NPMessageHeader (msg, eI2NPTunnelGateway);
 			return msg;
 		}
@@ -466,7 +451,7 @@ namespace i2p
 		const uint8_t * buf, size_t len, uint32_t replyMsgID)
 	{
 		I2NPMessage * msg = NewI2NPMessage (len);
-		size_t gatewayMsgOffset = sizeof (I2NPHeader) + sizeof (TunnelGatewayHeader);
+		size_t gatewayMsgOffset = I2NP_HEADER_SIZE + TUNNEL_GATEWAY_HEADER_SIZE;
 		msg->offset += gatewayMsgOffset;
 		msg->len += gatewayMsgOffset;
 		memcpy (msg->GetPayload (), buf, len);
@@ -474,24 +459,25 @@ namespace i2p
 		FillI2NPMessageHeader (msg, msgType, replyMsgID); // create content message
 		len = msg->GetLength ();
 		msg->offset -= gatewayMsgOffset;
-		TunnelGatewayHeader * header = (TunnelGatewayHeader *)msg->GetPayload ();
-		header->tunnelID = htobe32 (tunnelID);
-		header->length = htobe16 (len);
+		uint8_t * payload = msg->GetPayload ();
+		htobe32buf (payload + TUNNEL_GATEWAY_HEADER_TUNNELID_OFFSET, tunnelID);
+		htobe16buf (payload + TUNNEL_GATEWAY_HEADER_LENGTH_OFFSET, len);
 		FillI2NPMessageHeader (msg, eI2NPTunnelGateway); // gateway message
 		return msg;
 	}	
 	
 	void HandleTunnelGatewayMsg (I2NPMessage * msg)
 	{		
-		TunnelGatewayHeader * header = (TunnelGatewayHeader *)msg->GetPayload ();
-		uint32_t tunnelID = be32toh(header->tunnelID);
-		uint16_t len = be16toh(header->length);
+		const uint8_t * payload = msg->GetPayload ();
+		uint32_t tunnelID = bufbe32toh(payload + TUNNEL_GATEWAY_HEADER_TUNNELID_OFFSET);
+		uint16_t len = bufbe16toh(payload + TUNNEL_GATEWAY_HEADER_LENGTH_OFFSET);
 		// we make payload as new I2NP message to send
-		msg->offset += sizeof (I2NPHeader) + sizeof (TunnelGatewayHeader);
+		msg->offset += I2NP_HEADER_SIZE + TUNNEL_GATEWAY_HEADER_SIZE;
 		msg->len = msg->offset + len;
-		LogPrint ("TunnelGateway of ", (int)len, " bytes for tunnel ", (unsigned int)tunnelID, ". Msg type ", (int)msg->GetHeader()->typeID);
-		if (msg->GetHeader()->typeID == eI2NPDatabaseStore ||
-		    msg->GetHeader()->typeID == eI2NPDatabaseSearchReply)
+		auto typeID = msg->GetTypeID ();
+		LogPrint ("TunnelGateway of ", (int)len, " bytes for tunnel ", (unsigned int)tunnelID, ". Msg type ", (int)typeID);
+			
+		if (typeID == eI2NPDatabaseStore || typeID == eI2NPDatabaseSearchReply)
 		{
 			// transit DatabaseStore my contain new/updated RI 
 			// or DatabaseSearchReply with new routers
@@ -511,19 +497,18 @@ namespace i2p
 
 	size_t GetI2NPMessageLength (const uint8_t * msg)
 	{
-		I2NPHeader * header = (I2NPHeader *)msg;
-		return be16toh (header->size) + sizeof (I2NPHeader);
+		return bufbe16toh (msg + I2NP_HEADER_SIZE_OFFSET) + I2NP_HEADER_SIZE;
 	}	
 	
 	void HandleI2NPMessage (uint8_t * msg, size_t len)
 	{
-		I2NPHeader * header = (I2NPHeader *)msg;
-		uint32_t msgID = be32toh (header->msgID);	
-		LogPrint ("I2NP msg received len=", len,", type=", (int)header->typeID, ", msgID=", (unsigned int)msgID);
+		uint8_t typeID = msg[I2NP_HEADER_TYPEID_OFFSET];
+		uint32_t msgID = bufbe32toh (msg + I2NP_HEADER_MSGID_OFFSET);	
+		LogPrint ("I2NP msg received len=", len,", type=", (int)typeID, ", msgID=", (unsigned int)msgID);
 
-		uint8_t * buf = msg + sizeof (I2NPHeader);
-		int size = be16toh (header->size);
-		switch (header->typeID)
+		uint8_t * buf = msg + I2NP_HEADER_SIZE;
+		int size = bufbe16toh (msg + I2NP_HEADER_SIZE_OFFSET);
+		switch (typeID)
 		{	
 			case eI2NPVariableTunnelBuild:
 				LogPrint ("VariableTunnelBuild");
@@ -542,7 +527,7 @@ namespace i2p
 				// TODO:
 			break;	
 			default:
-				LogPrint ("Unexpected message ", (int)header->typeID);
+				LogPrint ("Unexpected message ", (int)typeID);
 		}	
 	}
 
@@ -550,7 +535,7 @@ namespace i2p
 	{
 		if (msg)
 		{	
-			switch (msg->GetHeader ()->typeID)
+			switch (msg->GetTypeID ())
 			{	
 				case eI2NPTunnelData:
 					LogPrint ("TunnelData");

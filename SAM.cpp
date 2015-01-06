@@ -7,7 +7,6 @@
 #include "base64.h"
 #include "Identity.h"
 #include "Log.h"
-#include "NetDb.h"
 #include "Destination.h"
 #include "ClientContext.h"
 #include "SAM.h"
@@ -326,9 +325,8 @@ namespace client
 				Connect (*leaseSet);
 			else
 			{
-				i2p::data::netdb.RequestDestination (dest.GetIdentHash (), true, m_Session->localDestination->GetTunnelPool ());
-				m_Timer.expires_from_now (boost::posix_time::seconds(SAM_CONNECT_TIMEOUT));
-				m_Timer.async_wait (std::bind (&SAMSocket::HandleStreamDestinationRequestTimer,
+				m_Session->localDestination->RequestDestination (dest.GetIdentHash (), 
+					std::bind (&SAMSocket::HandleLeaseSetRequestComplete,
 					shared_from_this (), std::placeholders::_1, dest.GetIdentHash ()));	
 			}
 		}
@@ -346,18 +344,17 @@ namespace client
 		SendMessageReply (SAM_STREAM_STATUS_OK, strlen(SAM_STREAM_STATUS_OK), false);
 	}
 
-	void SAMSocket::HandleStreamDestinationRequestTimer (const boost::system::error_code& ecode, i2p::data::IdentHash ident)
+	void SAMSocket::HandleLeaseSetRequestComplete (bool success, i2p::data::IdentHash ident)
 	{
-		if (!ecode) // timeout expired
+		const i2p::data::LeaseSet * leaseSet =  nullptr;
+		if (success) // timeout expired
+			leaseSet = m_Session->localDestination->FindLeaseSet (ident);
+		if (leaseSet)
+			Connect (*leaseSet);
+		else
 		{
-			auto leaseSet = m_Session->localDestination->FindLeaseSet (ident);
-			if (leaseSet)
-				Connect (*leaseSet);
-			else
-			{
-				LogPrint ("SAM destination to connect not found");
-				SendMessageReply (SAM_STREAM_STATUS_CANT_REACH_PEER, strlen(SAM_STREAM_STATUS_CANT_REACH_PEER), true);
-			}
+			LogPrint ("SAM destination to connect not found");
+			SendMessageReply (SAM_STREAM_STATUS_CANT_REACH_PEER, strlen(SAM_STREAM_STATUS_CANT_REACH_PEER), true);
 		}
 	}
 
@@ -568,6 +565,28 @@ namespace client
 			LogPrint (eLogWarning, "Datagram size ", len," exceeds buffer");
 	}
 
+	SAMSession::SAMSession (ClientDestination * dest):
+		localDestination (dest)
+	{
+	}
+		
+	SAMSession::~SAMSession ()
+	{
+		for (auto it: sockets)
+			it->SetSocketType (eSAMSocketTypeTerminated);
+		i2p::client::context.DeleteLocalDestination (localDestination);
+	}
+
+	void SAMSession::CloseStreams ()
+	{
+		for (auto it: sockets)
+		{	
+			it->CloseStream ();
+			it->SetSocketType (eSAMSocketTypeTerminated);
+		}	
+		sockets.clear ();
+	}
+
 	SAMBridge::SAMBridge (int port):
 		m_IsRunning (false), m_Thread (nullptr),
 		m_Acceptor (m_Service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
@@ -577,7 +596,8 @@ namespace client
 
 	SAMBridge::~SAMBridge ()
 	{
-		Stop ();
+		if (m_IsRunning)
+			Stop ();
 	}	
 
 	void SAMBridge::Start ()
@@ -591,6 +611,10 @@ namespace client
 	void SAMBridge::Stop ()
 	{
 		m_IsRunning = false;
+		m_Acceptor.cancel ();
+		for (auto it: m_Sessions)
+			delete it.second;
+		m_Sessions.clear ();
 		m_Service.stop ();
 		if (m_Thread)
 		{	
@@ -661,13 +685,11 @@ namespace client
 		}
 		if (localDestination)
 		{
-			SAMSession session;
-			session.localDestination = localDestination;
 			std::unique_lock<std::mutex> l(m_SessionsMutex);
-			auto ret = m_Sessions.insert (std::pair<std::string, SAMSession>(id, session));
+			auto ret = m_Sessions.insert (std::pair<std::string, SAMSession *>(id, new SAMSession (localDestination)));
 			if (!ret.second)
 				LogPrint ("Session ", id, " already exists");
-			return &(ret.first->second);
+			return ret.first->second;
 		}
 		return nullptr;
 	}
@@ -678,11 +700,10 @@ namespace client
 		auto it = m_Sessions.find (id);
 		if (it != m_Sessions.end ())
 		{
-			for (auto it1: it->second.sockets)
-				it1->CloseStream ();
-			it->second.sockets.clear ();
-			i2p::client::context.DeleteLocalDestination (it->second.localDestination);
+			auto session = it->second;
+			session->CloseStreams ();
 			m_Sessions.erase (it);
+			delete session;
 		}
 	}
 
@@ -691,7 +712,7 @@ namespace client
 		std::unique_lock<std::mutex> l(m_SessionsMutex);
 		auto it = m_Sessions.find (id);
 		if (it != m_Sessions.end ())
-			return &it->second;
+			return it->second;
 		return nullptr;
 	}
 
@@ -732,8 +753,7 @@ namespace client
 						else
 						{
 							LogPrint ("SAM datagram destination not found");
-							i2p::data::netdb.RequestDestination (dest.GetIdentHash (), true, 
-								session->localDestination->GetTunnelPool ());
+							session->localDestination->RequestDestination (dest.GetIdentHash ());
 						}	
 					}	
 					else

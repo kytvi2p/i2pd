@@ -3,6 +3,7 @@
 
 #include <map>
 #include <string>
+#include <iostream>
 #include <boost/asio.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -39,7 +40,14 @@ namespace util
 
 	namespace http
 	{
+		const char ETAG[] = "ETag";
+		const char IF_NONE_MATCH[] = "If-None-Match";
+		const char IF_MODIFIED_SINCE[] = "If-Modified-Since";
+		const char LAST_MODIFIED[] = "Last-Modified";
+		const char TRANSFER_ENCODING[] = "Transfer-Encoding";
+
 		std::string httpRequest(const std::string& address);
+		void MergeChunkedResponse (std::istream& response, std::ostream& merged);
 		int httpRequestViaI2pProxy(const std::string& address, std::string &content); // return http code
 		
 		struct url {

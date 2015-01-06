@@ -61,7 +61,7 @@ namespace tunnel
 						break;
 					  	case eDeliveryTypeTunnel: // 1
 							LogPrint ("Delivery type tunnel");	
-							m.tunnelID = be32toh (*(uint32_t *)fragment);
+							m.tunnelID = bufbe32toh (fragment);
 							fragment += 4; // tunnelID
 							m.hash = i2p::data::IdentHash (fragment);
 							fragment += 32; // hash
@@ -79,7 +79,7 @@ namespace tunnel
 					if (isFragmented)
 					{
 						// Message ID
-						msgID = be32toh (*(uint32_t *)fragment); 	
+						msgID = bufbe32toh (fragment); 	
 						fragment += 4;
 						LogPrint ("Fragmented message ", msgID);
 						isLastFragment = false;
@@ -88,14 +88,14 @@ namespace tunnel
 				else
 				{
 					// follow on
-					msgID = be32toh (*(uint32_t *)fragment); // MessageID			
+					msgID = bufbe32toh (fragment); // MessageID			
 					fragment += 4; 
 					fragmentNum = (flag >> 1) & 0x3F; // 6 bits
 					isLastFragment = flag & 0x01;
 					LogPrint ("Follow on fragment ", fragmentNum, " of message ", msgID, isLastFragment ? " last" : " non-last");
 				}	
 				
-				uint16_t size = be16toh (*(uint16_t *)fragment);
+				uint16_t size = bufbe16toh (fragment);
 				fragment += 2;
 				LogPrint ("Fragment size=", (int)size);
 
@@ -105,8 +105,8 @@ namespace tunnel
 				{
 					// this is not last message. we have to copy it
 					m.data = NewI2NPMessage ();
-					m.data->offset += sizeof (TunnelGatewayHeader); // reserve room for TunnelGateway header
-					m.data->len += sizeof (TunnelGatewayHeader);
+					m.data->offset += TUNNEL_GATEWAY_HEADER_SIZE; // reserve room for TunnelGateway header
+					m.data->len += TUNNEL_GATEWAY_HEADER_SIZE;
 					*(m.data) = *msg;
 				}
 				else
@@ -228,7 +228,7 @@ namespace tunnel
 	
 	void TunnelEndpoint::HandleNextMessage (const TunnelMessageBlock& msg)
 	{
-		LogPrint ("TunnelMessage: handle fragment of ", msg.data->GetLength ()," bytes. Msg type ", (int)msg.data->GetHeader()->typeID);
+		LogPrint ("TunnelMessage: handle fragment of ", msg.data->GetLength ()," bytes. Msg type ", (int)msg.data->GetTypeID ());
 		switch (msg.deliveryType)
 		{
 			case eDeliveryTypeLocal:
@@ -245,8 +245,8 @@ namespace tunnel
 					// to somebody else
 					if (!m_IsInbound) // outbound transit tunnel
 					{
-						if (msg.data->GetHeader()->typeID == eI2NPDatabaseStore ||
-						    msg.data->GetHeader()->typeID == eI2NPDatabaseSearchReply )
+						auto typeID = msg.data->GetTypeID ();
+						if (typeID == eI2NPDatabaseStore || typeID == eI2NPDatabaseSearchReply )
 						{
 							// catch RI or reply with new list of routers
 							auto ds = NewI2NPMessage ();

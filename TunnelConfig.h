@@ -8,6 +8,7 @@
 #include "aes.h"
 #include "RouterInfo.h"
 #include "RouterContext.h"
+#include "Timestamp.h"
 
 namespace i2p
 {
@@ -82,6 +83,28 @@ namespace tunnel
 				isGateway = false;
 			}	
 		}
+
+		void CreateBuildRequestRecord (uint8_t * record, uint32_t replyMsgID)
+		{
+			uint8_t clearText[BUILD_REQUEST_RECORD_CLEAR_TEXT_SIZE];
+			htobe32buf (clearText + BUILD_REQUEST_RECORD_RECEIVE_TUNNEL_OFFSET, tunnelID); 
+			memcpy (clearText + BUILD_REQUEST_RECORD_OUR_IDENT_OFFSET, router->GetIdentHash (), 32);
+			htobe32buf (clearText + BUILD_REQUEST_RECORD_NEXT_TUNNEL_OFFSET, nextTunnelID);
+			memcpy (clearText + BUILD_REQUEST_RECORD_NEXT_IDENT_OFFSET, nextRouter->GetIdentHash (), 32);
+			memcpy (clearText + BUILD_REQUEST_RECORD_LAYER_KEY_OFFSET, layerKey, 32);
+			memcpy (clearText + BUILD_REQUEST_RECORD_IV_KEY_OFFSET, ivKey, 32);
+			memcpy (clearText + BUILD_REQUEST_RECORD_REPLY_KEY_OFFSET, replyKey, 32);
+			memcpy (clearText + BUILD_REQUEST_RECORD_REPLY_IV_OFFSET, replyIV, 16);
+			uint8_t flag = 0;
+			if (isGateway) flag |= 0x80;
+			if (isEndpoint) flag |= 0x40;
+			clearText[BUILD_REQUEST_RECORD_FLAG_OFFSET] = flag;
+			htobe32buf (clearText + BUILD_REQUEST_RECORD_REQUEST_TIME_OFFSET, i2p::util::GetHoursSinceEpoch ()); 
+			htobe32buf (clearText + BUILD_REQUEST_RECORD_SEND_MSG_ID_OFFSET, replyMsgID); 
+			// TODO: fill padding
+			router->GetElGamalEncryption ()->Encrypt (clearText, BUILD_REQUEST_RECORD_CLEAR_TEXT_SIZE, record + BUILD_REQUEST_RECORD_ENCRYPTED_OFFSET);
+			memcpy (record + BUILD_REQUEST_RECORD_TO_PEER_OFFSET, (const uint8_t *)router->GetIdentHash (), 16);
+		}	
 	};	
 
 	class TunnelConfig

@@ -1,3 +1,4 @@
+#include <string.h>
 #include "I2PEndian.h"
 #include <thread>
 #include <algorithm>
@@ -33,7 +34,7 @@ namespace tunnel
 		int numRecords = numHops <= STANDARD_NUM_RECORDS ? STANDARD_NUM_RECORDS : numHops; 
 		I2NPMessage * msg = NewI2NPMessage ();
 		*msg->GetPayload () = numRecords;
-		msg->len += numRecords*sizeof (I2NPBuildRequestRecordElGamalEncrypted) + 1;		
+		msg->len += numRecords*TUNNEL_BUILD_RECORD_SIZE + 1;		
 
 		// shuffle records
 		std::vector<int> recordIndicies;
@@ -41,22 +42,14 @@ namespace tunnel
 		std::random_shuffle (recordIndicies.begin(), recordIndicies.end());
 
 		// create real records
-		I2NPBuildRequestRecordElGamalEncrypted * records = (I2NPBuildRequestRecordElGamalEncrypted *)(msg->GetPayload () + 1); 
+		uint8_t * records = msg->GetPayload () + 1; 
 		TunnelHopConfig * hop = m_Config->GetFirstHop ();
 		int i = 0;
 		while (hop)
 		{
 			int idx = recordIndicies[i];
-			EncryptBuildRequestRecord (*hop->router,
-				CreateBuildRequestRecord (hop->router->GetIdentHash (), 
-				    hop->tunnelID,
-					hop->nextRouter->GetIdentHash (), 
-					hop->nextTunnelID,
-					hop->layerKey, hop->ivKey,                  
-					hop->replyKey, hop->replyIV,
-					hop->next ? rnd.GenerateWord32 () : replyMsgID, // we set replyMsgID for last hop only
-				    hop->isGateway, hop->isEndpoint), 
-		    	records[idx]);
+			hop->CreateBuildRequestRecord (records + idx*TUNNEL_BUILD_RECORD_SIZE, 
+				hop->next ? rnd.GenerateWord32 () : replyMsgID); // we set replyMsgID for last hop only 
 			hop->recordIndex = idx; 
 			i++;
 			hop = hop->next;
@@ -65,7 +58,7 @@ namespace tunnel
 		for (int i = numHops; i < numRecords; i++)
 		{
 			int idx = recordIndicies[i];
-			rnd.GenerateBlock ((uint8_t *)(records + idx), sizeof (records[idx])); 
+			rnd.GenerateBlock (records + idx*TUNNEL_BUILD_RECORD_SIZE, TUNNEL_BUILD_RECORD_SIZE); 
 		}	
 
 		// decrypt real records
@@ -79,9 +72,8 @@ namespace tunnel
 			while (hop1)
 			{	
 				decryption.SetIV (hop->replyIV);
-				decryption.Decrypt((uint8_t *)&records[hop1->recordIndex], 
-					sizeof (I2NPBuildRequestRecordElGamalEncrypted), 
-				    (uint8_t *)&records[hop1->recordIndex]);
+				uint8_t * record = records + hop1->recordIndex*TUNNEL_BUILD_RECORD_SIZE;
+				decryption.Decrypt(record, TUNNEL_BUILD_RECORD_SIZE, record);
 				hop1 = hop1->next;
 			}	
 			hop = hop->prev;
@@ -111,9 +103,9 @@ namespace tunnel
 				auto idx = hop1->recordIndex;
 				if (idx >= 0 && idx < msg[0])
 				{	
-					uint8_t * record = msg + 1 + idx*sizeof (I2NPBuildResponseRecord);
+					uint8_t * record = msg + 1 + idx*TUNNEL_BUILD_RECORD_SIZE;
 					decryption.SetIV (hop->replyIV);
-					decryption.Decrypt(record, sizeof (I2NPBuildResponseRecord), record);
+					decryption.Decrypt(record, TUNNEL_BUILD_RECORD_SIZE, record);
 				}	
 				else
 					LogPrint ("Tunnel hop index ", idx, " is out of range");
@@ -126,9 +118,10 @@ namespace tunnel
 		hop = m_Config->GetFirstHop ();
 		while (hop)
 		{			
-			I2NPBuildResponseRecord * record = (I2NPBuildResponseRecord *)(msg + 1 + hop->recordIndex*sizeof (I2NPBuildResponseRecord));
-			LogPrint ("Ret code=", (int)record->ret);
-			if (record->ret) 
+			const uint8_t * record = msg + 1 + hop->recordIndex*TUNNEL_BUILD_RECORD_SIZE;
+			uint8_t ret = record[BUILD_RESPONSE_RECORD_RET_OFFSET];
+			LogPrint ("Ret code=", (int)ret);
+			if (ret) 
 				// if any of participants declined the tunnel is not established
 				established = false; 
 			hop = hop->next;
@@ -356,7 +349,7 @@ namespace tunnel
 				I2NPMessage * msg = m_Queue.GetNextWithTimeout (1000); // 1 sec
 				while (msg)
 				{
-					uint32_t  tunnelID = be32toh (*(uint32_t *)msg->GetPayload ()); 
+					uint32_t  tunnelID = bufbe32toh (msg->GetPayload ()); 
 					InboundTunnel * tunnel = GetInboundTunnel (tunnelID);
 					if (tunnel)
 						tunnel->HandleTunnelDataMsg (msg);
