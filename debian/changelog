@@ -1,3 +1,9 @@
+i2pd (0.6.0-1~trusty+1) trusty; urgency=medium
+
+  * Building for Trusty
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 06 Jan 2015 13:24:59 +0000
+
 i2pd (0.6.0-1) unstable; urgency=medium
 
   * New upstream release
