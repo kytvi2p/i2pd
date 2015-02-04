@@ -1,0 +1,30 @@
+From: Kill Your TV <killyourtv@i2pmail.org>
+Date: Wed, 4 Feb 2015 13:15:22 +0000
+Subject: fix build
+
+---
+ I2PControl.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/I2PControl.cpp b/I2PControl.cpp
+index 913f823..e83ca83 100644
+--- a/I2PControl.cpp
++++ b/I2PControl.cpp
+@@ -5,7 +5,7 @@
+ #include <boost/date_time/local_time/local_time.hpp>
+ #include <boost/date_time/posix_time/posix_time.hpp>
+ #include <boost/property_tree/ptree.hpp>
+-#include <boost/property_tree/json_parser.hpp>
++// #include <boost/property_tree/json_parser.hpp>
+ #include "Log.h"
+ #include "NetDb.h"
+ #include "RouterContext.h"
+@@ -143,7 +143,7 @@ namespace client
+ 					}
+ 				}
+ 				boost::property_tree::ptree pt;
+-				boost::property_tree::read_json (ss, pt);
++				//boost::property_tree::read_json (ss, pt);
+ 				std::string method = pt.get<std::string>(I2P_CONTROL_PROPERTY_METHOD);
+ 				auto it = m_MethodHandlers.find (method);
+ 				if (it != m_MethodHandlers.end ())
