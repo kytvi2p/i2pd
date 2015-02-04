@@ -1,3 +1,9 @@
+i2pd (0.7.0-1ubuntu1) utopic; urgency=medium
+
+  * Building for Utopic
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Wed, 04 Feb 2015 12:57:26 +0000
+
 i2pd (0.7.0-1) unstable; urgency=medium
 
   [ Francisco Blas (klondike) Izquierdo Riera ]
@@ -175,12 +181,6 @@ i2pd (0.7.0-1) unstable; urgency=medium
   * Temporarily disable systemd unit
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Wed, 04 Feb 2015 02:36:15 +0000
-
-i2pd (0.6.0-1ubuntu1) utopic; urgency=medium
-
-  * Building for Utopic
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 06 Jan 2015 13:24:14 +0000
 
 i2pd (0.6.0-1) unstable; urgency=medium
 
