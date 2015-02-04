@@ -2,8 +2,11 @@
 #define NTCP_SESSION_H__
 
 #include <inttypes.h>
-#include <list>
+#include <map>
 #include <memory>
+#include <thread>
+#include <mutex>
+#include <boost/asio.hpp>
 #include <cryptopp/modes.h>
 #include <cryptopp/aes.h>
 #include <cryptopp/adler32.h>
@@ -39,15 +42,16 @@ namespace transport
 #pragma pack()	
 
 	const size_t NTCP_MAX_MESSAGE_SIZE = 16384; 
-	const size_t NTCP_BUFFER_SIZE = 1040; // fits one tunnel message (1028)
+	const size_t NTCP_BUFFER_SIZE = 4160; // fits 4 tunnel messages (4*1028)
 	const int NTCP_TERMINATION_TIMEOUT = 120; // 2 minutes
 	const size_t NTCP_DEFAULT_PHASE3_SIZE = 2/*size*/ + i2p::data::DEFAULT_IDENTITY_SIZE/*387*/ + 4/*ts*/ + 15/*padding*/ + 40/*signature*/; // 448 	
 
+	class NTCPServer;
 	class NTCPSession: public TransportSession, public std::enable_shared_from_this<NTCPSession>
 	{
 		public:
 
-			NTCPSession (boost::asio::io_service& service, std::shared_ptr<const i2p::data::RouterInfo> in_RemoteRouter = nullptr);
+			NTCPSession (NTCPServer& server, std::shared_ptr<const i2p::data::RouterInfo> in_RemoteRouter = nullptr);
 			~NTCPSession ();
 			void Terminate ();
 
@@ -57,17 +61,18 @@ namespace transport
 			void ClientLogin ();
 			void ServerLogin ();
 			void SendI2NPMessage (I2NPMessage * msg);
+			void SendI2NPMessages (const std::vector<I2NPMessage *>& msgs);
 
 			size_t GetNumSentBytes () const { return m_NumSentBytes; };
 			size_t GetNumReceivedBytes () const { return m_NumReceivedBytes; };
 			
-		protected:
+		private:
 
+			void PostI2NPMessage (I2NPMessage * msg);
+			void PostI2NPMessages (std::vector<I2NPMessage *> msgs);
 			void Connected ();
 			void SendTimeSyncMessage ();
 			void SetIsEstablished (bool isEstablished) { m_IsEstablished = isEstablished; }
-			
-		private:
 
 			void CreateAESKey (uint8_t * pubKey, i2p::crypto::AESKey& key);
 				
@@ -94,15 +99,18 @@ namespace transport
 			bool DecryptNextBlock (const uint8_t * encrypted);	
 		
 			void Send (i2p::I2NPMessage * msg);
-			void HandleSent (const boost::system::error_code& ecode, std::size_t bytes_transferred, i2p::I2NPMessage * msg);
-
-
+			boost::asio::const_buffers_1 CreateMsgBuffer (I2NPMessage * msg);
+			void Send (const std::vector<I2NPMessage *>& msgs);
+			void HandleSent (const boost::system::error_code& ecode, std::size_t bytes_transferred, std::vector<I2NPMessage *> msgs);
+			
+			
 			// timer
 			void ScheduleTermination ();
 			void HandleTerminationTimer (const boost::system::error_code& ecode);
 			
 		private:
 
+			NTCPServer& m_Server;
 			boost::asio::ip::tcp::socket m_Socket;
 			boost::asio::deadline_timer m_TerminationTimer;
 			bool m_IsEstablished;
@@ -122,10 +130,55 @@ namespace transport
 			int m_ReceiveBufferOffset; 
 
 			i2p::I2NPMessage * m_NextMessage;
-			std::list<i2p::I2NPMessage *> m_DelayedMessages;
 			size_t m_NextMessageOffset;
+			i2p::I2NPMessagesHandler m_Handler;
 
+			bool m_IsSending;
+			std::vector<I2NPMessage *> m_SendQueue;
+			
 			size_t m_NumSentBytes, m_NumReceivedBytes;
+	};	
+
+	// TODO: move to NTCP.h/.cpp
+	class NTCPServer
+	{
+		public:
+
+			NTCPServer (int port);
+			~NTCPServer ();
+
+			void Start ();
+			void Stop ();
+
+			void AddNTCPSession (std::shared_ptr<NTCPSession> session);
+			void RemoveNTCPSession (std::shared_ptr<NTCPSession> session);
+			std::shared_ptr<NTCPSession> FindNTCPSession (const i2p::data::IdentHash& ident);
+			void Connect (const boost::asio::ip::address& address, int port, std::shared_ptr<NTCPSession> conn);
+			
+			boost::asio::io_service& GetService () { return m_Service; };
+			
+		private:
+
+			void Run ();
+			void HandleAccept (std::shared_ptr<NTCPSession> conn, const boost::system::error_code& error);
+			void HandleAcceptV6 (std::shared_ptr<NTCPSession> conn, const boost::system::error_code& error);
+
+			void HandleConnect (const boost::system::error_code& ecode, std::shared_ptr<NTCPSession> conn);
+			
+		private:	
+
+			bool m_IsRunning;
+			std::thread * m_Thread;	
+			boost::asio::io_service m_Service;
+			boost::asio::io_service::work m_Work;
+			boost::asio::ip::tcp::acceptor * m_NTCPAcceptor, * m_NTCPV6Acceptor;
+			std::mutex m_NTCPSessionsMutex;
+			std::map<i2p::data::IdentHash, std::shared_ptr<NTCPSession> > m_NTCPSessions;
+
+		public:
+
+			// for HTTP/I2PControl
+			const decltype(m_NTCPSessions)& GetNTCPSessions () const { return m_NTCPSessions; };
 	};	
 }	
 }	

@@ -3,11 +3,13 @@
 
 #include <inttypes.h>
 #include <string>
+#include <sstream>
 #include <map>
 #include <set>
 #include <queue>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <boost/asio.hpp>
 #include "I2PEndian.h"
 #include "Identity.h"
@@ -42,14 +44,19 @@ namespace stream
 	const int RESEND_TIMEOUT = 10; // in seconds
 	const int ACK_SEND_TIMEOUT = 200; // in milliseconds
 	const int MAX_NUM_RESEND_ATTEMPTS = 5;	
+	const int WINDOW_SIZE = 6; // in messages
+	const int MIN_WINDOW_SIZE = 1;
+	const int MAX_WINDOW_SIZE = 128;		
+	const int INITIAL_RTT = 8000; // in milliseconds
 	
 	struct Packet
 	{
 		size_t len, offset;
 		uint8_t buf[MAX_PACKET_SIZE];	
 		int numResendAttempts;
+		uint64_t sendTime;
 		
-		Packet (): len (0), offset (0), numResendAttempts (0) {};
+		Packet (): len (0), offset (0), numResendAttempts (0), sendTime (0) {};
 		uint8_t * GetBuffer () { return buf + offset; };
 		size_t GetLength () const { return len - offset; };
 
@@ -83,13 +90,13 @@ namespace stream
 		public:
 
 			Stream (boost::asio::io_service& service, StreamingDestination& local, 
-				const i2p::data::LeaseSet& remote, int port = 0); // outgoing
+				std::shared_ptr<const i2p::data::LeaseSet> remote, int port = 0); // outgoing
 			Stream (boost::asio::io_service& service, StreamingDestination& local); // incoming			
 
 			~Stream ();
 			uint32_t GetSendStreamID () const { return m_SendStreamID; };
 			uint32_t GetRecvStreamID () const { return m_RecvStreamID; };
-			const i2p::data::LeaseSet * GetRemoteLeaseSet () const { return m_RemoteLeaseSet; };
+			std::shared_ptr<const i2p::data::LeaseSet> GetRemoteLeaseSet () const { return m_RemoteLeaseSet; };
 			const i2p::data::IdentityEx& GetRemoteIdentity () const { return m_RemoteIdentity; };
 			bool IsOpen () const { return m_IsOpen; };
 			bool IsEstablished () const { return m_SendStreamID; };
@@ -109,12 +116,15 @@ namespace stream
 			size_t GetNumReceivedBytes () const { return m_NumReceivedBytes; };
 			size_t GetSendQueueSize () const { return m_SentPackets.size (); };
 			size_t GetReceiveQueueSize () const { return m_ReceiveQueue.size (); };
+			size_t GetSendBufferSize () const { return m_SendBuffer.rdbuf ()->in_avail (); };
+			int GetWindowSize () const { return m_WindowSize; };
+			int GetRTT () const { return m_RTT; };
 			
 		private:
 
+			void SendBuffer ();
 			void SendQuickAck ();
 			bool SendPacket (Packet * packet);
-			void PostPackets (const std::vector<Packet *> packets);
 			void SendPackets (const std::vector<Packet *>& packets);
 
 			void SavePacket (Packet * packet);
@@ -141,16 +151,21 @@ namespace stream
 			bool m_IsOpen, m_IsReset, m_IsAckSendScheduled;
 			StreamingDestination& m_LocalDestination;
 			i2p::data::IdentityEx m_RemoteIdentity;
-			const i2p::data::LeaseSet * m_RemoteLeaseSet;
-			i2p::garlic::GarlicRoutingSession * m_RoutingSession;
+			std::shared_ptr<const i2p::data::LeaseSet> m_RemoteLeaseSet;
+			std::shared_ptr<i2p::garlic::GarlicRoutingSession> m_RoutingSession;
 			i2p::data::Lease m_CurrentRemoteLease;
-			i2p::tunnel::OutboundTunnel * m_CurrentOutboundTunnel;
+			std::shared_ptr<i2p::tunnel::OutboundTunnel> m_CurrentOutboundTunnel;
 			std::queue<Packet *> m_ReceiveQueue;
 			std::set<Packet *, PacketCmp> m_SavedPackets;
 			std::set<Packet *, PacketCmp> m_SentPackets;
 			boost::asio::deadline_timer m_ReceiveTimer, m_ResendTimer, m_AckSendTimer;
 			size_t m_NumSentBytes, m_NumReceivedBytes;
 			uint16_t m_Port;
+
+			std::mutex m_SendBufferMutex;
+			std::stringstream m_SendBuffer;
+			int m_WindowSize, m_RTT;
+			uint64_t m_LastWindowSizeIncreaseTime;
 	};
 
 	class StreamingDestination
@@ -165,10 +180,10 @@ namespace stream
 			void Start ();
 			void Stop ();
 
-			std::shared_ptr<Stream> CreateNewOutgoingStream (const i2p::data::LeaseSet& remote, int port = 0);
+			std::shared_ptr<Stream> CreateNewOutgoingStream (std::shared_ptr<const i2p::data::LeaseSet> remote, int port = 0);
 			void DeleteStream (std::shared_ptr<Stream> stream);			
 			void SetAcceptor (const Acceptor& acceptor) { m_Acceptor = acceptor; };
-			void ResetAcceptor () { m_Acceptor = nullptr; };
+			void ResetAcceptor () { if (m_Acceptor) m_Acceptor (nullptr); m_Acceptor = nullptr; };
 			bool IsAcceptorSet () const { return m_Acceptor != nullptr; };	
 			i2p::client::ClientDestination& GetOwner () { return m_Owner; };
 
@@ -224,9 +239,19 @@ namespace stream
 				// no error
 				handler (boost::system::error_code (), received); 
 			else
-				// socket closed
-				handler (m_IsReset ? boost::asio::error::make_error_code (boost::asio::error::connection_reset) :
-					boost::asio::error::make_error_code (boost::asio::error::operation_aborted), received);
+			{	
+				// stream closed
+				if (m_IsReset)
+				{
+					// stream closed by peer
+					handler (received > 0 ? boost::system::error_code () : // we still have some data
+						boost::asio::error::make_error_code (boost::asio::error::connection_reset), // no more data
+						received);
+					
+				}
+				else // stream closed by us
+					handler (boost::asio::error::make_error_code (boost::asio::error::operation_aborted), received); 
+			}	
 		}	
 		else
 			// timeout expired

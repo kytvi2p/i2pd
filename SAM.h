@@ -104,10 +104,10 @@ namespace client
 			void ProcessNamingLookup (char * buf, size_t len);
 			void ExtractParams (char * buf, size_t len, std::map<std::string, std::string>& params);
 
-			void Connect (const i2p::data::LeaseSet& remote);
-			void HandleLeaseSetRequestComplete (bool success, i2p::data::IdentHash ident);
-			void SendNamingLookupReply (const i2p::data::LeaseSet * leaseSet);
+			void Connect (std::shared_ptr<const i2p::data::LeaseSet> remote);
+			void HandleConnectLeaseSetRequestComplete (bool success, i2p::data::IdentHash ident);
 			void SendNamingLookupReply (const i2p::data::IdentityEx& identity);
+			void HandleNamingLookupLeaseSetRequestComplete (bool success, i2p::data::IdentHash ident);
 			void HandleSessionReadinessCheckTimer (const boost::system::error_code& ecode);
 			void SendSessionCreateReplyOk ();
 

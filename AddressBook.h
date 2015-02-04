@@ -20,9 +20,11 @@ namespace client
 	const char DEFAULT_SUBSCRIPTION_ADDRESS[] = "http://udhdrtrcetjm5sxzskjyr5ztpeszydbh4dpl3pl4utgqqw2v4jna.b32.i2p/hosts.txt";
 	const int INITIAL_SUBSCRIPTION_UPDATE_TIMEOUT = 3; // in minutes	
 	const int INITIAL_SUBSCRIPTION_RETRY_TIMEOUT = 1; // in minutes			
-	const int CONTINIOUS_SUBSCRIPTION_UPDATE_TIMEOUT = 240; // in minutes			
+	const int CONTINIOUS_SUBSCRIPTION_UPDATE_TIMEOUT = 720; // in minutes (12 hours)			
 	const int CONTINIOUS_SUBSCRIPTION_RETRY_TIMEOUT = 5; // in minutes	
 	const int SUBSCRIPTION_REQUEST_TIMEOUT = 60; //in second
+	
+	inline std::string GetB32Address(const i2p::data::IdentHash& ident) { return ident.ToBase32().append(".b32.i2p"); }
 
 	class AddressBookStorage // interface for storage
 	{
@@ -55,7 +57,7 @@ namespace client
 			void LoadHostsFromStream (std::istream& f);
 			void DownloadComplete (bool success);
 			//This method returns the ".b32.i2p" address
-			std::string ToAddress(const i2p::data::IdentHash& ident) { return ident.ToBase32().append(".b32.i2p"); }
+			std::string ToAddress(const i2p::data::IdentHash& ident) { return GetB32Address(ident); }
 			std::string ToAddress(const i2p::data::IdentityEx& ident) { return ToAddress(ident.GetIdentHash ()); }
 		private:
 

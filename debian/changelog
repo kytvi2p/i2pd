@@ -1,3 +1,181 @@
+i2pd (0.7.0-1) unstable; urgency=medium
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Introduce missing call to request verification, so unknown address types
+    and commands are handled properly, allow for extra socket data after the
+    request for fast request sending, it will just be forwarded on I2PConnect
+  * Enter state BEFORE reading data to avoid race conditions
+  * Reorder SOCKS headers for cleanness
+  * Remove unnecessary header
+  * Detect null stream on I2PConnect
+  * Initial HTTPProxy support by simply transferring control to a tunnel
+
+  [ orignal ]
+  * read all available data from closed stream
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Force Connection: Close and allow http/1.1
+  * Create I2Pservice as a way to integrate service management, hide unnecessary handlers
+
+  [ orignal ]
+  * I2PControl added
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Migrate to I2Pservice
+  * Make HTTPProxy use SIGNING_KEY_TYPE_DSA_SHA1
+  * Remove ClientContext.h dependency
+  * Use shared_from_this to avoid being killed easily on stop
+
+  [ orignal ]
+  * JSON parser
+  * extract params
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Solve weak_ptr issue
+  * Add the TCPIPAcceptor class for handling TCP/IP services on clearnet
+  * Make the HTTP Proxy use TCPIPAcceptor
+  * Make SOCKS use TCPIPAcceptor
+  * Move Stream creation to its own handler for cleanliness, it will hand over
+    to a tunnel connection when done
+  * Make I2PClientTunnel use TCPIPAcceptor
+
+  [ orignal ]
+  * call TCPIPAccetor::Start from I2PClientTunnel::Start
+  * added I2PControl to ClientContext
+  * I2PControl Authenticate and Echo
+  * publish own RouterInfo every 40 minutes if nothing changed
+  * changed addressbook subscription update interval to 12 hours
+  * check for pending LeaseSet request
+  * pass results by reference
+  * put dot-separated params
+  * put dot-separated params
+  * handle i2p.router.netdb.knownpeers RouterInfo request
+  * shutdown and graceful shutdown through I2PControl
+  * some cleanup
+  * less agressive exploratory
+  * use TransportSession for sending messages
+  * fxied crash at startup
+  * moved NTCP to separate thread
+  * fixed race condition
+
+  [ root ]
+  * added I2PService to VS project
+  * fixed boost\asio\detail\socket_types.hpp(24) fatal error C1189:
+    "WinSock.h has already been included"
+
+  [ Riccardo Spagni ]
+  * license -> BSD 3-clause
+
+  [ orignal ]
+  * fixed race condition
+  * use lookup tables for requests
+  * participating request
+  * NetworkSetting method
+  * introduced Peer
+
+  [ Timofey Titovets ]
+  * Fix: mkdir exist in multi thread building
+  * Not overwrite -fPIC with CXXFLAGS
+
+  [ orignal ]
+  * send messages through Peer
+  * moved delayed queue to Peer
+  * handle i2p.router.netdb.activepeers
+  * handle i2p.router.netdb.activepeers
+  * RequestComplete for RouterInfo
+  * use RouterInfo request callback instead timeout
+  * fixed crash on shutdown
+  * I2PControl method
+  * address resolver for NTCP address
+  * skip HTTP header
+  * make HTTP header if necessary
+  * resolve address for NTCP
+  * fixed resolve bug
+  * use shared local destination for proxies
+  * make sure DatabaseStore message is first
+  * don't try to re-request expired LeaseSet
+  * Reseed through I2PControl
+  * correct CRC32 verification at big endian CPU
+  * use shared_ptr for TunnelPool
+  * removed useless mutex lock
+  * proper cleanup of pending tunnels
+  * send batch of I2NP messages
+  * send multiple messages though single write call
+  * some cleanup
+  * common HandleTunnelData for own and transit tunnels
+  * don't look for tunnel again if tunnelID is the same as for previous
+    message
+  * fixed 'bad descriptor' exception
+  * don't restart subscriptions update timer if no subscription presented
+  * TransitTunnelParticipant
+  * shared_ptr for GarlicRouting Session
+  * remove stream on close
+  * I2NPMessagesHandler
+  * cleanup routing sessions
+  * schedule routing session cleanup
+  * Update LICENSE
+  * Update copyright
+  * process TunnelGateway message in tunnel thread
+  * transit tunnel gateway batching
+  * naming lookup of .b32 address through LeaseSet request
+  * fixed crash
+  * fixed typo
+  * fixed typo
+  * use send buffer for a stream
+  * window
+  * check for max number of NACKs
+  * separate inbound and outbound pending tunnels
+  * check message type of follow on message
+  * handle tunnel build messages in tunnels thread
+  * store LeaseSet as shared_ptr
+  * shared_ptr for tunnels
+  * fixed corrupted NTCP messages
+  * check tunnel status instead fidning it every time
+  * clean up expired LeaseSets
+  * floodfill parameter
+  * specify reply token for RIs DatabaseStore
+  * publishing with flood
+  * shared_ptr for RoutingDestination
+  * slow start and congestion avoidance
+  * congesion control during retransmission
+  * use I2NPMessagesHandler for SSU
+  * send DatabaseStore reply
+  * don't send DatabaseStore reply for local destinations
+  * detect congesion for first message in sned queue only
+  * use unique_ptr for sent fragments
+  * show send buffer size
+  * fixed typo
+  * use stream buffer for sending identity
+  * invoke acceptor on reset
+  * fixed non-responding destination request
+  * flood
+  * send 3 closest floodfills
+
+  [ ygrishin ]
+  * fixed HTTP connection being reset on Windows
+
+  [ orignal ]
+  * don't delete updated RouterInfo
+  * moved UPNP to common files
+  * DatabaseLookup flags
+  * ability to turn floodfill off
+  * floodfill parameter
+  * pass ident hash by value to transports thread
+  * fixed incorect reply data parsing for DatabaseStore
+  * make sure DeliveryStatus and DatabseStore are sent first
+  * log more disgnostics data
+  * handle exploratory lookups
+  * RTT
+  * don't request same RouterInfo twice
+  * show tunnels queue size
+  * Update version.h
+
+  [ Kill Your TV ]
+  * update debian/copyright
+  * Temporarily disable systemd unit
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Wed, 04 Feb 2015 02:36:15 +0000
+
 i2pd (0.6.0-1~trusty+1) trusty; urgency=medium
 
   * Building for Trusty
@@ -53,7 +231,7 @@ i2pd (0.6.0-1) unstable; urgency=medium
   * HTTP 1.1 for addressbook
 
   [ hagen ]
-  * * new makefile target: deps
+  * new makefile target: deps
 
   [ orignal ]
   * check status code 304
@@ -294,9 +472,9 @@ i2pd (0.5.0-1) unstable; urgency=medium
   * copy private signing key of proper size
 
   [ hagen ]
-  * * README.md : add -conf option
-  * * build library in the same tree as main binary
-  * * fix cmake build
+  * README.md : add -conf option
+  * build library in the same tree as main binary
+  * fix cmake build
 
   [ orignal ]
   * reaturned api folder back
@@ -324,26 +502,26 @@ i2pd (0.5.0-1) unstable; urgency=medium
   * read certificate file
 
   [ hagen ]
-  * * cleanup : remove 100% garbage in Makefile.osx
-  * * (1/3) update filelist.mk : 3 lists of sources: common, daemon-specific and library-specific
-  * * (2/3) update main Makefile
-  * * (3/3) 2nd try : drop api/ subdir
-  * * (1/3) cleanup : use $CXXFLAGS instead $CPU_FLAGS
-  * * (2/3) cleanup : use $CXXFLAGS instead $NEEDED_FLAGS
-  * * (3/3) cleanup : unused variable
-  * * Makefile.osx : exchange options
-  * * Makefile.linux : reorder checks
-  * * Makefile.linux : use idents with spaces
-  * * move USE_* to main Makefile
-  * * almost fixed static linking
-  * * Makefile : add dist target
-  * * update build/CMakeLists.txt
+  * cleanup : remove 100% garbage in Makefile.osx
+  * (1/3) update filelist.mk : 3 lists of sources: common, daemon-specific and library-specific
+  * (2/3) update main Makefile
+  * (3/3) 2nd try : drop api/ subdir
+  * (1/3) cleanup : use $CXXFLAGS instead $CPU_FLAGS
+  * (2/3) cleanup : use $CXXFLAGS instead $NEEDED_FLAGS
+  * (3/3) cleanup : unused variable
+  * Makefile.osx : exchange options
+  * Makefile.linux : reorder checks
+  * Makefile.linux : use idents with spaces
+  * move USE_* to main Makefile
+  * almost fixed static linking
+  * Makefile : add dist target
+  * update build/CMakeLists.txt
 
   [ orignal ]
   * extract issuer name
 
   [ hagen ]
-  * * reorder makefile rules : fix depends on header
+  * reorder makefile rules : fix depends on header
 
   [ orignal ]
   * don't make executable as shared
