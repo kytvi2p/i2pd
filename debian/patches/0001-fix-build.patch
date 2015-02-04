@@ -1,0 +1,21 @@
+From: Kill Your TV <killyourtv@i2pmail.org>
+Date: Wed, 4 Feb 2015 13:15:22 +0000
+Subject: fix build
+
+---
+ I2PControl.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/I2PControl.cpp b/I2PControl.cpp
+index 913f823..e90e08e 100644
+--- a/I2PControl.cpp
++++ b/I2PControl.cpp
+@@ -143,7 +143,7 @@ namespace client
+ 					}
+ 				}
+ 				boost::property_tree::ptree pt;
+-				boost::property_tree::read_json (ss, pt);
++				//boost::property_tree::read_json (ss, pt);
+ 				std::string method = pt.get<std::string>(I2P_CONTROL_PROPERTY_METHOD);
+ 				auto it = m_MethodHandlers.find (method);
+ 				if (it != m_MethodHandlers.end ())
