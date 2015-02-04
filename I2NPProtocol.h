@@ -87,6 +87,15 @@ namespace i2p
 
 	const int NUM_TUNNEL_BUILD_RECORDS = 8;	
 
+	// DatabaseLookup flags
+	const uint8_t DATABASE_LOOKUP_DELIVERY_FLAG = 0x01;
+	const uint8_t DATABASE_LOOKUP_ENCYPTION_FLAG = 0x02;	
+	const uint8_t DATABASE_LOOKUP_TYPE_FLAGS_MASK = 0x0C;
+	const uint8_t DATABASE_LOOKUP_TYPE_NORMAL_LOOKUP = 0;
+	const uint8_t DATABASE_LOOKUP_TYPE_LEASESET_LOOKUP = 0x04; // 0100
+	const uint8_t DATABASE_LOOKUP_TYPE_ROUTERINFO_LOOKUP = 0x08; // 1000			
+	const uint8_t DATABASE_LOOKUP_TYPE_EXPLORATORY_LOOKUP = 0x0C; // 1100
+
 namespace tunnel
 {		
 	class InboundTunnel;
@@ -194,9 +203,9 @@ namespace tunnel
 	I2NPMessage * CreateLeaseSetDatabaseLookupMsg (const i2p::data::IdentHash& dest, 
 		const std::set<i2p::data::IdentHash>& excludedFloodfills,
 		const i2p::tunnel::InboundTunnel * replyTunnel, const uint8_t * replyKey, const uint8_t * replyTag);
-	I2NPMessage * CreateDatabaseSearchReply (const i2p::data::IdentHash& ident, const i2p::data::RouterInfo * floodfill);
+	I2NPMessage * CreateDatabaseSearchReply (const i2p::data::IdentHash& ident, std::vector<i2p::data::IdentHash> routers);
 	
-	I2NPMessage * CreateDatabaseStoreMsg (const i2p::data::RouterInfo * router = nullptr);
+	I2NPMessage * CreateDatabaseStoreMsg (const i2p::data::RouterInfo * router = nullptr, uint32_t replyToken = 0);
 	I2NPMessage * CreateDatabaseStoreMsg (const i2p::data::LeaseSet * leaseSet, uint32_t replyToken = 0);		
 		
 	bool HandleBuildRequestRecords (int num, uint8_t * records, uint8_t * clearText);
@@ -207,7 +216,6 @@ namespace tunnel
 	I2NPMessage * CreateTunnelDataMsg (const uint8_t * buf);	
 	I2NPMessage * CreateTunnelDataMsg (uint32_t tunnelID, const uint8_t * payload);		
 	
-	void HandleTunnelGatewayMsg (I2NPMessage * msg);
 	I2NPMessage * CreateTunnelGatewayMsg (uint32_t tunnelID, const uint8_t * buf, size_t len);
 	I2NPMessage * CreateTunnelGatewayMsg (uint32_t tunnelID, I2NPMessageType msgType, 
 		const uint8_t * buf, size_t len, uint32_t replyMsgID = 0);
@@ -216,6 +224,19 @@ namespace tunnel
 	size_t GetI2NPMessageLength (const uint8_t * msg);
 	void HandleI2NPMessage (uint8_t * msg, size_t len);
 	void HandleI2NPMessage (I2NPMessage * msg);
+
+	class I2NPMessagesHandler
+	{
+		public:
+
+			~I2NPMessagesHandler ();
+			void PutNextMessage (I2NPMessage * msg);
+			void Flush ();
+			
+		private:
+
+			std::vector<I2NPMessage *> m_TunnelMsgs, m_TunnelGatewayMsgs;
+	};
 }	
 
 #endif

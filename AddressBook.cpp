@@ -355,10 +355,13 @@ namespace client
 	void AddressBook::DownloadComplete (bool success)
 	{
 		m_IsDownloading = false;
-		m_SubscriptionsUpdateTimer->expires_from_now (boost::posix_time::minutes(
-			success ? CONTINIOUS_SUBSCRIPTION_UPDATE_TIMEOUT : CONTINIOUS_SUBSCRIPTION_RETRY_TIMEOUT));
-		m_SubscriptionsUpdateTimer->async_wait (std::bind (&AddressBook::HandleSubscriptionsUpdateTimer,
-			this, std::placeholders::_1));
+		if (m_SubscriptionsUpdateTimer)
+		{
+			m_SubscriptionsUpdateTimer->expires_from_now (boost::posix_time::minutes(
+				success ? CONTINIOUS_SUBSCRIPTION_UPDATE_TIMEOUT : CONTINIOUS_SUBSCRIPTION_RETRY_TIMEOUT));
+			m_SubscriptionsUpdateTimer->async_wait (std::bind (&AddressBook::HandleSubscriptionsUpdateTimer,
+				this, std::placeholders::_1));
+		}
 	}
 
 	void AddressBook::StartSubscriptions ()
@@ -432,7 +435,7 @@ namespace client
 		{
 			std::condition_variable newDataReceived;
 			std::mutex newDataReceivedMutex;
-			const i2p::data::LeaseSet * leaseSet = i2p::data::netdb.FindLeaseSet (ident);
+			auto leaseSet = i2p::client::context.GetSharedLocalDestination ()->FindLeaseSet (ident);
 			if (!leaseSet)
 			{
 				bool found = false;
@@ -459,7 +462,7 @@ namespace client
 				if (m_LastModified.length () > 0) // if-modfief-since
 					request << i2p::util::http::IF_MODIFIED_SINCE << ": " << m_LastModified << "\r\n";
 				request << "\r\n"; // end of header
-				auto stream = i2p::client::context.GetSharedLocalDestination ()->CreateStream (*leaseSet, u.port_);
+				auto stream = i2p::client::context.GetSharedLocalDestination ()->CreateStream (leaseSet, u.port_);
 				stream->Send ((uint8_t *)request.str ().c_str (), request.str ().length ());
 				
 				uint8_t buf[4095];

@@ -150,9 +150,17 @@ namespace data
 					address.host = boost::asio::ip::address::from_string (value, ecode);
 					if (ecode)
 					{	
-						// TODO: we should try to resolve address here
-						LogPrint (eLogWarning, "Unexpected address ", value);
-						isValidAddress = false;
+						if (address.transportStyle == eTransportNTCP)
+						{
+							m_SupportedTransports |= eNTCPV4; // TODO:
+							address.addressString = value;
+						}
+						else
+						{	
+							// TODO: resolve address for SSU
+							LogPrint (eLogWarning, "Unexpected SSU address ", value);
+							isValidAddress = false;
+						}	
 					}	
 					else
 					{
@@ -268,8 +276,13 @@ namespace data
 	void RouterInfo::UpdateCapsProperty ()
 	{	
 		std::string caps;
-		caps += (m_Caps & eHighBandwidth) ? CAPS_FLAG_HIGH_BANDWIDTH1 : CAPS_FLAG_LOW_BANDWIDTH2; // bandwidth
-		if (m_Caps & eFloodfill) caps += CAPS_FLAG_FLOODFILL; // floodfill
+		if (m_Caps & eFloodfill) 
+		{
+			caps += CAPS_FLAG_HIGH_BANDWIDTH3; // highest bandwidth
+			caps += CAPS_FLAG_FLOODFILL; // floodfill  
+		}	
+		else
+			caps += (m_Caps & eHighBandwidth) ? CAPS_FLAG_HIGH_BANDWIDTH1 : CAPS_FLAG_LOW_BANDWIDTH2; // bandwidth		
 		if (m_Caps & eHidden) caps += CAPS_FLAG_HIDDEN; // hidden
 		if (m_Caps & eReachable) caps += CAPS_FLAG_REACHABLE; // reachable
 		if (m_Caps & eUnreachable) caps += CAPS_FLAG_UNREACHABLE; // unreachable
