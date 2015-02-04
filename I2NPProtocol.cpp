@@ -108,10 +108,10 @@ namespace i2p
 		buf += 32;
 		memcpy (buf, from, 32); // from
 		buf += 32;
-		uint8_t flag = exploratory ? 0x0C : 0x08; // 1000 - RI, 1100 -exporatory	
+		uint8_t flag = exploratory ? DATABASE_LOOKUP_TYPE_EXPLORATORY_LOOKUP : DATABASE_LOOKUP_TYPE_ROUTERINFO_LOOKUP; 
 		if (replyTunnelID)
 		{
-			*buf = flag | 0x01; // set delivery flag
+			*buf = flag | DATABASE_LOOKUP_DELIVERY_FLAG; // set delivery flag
 			htobe32buf (buf+1, replyTunnelID);
 			buf += 5;
 		}
@@ -154,7 +154,7 @@ namespace i2p
 		buf += 32;
 		memcpy (buf, replyTunnel->GetNextIdentHash (), 32); // reply tunnel GW
 		buf += 32;
-		*buf = 7; // flags (01 - tunnel, 10 - encrypted, 0100 - LS lookup
+		*buf = DATABASE_LOOKUP_DELIVERY_FLAG | DATABASE_LOOKUP_ENCYPTION_FLAG | DATABASE_LOOKUP_TYPE_LEASESET_LOOKUP; // flags 
 		htobe32buf (buf + 1, replyTunnel->GetNextTunnelID ()); // reply tunnel ID
 		buf += 5;
 		
@@ -184,18 +184,18 @@ namespace i2p
 	
 
 	I2NPMessage * CreateDatabaseSearchReply (const i2p::data::IdentHash& ident, 
-		const i2p::data::RouterInfo * floodfill)
+		 std::vector<i2p::data::IdentHash> routers)
 	{
 		I2NPMessage * m = NewI2NPShortMessage ();
 		uint8_t * buf = m->GetPayload ();
 		size_t len = 0;
 		memcpy (buf, ident, 32);
 		len += 32;
-		buf[len] = floodfill ? 1 : 0; // 1 router for now
+		buf[len] = routers.size (); 
 		len++;
-		if (floodfill)
+		for (auto it: routers)
 		{
-			memcpy (buf + len, floodfill->GetIdentHash (), 32);
+			memcpy (buf + len, it, 32);
 			len += 32;
 		}	
 		memcpy (buf + len, i2p::context.GetRouterInfo ().GetIdentHash (), 32);
@@ -205,7 +205,7 @@ namespace i2p
 		return m; 
 	}	
 	
-	I2NPMessage * CreateDatabaseStoreMsg (const i2p::data::RouterInfo * router)
+	I2NPMessage * CreateDatabaseStoreMsg (const i2p::data::RouterInfo * router, uint32_t replyToken)
 	{
 		if (!router) // we send own RouterInfo
 			router = &context.GetRouterInfo ();
@@ -214,19 +214,27 @@ namespace i2p
 		uint8_t * payload = m->GetPayload ();		
 
 		memcpy (payload + DATABASE_STORE_KEY_OFFSET, router->GetIdentHash (), 32);
-		payload[DATABASE_STORE_TYPE_OFFSET] = 0;
-		htobe32buf (payload + DATABASE_STORE_REPLY_TOKEN_OFFSET, 0);
-		
+		payload[DATABASE_STORE_TYPE_OFFSET] = 0; // RouterInfo
+		htobe32buf (payload + DATABASE_STORE_REPLY_TOKEN_OFFSET, replyToken);
+		uint8_t * buf = payload + DATABASE_STORE_HEADER_SIZE;
+		if (replyToken)
+		{
+			memset (buf, 0, 4); // zero tunnelID means direct reply
+			buf += 4;
+			memcpy (buf, router->GetIdentHash (), 32);
+			buf += 32;
+		}		
+
 		CryptoPP::Gzip compressor;
 		compressor.Put (router->GetBuffer (), router->GetBufferLen ());
 		compressor.MessageEnd();
 		auto size = compressor.MaxRetrievable ();
-		uint8_t * buf = payload + DATABASE_STORE_HEADER_SIZE;
 		htobe16buf (buf, size); // size
 		buf += 2;
 		// TODO: check if size doesn't exceed buffer
 		compressor.Get (buf, size); 
-		m->len += DATABASE_STORE_HEADER_SIZE + 2 + size; // payload size
+		buf += size;
+		m->len += (buf - payload); // payload size
 		FillI2NPMessageHeader (m, eI2NPDatabaseStore);
 		
 		return m;
@@ -312,7 +320,7 @@ namespace i2p
 		int num = buf[0];
 		LogPrint ("VariableTunnelBuild ", num, " records");
 
-		i2p::tunnel::Tunnel * tunnel =  i2p::tunnel::tunnels.GetPendingTunnel (replyMsgID);
+		auto tunnel =  i2p::tunnel::tunnels.GetPendingInboundTunnel (replyMsgID);
 		if (tunnel)
 		{
 			// endpoint of inbound tunnel
@@ -321,7 +329,7 @@ namespace i2p
 			{
 				LogPrint ("Inbound tunnel ", tunnel->GetTunnelID (), " has been created");
 				tunnel->SetState (i2p::tunnel::eTunnelStateEstablished);	
-				i2p::tunnel::tunnels.AddInboundTunnel (static_cast<i2p::tunnel::InboundTunnel *>(tunnel));
+				i2p::tunnel::tunnels.AddInboundTunnel (tunnel);
 			}
 			else
 			{
@@ -373,7 +381,7 @@ namespace i2p
 	void HandleVariableTunnelBuildReplyMsg (uint32_t replyMsgID, uint8_t * buf, size_t len)
 	{	
 		LogPrint ("VariableTunnelBuildReplyMsg replyMsgID=", replyMsgID);
-		i2p::tunnel::Tunnel * tunnel = i2p::tunnel::tunnels.GetPendingTunnel (replyMsgID);
+		auto tunnel = i2p::tunnel::tunnels.GetPendingOutboundTunnel (replyMsgID);
 		if (tunnel)
 		{	
 			// reply for outbound tunnel
@@ -381,7 +389,7 @@ namespace i2p
 			{	
 				LogPrint ("Outbound tunnel ", tunnel->GetTunnelID (), " has been created");
 				tunnel->SetState (i2p::tunnel::eTunnelStateEstablished);	
-				i2p::tunnel::tunnels.AddOutboundTunnel (static_cast<i2p::tunnel::OutboundTunnel *>(tunnel));
+				i2p::tunnel::tunnels.AddOutboundTunnel (tunnel);
 			}	
 			else
 			{
@@ -465,35 +473,6 @@ namespace i2p
 		FillI2NPMessageHeader (msg, eI2NPTunnelGateway); // gateway message
 		return msg;
 	}	
-	
-	void HandleTunnelGatewayMsg (I2NPMessage * msg)
-	{		
-		const uint8_t * payload = msg->GetPayload ();
-		uint32_t tunnelID = bufbe32toh(payload + TUNNEL_GATEWAY_HEADER_TUNNELID_OFFSET);
-		uint16_t len = bufbe16toh(payload + TUNNEL_GATEWAY_HEADER_LENGTH_OFFSET);
-		// we make payload as new I2NP message to send
-		msg->offset += I2NP_HEADER_SIZE + TUNNEL_GATEWAY_HEADER_SIZE;
-		msg->len = msg->offset + len;
-		auto typeID = msg->GetTypeID ();
-		LogPrint ("TunnelGateway of ", (int)len, " bytes for tunnel ", (unsigned int)tunnelID, ". Msg type ", (int)typeID);
-			
-		if (typeID == eI2NPDatabaseStore || typeID == eI2NPDatabaseSearchReply)
-		{
-			// transit DatabaseStore my contain new/updated RI 
-			// or DatabaseSearchReply with new routers
-			auto ds = NewI2NPMessage ();
-			*ds = *msg;
-			i2p::data::netdb.PostI2NPMsg (ds);
-		}	
-		i2p::tunnel::TransitTunnel * tunnel =  i2p::tunnel::tunnels.GetTransitTunnel (tunnelID);
-		if (tunnel)
-			tunnel->SendTunnelDataMsg (msg);
-		else
-		{	
-			LogPrint ("Tunnel ", (unsigned int)tunnelID, " not found");
-			i2p::DeleteI2NPMessage (msg);
-		}	
-	}	
 
 	size_t GetI2NPMessageLength (const uint8_t * msg)
 	{
@@ -543,7 +522,7 @@ namespace i2p
 				break;	
 				case eI2NPTunnelGateway:
 					LogPrint ("TunnelGateway");
-					HandleTunnelGatewayMsg (msg);
+					i2p::tunnel::tunnels.PostTunnelData (msg);
 				break;
 				case eI2NPGarlic:
 					LogPrint ("Garlic");
@@ -573,10 +552,56 @@ namespace i2p
 					else
 						i2p::context.ProcessDeliveryStatusMessage (msg);
 				break;	
+				case eI2NPVariableTunnelBuild:		
+				case eI2NPVariableTunnelBuildReply:
+				case eI2NPTunnelBuild:
+				case eI2NPTunnelBuildReply:	
+					// forward to tunnel thread
+					i2p::tunnel::tunnels.PostTunnelData (msg);
+				break;	
 				default:
 					HandleI2NPMessage (msg->GetBuffer (), msg->GetLength ());
 					DeleteI2NPMessage (msg);
 			}	
+		}	
+	}	
+
+	I2NPMessagesHandler::~I2NPMessagesHandler ()
+	{
+		Flush ();
+	}
+	
+	void I2NPMessagesHandler::PutNextMessage (I2NPMessage * msg)
+	{
+		if (msg)
+		{
+			switch (msg->GetTypeID ())
+			{	
+				case eI2NPTunnelData:
+					LogPrint ("TunnelData");
+					m_TunnelMsgs.push_back (msg);
+				break;
+				case eI2NPTunnelGateway:	
+					LogPrint ("TunnelGateway");
+					m_TunnelGatewayMsgs.push_back (msg);
+				break;	
+				default:
+					HandleI2NPMessage (msg);
+			}		
+		}	
+	}
+	
+	void I2NPMessagesHandler::Flush ()
+	{
+		if (!m_TunnelMsgs.empty ())
+		{	
+			i2p::tunnel::tunnels.PostTunnelData (m_TunnelMsgs);
+			m_TunnelMsgs.clear ();
+		}	
+		if (!m_TunnelGatewayMsgs.empty ())
+		{	
+			i2p::tunnel::tunnels.PostTunnelData (m_TunnelGatewayMsgs);
+			m_TunnelGatewayMsgs.clear ();
 		}	
 	}	
 }

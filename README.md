@@ -3,6 +3,12 @@ i2pd
 
 I2P router written in C++
 
+License
+-------
+
+This project is licensed under the BSD 3-clause license, which can be found in the file
+LICENSE in the root of the project source code.
+
 Requirements for Linux/FreeBSD/OSX
 ----------------------------------
 
@@ -16,10 +22,17 @@ VS2013 (known to work with 12.0.21005.1 or newer), Boost 1.46 or newer,
 crypto++ 5.62. See Win32/README-Build.txt for instructions on how to build i2pd
 and its dependencies.
 
+Downloads
+------------
+
+Official binary releases could be found at:
+http://download.i2p.io/purplei2p/i2pd/releases/
+
+
 Build Statuses
 ---------------
 
-- Linux x64      - [![Build Status](https://jenkins.nordcloud.no/buildStatus/icon?job=i2pd-linux)](https://jenkins.nordcloud.no/job/i2pd-linux/)
+- Linux x64      - [![Build Status](https://jenkins.greyhat.no/buildStatus/icon?job=i2pd-linux)](https://jenkins.nordcloud.no/job/i2pd-linux/)
 - Linux ARM      - To be added
 - Mac OS X       - Got it working, but not well tested. (Only works with clang, not GCC.)
 - Microsoft VC13 - To be added
@@ -30,6 +43,8 @@ Testing
 
 First, build it.
 
+On Ubuntu/Debian based
+* sudo apt-get install libboost-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev libcrypto++-dev libboost-date-time-dev
 * $ cd i2pd
 * $ make
 
@@ -59,6 +74,7 @@ Cmdline options
 * --service=            - 1 if uses system folders (/var/run/i2pd.pid, /var/log/i2pd.log, /var/lib/i2pd).
 * --unreachable=        - 1 if router is declared as unreachable and works through introducers.
 * --v6=                 - 1 if supports communication through ipv6, off by default
+* --floodfill=          - 1 if router is floodfill, off by default
 * --httpproxyport=      - The port to listen on (HTTP Proxy)
 * --socksproxyport=     - The port to listen on (SOCKS Proxy)
 * --ircport=            - The local port of IRC tunnel to listen on. 6668 by default
@@ -70,6 +86,7 @@ Cmdline options
 * --eepport=            - Port incoming trafic forward to. 80 by default
 * --samport=            - Port of SAM bridge. Usually 7656. SAM is off if not specified
 * --bobport=            - Port of BOB command channel. Usually 2827. BOB is off if not specified
+* --i2pcontrolport=     - Port of I2P control service. Usually 7650. I2PControl is off if not specified
 * --conf=               - Config file (default: ~/.i2pd/i2p.conf or /var/lib/i2pd/i2p.conf)
                           This parameter will be silently ignored if the specified config file does not exist.
                           Options specified on the command line take precedence over those in the config file.

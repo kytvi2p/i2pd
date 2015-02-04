@@ -29,6 +29,7 @@ namespace client
 	const int LEASESET_REQUEST_TIMEOUT = 5; // in seconds
 	const int MAX_LEASESET_REQUEST_TIMEOUT = 40; // in seconds
 	const int MAX_NUM_FLOODFILLS_PER_REQUEST = 7;
+	const int DESTINATION_CLEANUP_TIMEOUT = 20; // in minutes 
 	
 	// I2CP
 	const char I2CP_PARAM_INBOUND_TUNNEL_LENGTH[] = "inbound.length";
@@ -36,7 +37,9 @@ namespace client
 	const char I2CP_PARAM_OUTBOUND_TUNNEL_LENGTH[] = "outbound.length";
 	const int DEFAULT_OUTBOUND_TUNNEL_LENGTH = 3;
 	const int STREAM_REQUEST_TIMEOUT = 60; //in seconds
-	
+
+	typedef std::function<void (std::shared_ptr<i2p::stream::Stream> stream)> StreamRequestComplete;
+
 	class ClientDestination: public i2p::garlic::GarlicDestination
 	{
 		typedef std::function<void (bool success)> RequestComplete;
@@ -49,7 +52,6 @@ namespace client
 			RequestComplete requestComplete;
 		};	
 		
-		typedef std::function<void (std::shared_ptr<i2p::stream::Stream> stream)> StreamRequestComplete;
 		
 		public:
 
@@ -60,16 +62,15 @@ namespace client
 			virtual void Stop ();
 			bool IsRunning () const { return m_IsRunning; };
 			boost::asio::io_service& GetService () { return m_Service; };
-			i2p::tunnel::TunnelPool * GetTunnelPool () { return m_Pool; }; 
+			std::shared_ptr<i2p::tunnel::TunnelPool> GetTunnelPool () { return m_Pool; }; 
 			bool IsReady () const { return m_LeaseSet && m_LeaseSet->HasNonExpiredLeases (); };
-			const i2p::data::LeaseSet * FindLeaseSet (const i2p::data::IdentHash& ident);
+			std::shared_ptr<const i2p::data::LeaseSet> FindLeaseSet (const i2p::data::IdentHash& ident);
 			bool RequestDestination (const i2p::data::IdentHash& dest, RequestComplete requestComplete = nullptr);
 			
 			// streaming
 			i2p::stream::StreamingDestination * GetStreamingDestination () const { return m_StreamingDestination; };
-			void CreateStream (StreamRequestComplete streamRequestComplete, const std::string& dest, int port = 0);
 			void CreateStream (StreamRequestComplete streamRequestComplete, const i2p::data::IdentHash& dest, int port = 0);
-			std::shared_ptr<i2p::stream::Stream> CreateStream (const i2p::data::LeaseSet& remote, int port = 0);
+			std::shared_ptr<i2p::stream::Stream> CreateStream (std::shared_ptr<const i2p::data::LeaseSet> remote, int port = 0);
 			void AcceptStreams (const i2p::stream::StreamingDestination::Acceptor& acceptor);
 			void StopAcceptingStreams ();
 			bool IsAcceptingStreams () const;
@@ -109,6 +110,8 @@ namespace client
 			void RequestLeaseSet (const i2p::data::IdentHash& dest, RequestComplete requestComplete);
 			bool SendLeaseSetRequest (const i2p::data::IdentHash& dest, std::shared_ptr<const i2p::data::RouterInfo>  nextFloodfill, LeaseSetRequest * request);	
 			void HandleRequestTimoutTimer (const boost::system::error_code& ecode, const i2p::data::IdentHash& dest);
+			void HandleCleanupTimer (const boost::system::error_code& ecode);
+			void CleanupRemoteLeaseSets ();
 			
 		private:
 
@@ -118,10 +121,10 @@ namespace client
 			boost::asio::io_service::work m_Work;
 			i2p::data::PrivateKeys m_Keys;
 			uint8_t m_EncryptionPublicKey[256], m_EncryptionPrivateKey[256];
-			std::map<i2p::data::IdentHash, i2p::data::LeaseSet *> m_RemoteLeaseSets;
+			std::map<i2p::data::IdentHash, std::shared_ptr<i2p::data::LeaseSet> > m_RemoteLeaseSets;
 			std::map<i2p::data::IdentHash, LeaseSetRequest *> m_LeaseSetRequests;
 
-			i2p::tunnel::TunnelPool * m_Pool;
+			std::shared_ptr<i2p::tunnel::TunnelPool> m_Pool;
 			i2p::data::LeaseSet * m_LeaseSet;
 			bool m_IsPublic;
 			uint32_t m_PublishReplyToken;
@@ -130,7 +133,7 @@ namespace client
 			i2p::stream::StreamingDestination * m_StreamingDestination;
 			i2p::datagram::DatagramDestination * m_DatagramDestination;
 	
-			boost::asio::deadline_timer m_PublishConfirmationTimer;
+			boost::asio::deadline_timer m_PublishConfirmationTimer, m_CleanupTimer;
 
 		public:
 			

@@ -6,6 +6,7 @@
 #include <map>
 #include <vector>
 #include <set>
+#include <memory>
 #include <boost/asio.hpp>
 #include "I2NPProtocol.h"
 #include "Identity.h"
@@ -65,11 +66,9 @@ namespace transport
 
 	struct SentMessage
 	{
-		std::vector<Fragment *> fragments;
+		std::vector<std::unique_ptr<Fragment> > fragments;
 		uint32_t nextResendTime; // in seconds
 		int numResends;
-
-		~SentMessage () { for (auto it: fragments) { delete it; }; };
 	};	
 	
 	class SSUSession;
@@ -106,6 +105,7 @@ namespace transport
 			std::set<uint32_t> m_ReceivedMessages;
 			boost::asio::deadline_timer m_ResendTimer;
 			int m_MaxPacketSize, m_PacketSize;
+			i2p::I2NPMessagesHandler m_Handler;
 	};	
 }
 }

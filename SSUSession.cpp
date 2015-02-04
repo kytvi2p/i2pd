@@ -255,7 +255,7 @@ namespace transport
 		if (paddingSize > 0) paddingSize = 16 - paddingSize;
 		payload += paddingSize;
 		// TODO: verify signature (need data from session request), payload points to signature
-		SendI2NPMessage (CreateDeliveryStatusMsg (0));
+		m_Data.Send (CreateDeliveryStatusMsg (0));
 		Established ();
 	}
 
@@ -756,12 +756,7 @@ namespace transport
 	void SSUSession::Close ()
 	{
 		SendSesionDestroyed ();
-		if (!m_DelayedMessages.empty ())
-		{
-			for (auto it :m_DelayedMessages)
-				DeleteI2NPMessage (it);
-			m_DelayedMessages.clear ();
-		}	
+		transports.PeerDisconnected (shared_from_this ());
 	}	
 
 	void SSUSession::Established ()
@@ -772,13 +767,8 @@ namespace transport
 			delete m_DHKeysPair;
 			m_DHKeysPair = nullptr;
 		}
-		SendI2NPMessage (CreateDatabaseStoreMsg ());
-		if (!m_DelayedMessages.empty ())
-		{
-			for (auto it :m_DelayedMessages)
-				m_Data.Send (it);
-			m_DelayedMessages.clear ();
-		}
+		m_Data.Send (CreateDatabaseStoreMsg ());
+		transports.PeerConnected (shared_from_this ());
 		if (m_PeerTest && (m_RemoteRouter && m_RemoteRouter->IsPeerTesting ()))
 			SendPeerTest ();
 		ScheduleTermination ();
@@ -828,20 +818,28 @@ namespace transport
 
 	void SSUSession::SendI2NPMessage (I2NPMessage * msg)
 	{
-		m_Server.GetService ().post (std::bind (&SSUSession::PostI2NPMessage, shared_from_this (), msg));    
+		boost::asio::io_service& service = IsV6 () ? m_Server.GetServiceV6 () : m_Server.GetService ();
+		service.post (std::bind (&SSUSession::PostI2NPMessage, shared_from_this (), msg));    
 	}	
 
 	void SSUSession::PostI2NPMessage (I2NPMessage * msg)
 	{
 		if (msg)
-		{	
-			if (m_State == eSessionStateEstablished)
-				m_Data.Send (msg);
-			else
-				m_DelayedMessages.push_back (msg);
-		}	
+			m_Data.Send (msg);
 	}		
-		
+
+	void SSUSession::SendI2NPMessages (const std::vector<I2NPMessage *>& msgs)
+	{
+		boost::asio::io_service& service = IsV6 () ? m_Server.GetServiceV6 () : m_Server.GetService ();
+		service.post (std::bind (&SSUSession::PostI2NPMessages, shared_from_this (), msgs));    
+	}
+
+	void SSUSession::PostI2NPMessages (std::vector<I2NPMessage *> msgs)
+	{
+		for (auto it: msgs)
+			if (it) m_Data.Send (it);
+	}	
+
 	void SSUSession::ProcessData (uint8_t * buf, size_t len)
 	{
 		m_Data.ProcessMessage (buf, len);
