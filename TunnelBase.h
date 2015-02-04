@@ -2,6 +2,7 @@
 #define TUNNEL_BASE_H__
 
 #include <inttypes.h>
+#include <memory>
 #include "Timestamp.h"
 #include "I2NPProtocol.h"
 #include "Identity.h"
@@ -36,6 +37,9 @@ namespace tunnel
 			TunnelBase (): m_CreationTime (i2p::util::GetSecondsSinceEpoch ()) {};
 			virtual ~TunnelBase () {};
 			
+			virtual void HandleTunnelDataMsg (i2p::I2NPMessage * tunnelMsg) = 0;
+			virtual void SendTunnelDataMsg (i2p::I2NPMessage * msg) = 0;
+			virtual void FlushTunnelDataMsgs () {};
 			virtual void EncryptTunnelMsg (I2NPMessage * tunnelMsg) = 0;
 			virtual uint32_t GetNextTunnelID () const = 0;
 			virtual const i2p::data::IdentHash& GetNextIdentHash () const = 0;
@@ -51,7 +55,7 @@ namespace tunnel
 
 	struct TunnelCreationTimeCmp
 	{
-		bool operator() (const TunnelBase * t1, const TunnelBase * t2) const
+		bool operator() (std::shared_ptr<const TunnelBase> t1, std::shared_ptr<const TunnelBase> t2) const
   		{	
 			if (t1->GetCreationTime () != t2->GetCreationTime ())
 				return t1->GetCreationTime () > t2->GetCreationTime (); 

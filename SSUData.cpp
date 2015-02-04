@@ -115,10 +115,7 @@ namespace transport
 							if (bitfield & mask)
 							{
 								if (fragment < numSentFragments)
-								{
-									delete it->second->fragments[fragment];
-									it->second->fragments[fragment] = nullptr;
-								}	
+									it->second->fragments[fragment].reset (nullptr);
 							}				
 							fragment++;
 							mask <<= 1;
@@ -235,7 +232,7 @@ namespace transport
 					{	
 						if (m_ReceivedMessages.size () > 100) m_ReceivedMessages.clear ();
 						m_ReceivedMessages.insert (msgID);
-						i2p::HandleI2NPMessage (msg);
+						m_Handler.PutNextMessage (msg);
 					}	
 					else
 					{
@@ -260,6 +257,8 @@ namespace transport
 				SendFragmentAck (msgID, fragmentNum);			
 			buf += fragmentSize;
 		}	
+		if (numFragments > 0)
+			m_Handler.Flush ();
 	}
 
 	void SSUData::ProcessMessage (uint8_t * buf, size_t len)
@@ -267,7 +266,7 @@ namespace transport
 		//uint8_t * start = buf;
 		uint8_t flag = *buf;
 		buf++;
-		LogPrint (eLogDebug, "Process SSU data flags=", (int)flag);
+		LogPrint (eLogDebug, "Process SSU data flags=", (int)flag, " len=", len);
 		// process acks if presented
 		if (flag & (DATA_FLAG_ACK_BITFIELDS_INCLUDED | DATA_FLAG_EXPLICIT_ACKS_INCLUDED))
 			ProcessAcks (buf, flag);
@@ -299,7 +298,6 @@ namespace transport
 		sentMessage->nextResendTime = i2p::util::GetSecondsSinceEpoch () + RESEND_INTERVAL;
 		sentMessage->numResends = 0;
 		auto& fragments = sentMessage->fragments;
-		msgID = htobe32 (msgID);	
 		size_t payloadSize = m_PacketSize - sizeof (SSUHeader) - 9; // 9  =  flag + #frg(1) + messageID(4) + frag info (3) 
 		size_t len = msg->GetLength ();
 		uint8_t * msgBuf = msg->GetSSUHeader ();
@@ -310,13 +308,12 @@ namespace transport
 			Fragment * fragment = new Fragment;
 			fragment->fragmentNum = fragmentNum;
 			uint8_t * buf = fragment->buf;
-			fragments.push_back (fragment);
 			uint8_t	* payload = buf + sizeof (SSUHeader);
 			*payload = DATA_FLAG_WANT_REPLY; // for compatibility
 			payload++;
 			*payload = 1; // always 1 message fragment per message
 			payload++;
-			*(uint32_t *)payload = msgID;
+			htobe32buf (payload, msgID);
 			payload += 4;
 			bool isLast = (len <= payloadSize);
 			size_t size = isLast ? len : payloadSize;
@@ -334,6 +331,7 @@ namespace transport
 			if (size & 0x0F) // make sure 16 bytes boundary
 				size = ((size >> 4) + 1) << 4; // (/16 + 1)*16
 			fragment->len = size; 
+			fragments.push_back (std::unique_ptr<Fragment> (fragment));
 			
 			// encrypt message with session key
 			m_Session.FillHeaderAndEncrypt (PAYLOAD_TYPE_DATA, buf, size);
@@ -415,7 +413,7 @@ namespace transport
 			{
 				if (ts >= it.second->nextResendTime && it.second->numResends < MAX_NUM_RESENDS)
 				{	
-					for (auto f: it.second->fragments)
+					for (auto& f: it.second->fragments)
 						if (f) m_Session.Send (f->buf, f->len); // resend
 
 					it.second->numResends++;

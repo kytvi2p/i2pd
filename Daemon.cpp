@@ -78,6 +78,7 @@ namespace i2p
 				i2p::context.SetUnreachable ();
 
 			i2p::context.SetSupportsV6 (i2p::util::config::GetArg("-v6", 0));
+			i2p::context.SetFloodfill (i2p::util::config::GetArg("-floodfill", 0));
 			
 			LogPrint("CMD parameters:");
 			for (int i = 0; i < argc; ++i)
