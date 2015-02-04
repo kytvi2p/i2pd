@@ -1,5 +1,4 @@
 #include <cryptopp/dh.h>
-#include <boost/bind.hpp>
 #include "Log.h"
 #include "CryptoConst.h"
 #include "RouterContext.h"
@@ -96,8 +95,9 @@ namespace transport
 	Transports transports;	
 	
 	Transports::Transports (): 
-		m_Thread (nullptr), m_Work (m_Service), m_NTCPAcceptor (nullptr), m_NTCPV6Acceptor (nullptr), 
-		m_SSUServer (nullptr), m_DHKeysPairSupplier (5) // 5 pre-generated keys
+		m_IsRunning (false), m_Thread (nullptr), m_Work (m_Service),
+		m_NTCPServer (nullptr), m_SSUServer (nullptr), 
+		m_DHKeysPairSupplier (5) // 5 pre-generated keys
 	{		
 	}
 		
@@ -115,31 +115,13 @@ namespace transport
 		auto addresses = context.GetRouterInfo ().GetAddresses ();
 		for (auto& address : addresses)
 		{
-			if (address.transportStyle == RouterInfo::eTransportNTCP && address.host.is_v4 ())
+			if (!m_NTCPServer)
 			{	
-				m_NTCPAcceptor = new boost::asio::ip::tcp::acceptor (m_Service,
-					boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), address.port));
-
-				LogPrint ("Start listening TCP port ", address.port);	
-				auto conn = std::make_shared<NTCPSession>(m_Service);
-				m_NTCPAcceptor->async_accept(conn->GetSocket (), boost::bind (&Transports::HandleAccept, this, 
-					conn, boost::asio::placeholders::error));	
-				
-				if (context.SupportsV6 ())
-				{
-					m_NTCPV6Acceptor = new boost::asio::ip::tcp::acceptor (m_Service);
-					m_NTCPV6Acceptor->open (boost::asio::ip::tcp::v6());
-					m_NTCPV6Acceptor->set_option (boost::asio::ip::v6_only (true));
-					m_NTCPV6Acceptor->bind (boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v6(), address.port));
-					m_NTCPV6Acceptor->listen ();
-
-					LogPrint ("Start listening V6 TCP port ", address.port);	
-					auto conn = std::make_shared<NTCPSession> (m_Service);
-					m_NTCPV6Acceptor->async_accept(conn->GetSocket (), boost::bind (&Transports::HandleAcceptV6,
-						this, conn, boost::asio::placeholders::error));
-				}	
+				m_NTCPServer = new NTCPServer (address.port);
+				m_NTCPServer->Start ();
 			}	
-			else if (address.transportStyle == RouterInfo::eTransportSSU && address.host.is_v4 ())
+			
+			if (address.transportStyle == RouterInfo::eTransportSSU && address.host.is_v4 ())
 			{
 				if (!m_SSUServer)
 				{	
@@ -156,18 +138,19 @@ namespace transport
 		
 	void Transports::Stop ()
 	{	
+		m_Peers.clear ();
 		if (m_SSUServer)
 		{
 			m_SSUServer->Stop ();
 			delete m_SSUServer;
 			m_SSUServer = nullptr;
 		}	
-		m_NTCPSessions.clear ();
-		
-		delete m_NTCPAcceptor;
-		m_NTCPAcceptor = nullptr;
-		delete m_NTCPV6Acceptor;
-		m_NTCPV6Acceptor = nullptr;
+		if (m_NTCPServer)
+		{
+			m_NTCPServer->Stop ();
+			delete m_NTCPServer;
+			m_NTCPServer = nullptr;
+		}	
 
 		m_DHKeysPairSupplier.Stop ();
 		m_IsRunning = false;
@@ -195,175 +178,186 @@ namespace transport
 		}	
 	}
 		
-	void Transports::AddNTCPSession (std::shared_ptr<NTCPSession> session)
-	{
-		if (session)
-			m_NTCPSessions[session->GetRemoteIdentity ().GetIdentHash ()] = session;
-	}	
-
-	void Transports::RemoveNTCPSession (std::shared_ptr<NTCPSession> session)
-	{
-		if (session)
-			m_NTCPSessions.erase (session->GetRemoteIdentity ().GetIdentHash ());
-	}	
-		
-	void Transports::HandleAccept (std::shared_ptr<NTCPSession> conn, const boost::system::error_code& error)
-	{		
-		if (!error)
-		{
-			LogPrint ("Connected from ", conn->GetSocket ().remote_endpoint().address ().to_string ());
-			conn->ServerLogin ();
-		}
-		
-
-		if (error != boost::asio::error::operation_aborted)
-		{
-    		conn = std::make_shared<NTCPSession> (m_Service);
-			m_NTCPAcceptor->async_accept(conn->GetSocket (), boost::bind (&Transports::HandleAccept, this, 
-				conn, boost::asio::placeholders::error));
-		}	
-	}
-
-	void Transports::HandleAcceptV6 (std::shared_ptr<NTCPSession> conn, const boost::system::error_code& error)
-	{		
-		if (!error)
-		{
-			LogPrint ("Connected from ", conn->GetSocket ().remote_endpoint().address ().to_string ());
-			conn->ServerLogin ();
-		}
-
-		if (error != boost::asio::error::operation_aborted)
-		{
-    		conn = std::make_shared<NTCPSession> (m_Service);
-			m_NTCPV6Acceptor->async_accept(conn->GetSocket (), boost::bind (&Transports::HandleAcceptV6, this, 
-				conn, boost::asio::placeholders::error));
-		}	
-	}
-
-	void Transports::Connect (const boost::asio::ip::address& address, int port, std::shared_ptr<NTCPSession> conn)
-	{
-		LogPrint ("Connecting to ", address ,":",  port);
-		conn->GetSocket ().async_connect (boost::asio::ip::tcp::endpoint (address, port), 
-			boost::bind (&Transports::HandleConnect, this, boost::asio::placeholders::error, conn));
-	}
-
-	void Transports::HandleConnect (const boost::system::error_code& ecode, std::shared_ptr<NTCPSession> conn)
-	{
-		if (ecode)
-        {
-			LogPrint ("Connect error: ", ecode.message ());
-			if (ecode != boost::asio::error::operation_aborted)
-			{
-				i2p::data::netdb.SetUnreachable (conn->GetRemoteIdentity ().GetIdentHash (), true);
-				conn->Terminate ();
-			}
-		}
-		else
-		{
-			LogPrint ("Connected");
-			if (conn->GetSocket ().local_endpoint ().protocol () == boost::asio::ip::tcp::v6()) // ipv6
-				context.UpdateNTCPV6Address (conn->GetSocket ().local_endpoint ().address ());
-			conn->ClientLogin ();
-		}	
-	}	
-
-	std::shared_ptr<NTCPSession> Transports::GetNextNTCPSession ()
-	{
-		for (auto session: m_NTCPSessions)
-			if (session.second->IsEstablished ())
-				return session.second;
-		return 0;
-	}	
-
-	std::shared_ptr<NTCPSession> Transports::FindNTCPSession (const i2p::data::IdentHash& ident)
-	{
-		auto it = m_NTCPSessions.find (ident);
-		if (it != m_NTCPSessions.end ())
-			return it->second;
-		return 0;
-	}	
 
 	void Transports::SendMessage (const i2p::data::IdentHash& ident, i2p::I2NPMessage * msg)
 	{
-		if (ident == i2p::context.GetRouterInfo ().GetIdentHash ())
-			// we send it to ourself
-			i2p::HandleI2NPMessage (msg);
-		else
-			m_Service.post (boost::bind (&Transports::PostMessage, this, ident, msg));                             
+		m_Service.post (std::bind (&Transports::PostMessage, this, ident, msg));                             
 	}	
 
-	void Transports::PostMessage (const i2p::data::IdentHash& ident, i2p::I2NPMessage * msg)
+	void Transports::SendMessages (const i2p::data::IdentHash& ident, const std::vector<i2p::I2NPMessage *>& msgs)
 	{
-		auto session = FindNTCPSession (ident);
-		if (session)
-			session->SendI2NPMessage (msg);
-		else
+		m_Service.post (std::bind (&Transports::PostMessages, this, ident, msgs));
+	}	
+		
+	void Transports::PostMessage (i2p::data::IdentHash ident, i2p::I2NPMessage * msg)
+	{
+		if (ident == i2p::context.GetRouterInfo ().GetIdentHash ())
+		{	
+			// we send it to ourself
+			i2p::HandleI2NPMessage (msg);
+			return;
+		}	
+
+		auto it = m_Peers.find (ident);
+		if (it == m_Peers.end ())
 		{
 			auto r = netdb.FindRouter (ident);
-			if (r)
-			{	
-				auto ssuSession = m_SSUServer ? m_SSUServer->FindSession (r) : nullptr;
-				if (ssuSession)
-					ssuSession->SendI2NPMessage (msg);
-				else
-				{	
-					// existing session not found. create new 
-					// try NTCP first if message size < 16K
-					auto address = r->GetNTCPAddress (!context.SupportsV6 ()); 
-					if (address && !r->UsesIntroducer () && !r->IsUnreachable () && msg->GetLength () < NTCP_MAX_MESSAGE_SIZE)
-					{	
-						auto s = std::make_shared<NTCPSession> (m_Service, r);
-						AddNTCPSession (s);
-						s->SendI2NPMessage (msg);
-						Connect (address->host, address->port, s);
-					}	
-					else
-					{	
-						// then SSU					
-						auto s = m_SSUServer ? m_SSUServer->GetSession (r) : nullptr;
-						if (s)
-							s->SendI2NPMessage (msg);
-						else
+			it = m_Peers.insert (std::pair<i2p::data::IdentHash, Peer>(ident, { 0, r, nullptr})).first;
+			if (!ConnectToPeer (ident, it->second))
+			{
+				DeleteI2NPMessage (msg);
+				return;
+			}	
+		}	
+		if (it->second.session)
+			it->second.session->SendI2NPMessage (msg);
+		else
+			it->second.delayedMessages.push_back (msg);
+	}	
+
+	void Transports::PostMessages (i2p::data::IdentHash ident, std::vector<i2p::I2NPMessage *> msgs)
+	{
+		if (ident == i2p::context.GetRouterInfo ().GetIdentHash ())
+		{	
+			// we send it to ourself
+			for (auto it: msgs)
+				i2p::HandleI2NPMessage (it);
+			return;
+		}	
+		auto it = m_Peers.find (ident);
+		if (it == m_Peers.end ())
+		{
+			auto r = netdb.FindRouter (ident);
+			it = m_Peers.insert (std::pair<i2p::data::IdentHash, Peer>(ident, { 0, r, nullptr})).first;
+			if (!ConnectToPeer (ident, it->second))
+			{
+				for (auto it1: msgs)
+					DeleteI2NPMessage (it1);
+				return;
+			}	
+		}	
+		if (it->second.session)
+			it->second.session->SendI2NPMessages (msgs);
+		else
+		{	
+			for (auto it1: msgs)
+				it->second.delayedMessages.push_back (it1);
+		}	
+	}	
+		
+	bool Transports::ConnectToPeer (const i2p::data::IdentHash& ident, Peer& peer)
+	{
+		if (peer.router) // we have RI already
+		{	
+			if (!peer.numAttempts) // NTCP
+			{
+				peer.numAttempts++;
+				auto address = peer.router->GetNTCPAddress (!context.SupportsV6 ());
+				if (address)
+				{
+					if (!address->host.is_unspecified ()) // we have address now
+					{
+						if (!peer.router->UsesIntroducer () && !peer.router->IsUnreachable ())
+						{	
+							auto s = std::make_shared<NTCPSession> (*m_NTCPServer, peer.router);
+							m_NTCPServer->Connect (address->host, address->port, s);
+							return true;
+						}
+					}
+					else // we don't have address
+					{
+						if (address->addressString.length () > 0) // trying to resolve
 						{
-							LogPrint ("No NTCP and SSU addresses available");
-							DeleteI2NPMessage (msg); 
+							LogPrint (eLogInfo, "Resolving ", address->addressString);
+							NTCPResolve (address->addressString, ident);
+							return true;
 						}
 					}
 				}	
 			}
+			else  if (peer.numAttempts == 1)// SSU
+			{
+				peer.numAttempts++;
+				if (m_SSUServer)
+				{	
+					if (m_SSUServer->GetSession (peer.router))
+						return true;
+				}
+			}	
+			LogPrint (eLogError, "No NTCP and SSU addresses available");
+			m_Peers.erase (ident);
+			return false;
+		}	
+		else // otherwise request RI
+		{
+			LogPrint ("Router not found. Requested");
+			i2p::data::netdb.RequestDestination (ident, std::bind (
+				&Transports::RequestComplete, this, std::placeholders::_1, ident));
+		}	
+		return true;
+	}	
+	
+	void Transports::RequestComplete (std::shared_ptr<const i2p::data::RouterInfo> r, const i2p::data::IdentHash& ident)
+	{
+		m_Service.post (std::bind (&Transports::HandleRequestComplete, this, r, ident));
+	}		
+	
+	void Transports::HandleRequestComplete (std::shared_ptr<const i2p::data::RouterInfo> r, const i2p::data::IdentHash& ident)
+	{
+		auto it = m_Peers.find (ident);
+		if (it != m_Peers.end ())
+		{	
+			if (r)
+			{
+				LogPrint ("Router found. Trying to connect");
+				it->second.router = r;
+				ConnectToPeer (ident, it->second);
+			}	
 			else
 			{
-				LogPrint ("Router not found. Requested");
-				i2p::data::netdb.RequestDestination (ident);
-				auto resendTimer = new boost::asio::deadline_timer (m_Service);
-				resendTimer->expires_from_now (boost::posix_time::seconds(5)); // 5 seconds
-				resendTimer->async_wait (boost::bind (&Transports::HandleResendTimer,
-					this, boost::asio::placeholders::error, resendTimer, ident, msg));			
+				LogPrint ("Router not found. Failed to send messages");
+				m_Peers.erase (it);
 			}	
 		}	
 	}	
 
-	void Transports::HandleResendTimer (const boost::system::error_code& ecode, 
-		boost::asio::deadline_timer * timer, const i2p::data::IdentHash& ident, i2p::I2NPMessage * msg)
+	void Transports::NTCPResolve (const std::string& addr, const i2p::data::IdentHash& ident)
 	{
-		auto r = netdb.FindRouter (ident);
-		if (r)
+		auto resolver = std::make_shared<boost::asio::ip::tcp::resolver>(m_Service);
+		resolver->async_resolve (boost::asio::ip::tcp::resolver::query (addr, ""), 
+			std::bind (&Transports::HandleNTCPResolve, this, 
+				std::placeholders::_1, std::placeholders::_2, ident, resolver));
+	}
+
+	void Transports::HandleNTCPResolve (const boost::system::error_code& ecode, boost::asio::ip::tcp::resolver::iterator it, 
+		const i2p::data::IdentHash& ident, std::shared_ptr<boost::asio::ip::tcp::resolver> resolver)
+	{
+		auto it1 = m_Peers.find (ident);
+		if (it1 != m_Peers.end () && it1->second.router)
 		{
-			LogPrint ("Router found. Sending message");
-			PostMessage (ident, msg);
-		}	
-		else
-		{
-			LogPrint ("Router not found. Failed to send message");
-			DeleteI2NPMessage (msg);
-		}	
-		delete timer;
-	}	
-		
+			auto& peer = it1->second;
+			if (!ecode)
+			{
+				auto address = (*it).endpoint ().address ();
+				LogPrint (eLogInfo, (*it).host_name (), " has been resolved to ", address);
+				auto addr = peer.router->GetNTCPAddress ();
+				if (addr)
+				{
+					auto s = std::make_shared<NTCPSession> (*m_NTCPServer, peer.router);
+					m_NTCPServer->Connect (address, addr->port, s);
+					return;
+				}	
+			}
+		}
+
+		LogPrint (eLogError, "Unable to resolve NTCP address: ", ecode.message ());
+		m_Peers.erase (it1);
+	}
+
 	void Transports::CloseSession (std::shared_ptr<const i2p::data::RouterInfo> router)
 	{
 		if (!router) return;
-		m_Service.post (boost::bind (&Transports::PostCloseSession, this, router));    
+		m_Service.post (std::bind (&Transports::PostCloseSession, this, router));    
 	}	
 
 	void Transports::PostCloseSession (std::shared_ptr<const i2p::data::RouterInfo> router)
@@ -396,6 +390,39 @@ namespace transport
 	{
 		m_DHKeysPairSupplier.Return (pair);
 	}
+
+	void Transports::PeerConnected (std::shared_ptr<TransportSession> session)
+	{
+		m_Service.post([session, this]()
+		{   
+			auto ident = session->GetRemoteIdentity ().GetIdentHash ();
+			auto it = m_Peers.find (ident);
+			if (it != m_Peers.end ())
+			{
+				it->second.session = session;
+				session->SendI2NPMessages (it->second.delayedMessages);
+				it->second.delayedMessages.clear ();
+			}
+			else // incoming connection
+				m_Peers[ident] = { 0, nullptr, session };
+		});			
+	}
+		
+	void Transports::PeerDisconnected (std::shared_ptr<TransportSession> session)
+	{
+		m_Service.post([session, this]()
+		{  
+			auto ident = session->GetRemoteIdentity ().GetIdentHash ();
+			auto it = m_Peers.find (ident);
+			if (it != m_Peers.end ())
+			{
+				if (it->second.delayedMessages.size () > 0)
+					ConnectToPeer (ident, it->second);
+				else
+					m_Peers.erase (it);
+			}
+		});	
+	}	
 }
 }
 

@@ -6,6 +6,7 @@
 #include <condition_variable>
 #include <functional>
 #include <map>
+#include <vector>
 #include <queue>
 #include <string>
 #include <memory>
@@ -50,6 +51,20 @@ namespace transport
 			CryptoPP::AutoSeededRandomPool m_Rnd;
 	};
 
+	struct Peer
+	{
+		int numAttempts;
+		std::shared_ptr<const i2p::data::RouterInfo> router;
+		std::shared_ptr<TransportSession> session;
+		std::vector<i2p::I2NPMessage *> delayedMessages;
+
+		~Peer ()
+		{
+			for (auto it :delayedMessages)
+				i2p::DeleteI2NPMessage (it);
+		}	
+	};	
+	
 	class Transports
 	{
 		public:
@@ -64,27 +79,26 @@ namespace transport
 			i2p::transport::DHKeysPair * GetNextDHKeysPair ();	
 			void ReuseDHKeysPair (DHKeysPair * pair);
 
-			void AddNTCPSession (std::shared_ptr<NTCPSession> session);
-			void RemoveNTCPSession (std::shared_ptr<NTCPSession> session);
-			
-			std::shared_ptr<NTCPSession> GetNextNTCPSession ();
-			std::shared_ptr<NTCPSession> FindNTCPSession (const i2p::data::IdentHash& ident);
-
 			void SendMessage (const i2p::data::IdentHash& ident, i2p::I2NPMessage * msg);
+			void SendMessages (const i2p::data::IdentHash& ident, const std::vector<i2p::I2NPMessage *>& msgs);
 			void CloseSession (std::shared_ptr<const i2p::data::RouterInfo> router);
+
+			void PeerConnected (std::shared_ptr<TransportSession> session);
+			void PeerDisconnected (std::shared_ptr<TransportSession> session);
 			
 		private:
 
 			void Run ();
-			void HandleAccept (std::shared_ptr<NTCPSession> conn, const boost::system::error_code& error);
-			void HandleAcceptV6 (std::shared_ptr<NTCPSession> conn, const boost::system::error_code& error);
-			void HandleResendTimer (const boost::system::error_code& ecode, boost::asio::deadline_timer * timer,
-				const i2p::data::IdentHash& ident, i2p::I2NPMessage * msg);
-			void PostMessage (const i2p::data::IdentHash& ident, i2p::I2NPMessage * msg);
+			void RequestComplete (std::shared_ptr<const i2p::data::RouterInfo> r, const i2p::data::IdentHash& ident);
+			void HandleRequestComplete (std::shared_ptr<const i2p::data::RouterInfo> r, const i2p::data::IdentHash& ident);
+			void PostMessage (i2p::data::IdentHash ident, i2p::I2NPMessage * msg);
+			void PostMessages (i2p::data::IdentHash ident, std::vector<i2p::I2NPMessage *> msgs);
 			void PostCloseSession (std::shared_ptr<const i2p::data::RouterInfo> router);
+			bool ConnectToPeer (const i2p::data::IdentHash& ident, Peer& peer);
 			
-			void Connect (const boost::asio::ip::address& address, int port, std::shared_ptr<NTCPSession> conn);
-			void HandleConnect (const boost::system::error_code& ecode, std::shared_ptr<NTCPSession> conn);
+			void NTCPResolve (const std::string& addr, const i2p::data::IdentHash& ident);
+			void HandleNTCPResolve (const boost::system::error_code& ecode, boost::asio::ip::tcp::resolver::iterator it,
+ 				const i2p::data::IdentHash& ident, std::shared_ptr<boost::asio::ip::tcp::resolver> resolver);
 
 			void DetectExternalIP ();
 			
@@ -94,18 +108,19 @@ namespace transport
 			std::thread * m_Thread;	
 			boost::asio::io_service m_Service;
 			boost::asio::io_service::work m_Work;
-			boost::asio::ip::tcp::acceptor * m_NTCPAcceptor, * m_NTCPV6Acceptor;
 
-			std::map<i2p::data::IdentHash, std::shared_ptr<NTCPSession> > m_NTCPSessions;
+			NTCPServer * m_NTCPServer;
 			SSUServer * m_SSUServer;
-
+			std::map<i2p::data::IdentHash, Peer> m_Peers;
+			
 			DHKeysPairSupplier m_DHKeysPairSupplier;
 
 		public:
 
 			// for HTTP only
-			const decltype(m_NTCPSessions)& GetNTCPSessions () const { return m_NTCPSessions; };
+			const NTCPServer * GetNTCPServer () const { return m_NTCPServer; };
 			const SSUServer * GetSSUServer () const { return m_SSUServer; };
+			const decltype(m_Peers)& GetPeers () const { return m_Peers; };
 	};	
 
 	extern Transports transports;

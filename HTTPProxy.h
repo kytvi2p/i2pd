@@ -1,42 +1,30 @@
 #ifndef HTTP_PROXY_H__
 #define HTTP_PROXY_H__
 
-#include <sstream>
-#include <thread>
+#include <memory>
+#include <set>
 #include <boost/asio.hpp>
-#include <boost/array.hpp>
-
-#include "HTTPServer.h"
+#include <mutex>
+#include "I2PService.h"
 
 namespace i2p
 {
 namespace proxy
 {
-	class HTTPProxyConnection : public i2p::util::HTTPConnection
+	class HTTPProxyServer: public i2p::client::TCPIPAcceptor
 	{
-		public:
-			HTTPProxyConnection (boost::asio::ip::tcp::socket * socket): HTTPConnection(socket) { };
-
 		protected:
-			void RunRequest();
-			void parseHeaders(const std::string& h, std::vector<header>& hm);
-			void ExtractRequest(request& r);
-	};
+			// Implements TCPIPAcceptor
+			std::shared_ptr<i2p::client::I2PServiceHandler> CreateHandler(boost::asio::ip::tcp::socket * socket);
+			const char* GetName() { return "HTTP Proxy"; }
 
-	class HTTPProxy : public i2p::util::HTTPServer
-	{
 		public:
-			HTTPProxy (int port): HTTPServer(port) {};
-
-		private:
-			void CreateConnection(boost::asio::ip::tcp::socket * m_NewSocket)
-			{
-				new HTTPProxyConnection(m_NewSocket);
-			}
+			HTTPProxyServer(int port);
+			~HTTPProxyServer() {}
 	};
+
+	typedef HTTPProxyServer HTTPProxy;
 }
 }
 
 #endif
-
-

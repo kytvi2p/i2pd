@@ -605,7 +605,8 @@ namespace util
 	{
 		if (ecode != boost::asio::error::operation_aborted)
 		{
-			m_Socket->close ();
+			boost::system::error_code ignored_ec;
+			m_Socket->shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
 			Terminate ();
 		}	
 	}
@@ -709,22 +710,26 @@ namespace util
 
 	void HTTPConnection::ShowTransports (std::stringstream& s)
 	{
-		s << "NTCP<br>";
-		for (auto it: i2p::transport::transports.GetNTCPSessions ())
-		{
-			if (it.second && it.second->IsEstablished ())
+		auto ntcpServer = i2p::transport::transports.GetNTCPServer (); 
+		if (ntcpServer)
+		{	
+			s << "NTCP<br>";
+			for (auto it: ntcpServer->GetNTCPSessions ())
 			{
-				// incoming connection doesn't have remote RI
-				auto outgoing = it.second->GetRemoteRouter ();
-				if (outgoing) s << "-->";
-				s << it.second->GetRemoteIdentity ().GetIdentHash ().ToBase64 ().substr (0, 4) <<  ": "
-					<< it.second->GetSocket ().remote_endpoint().address ().to_string ();
-				if (!outgoing) s << "-->";
-				s << " [" << it.second->GetNumSentBytes () << ":" << it.second->GetNumReceivedBytes () << "]";
-				s << "<br>";
+				if (it.second && it.second->IsEstablished ())
+				{
+					// incoming connection doesn't have remote RI
+					auto outgoing = it.second->GetRemoteRouter ();
+					if (outgoing) s << "-->";
+					s << it.second->GetRemoteIdentity ().GetIdentHash ().ToBase64 ().substr (0, 4) <<  ": "
+						<< it.second->GetSocket ().remote_endpoint().address ().to_string ();
+					if (!outgoing) s << "-->";
+					s << " [" << it.second->GetNumSentBytes () << ":" << it.second->GetNumReceivedBytes () << "]";
+					s << "<br>";
+				}
+				s << std::endl;
 			}
-			s << std::endl;
-		}
+		}	
 		auto ssuServer = i2p::transport::transports.GetSSUServer ();
 		if (ssuServer)
 		{
@@ -746,6 +751,8 @@ namespace util
 	
 	void HTTPConnection::ShowTunnels (std::stringstream& s)
 	{
+		s << "Queue size:" << i2p::tunnel::tunnels.GetQueueSize () << "<br>";
+
 		for (auto it: i2p::tunnel::tunnels.GetOutboundTunnels ())
 		{
 			it->GetTunnelConfig ()->Print (s);
@@ -835,6 +842,8 @@ namespace util
 				s << it.first << "->" << i2p::client::context.GetAddressBook ().ToAddress(it.second->GetRemoteIdentity ()) << " ";
 				s << " [" << it.second->GetNumSentBytes () << ":" << it.second->GetNumReceivedBytes () << "]";
 				s << " [out:" << it.second->GetSendQueueSize () << "][in:" << it.second->GetReceiveQueueSize () << "]";
+				s << "[buf:" << it.second->GetSendBufferSize () << "]";
+				s << "[RTT:" << it.second->GetRTT () << "]"; 
 				s << "<br>"<< std::endl; 
 			}	
 		}	
@@ -897,10 +906,10 @@ namespace util
 		}
 	}	
 	
-	void HTTPConnection::SendToDestination (const i2p::data::LeaseSet * remote, int port, const char * buf, size_t len)
+	void HTTPConnection::SendToDestination (std::shared_ptr<const i2p::data::LeaseSet> remote, int port, const char * buf, size_t len)
 	{
 		if (!m_Stream)
-			m_Stream = i2p::client::context.GetSharedLocalDestination ()->CreateStream (*remote, port);
+			m_Stream = i2p::client::context.GetSharedLocalDestination ()->CreateStream (remote, port);
 		if (m_Stream)
 		{
 			m_Stream->Send ((uint8_t *)buf, len);

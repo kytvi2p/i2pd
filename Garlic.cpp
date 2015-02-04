@@ -15,7 +15,7 @@ namespace i2p
 namespace garlic
 {
 	GarlicRoutingSession::GarlicRoutingSession (GarlicDestination * owner, 
-	    const i2p::data::RoutingDestination * destination, int numTags):
+	    std::shared_ptr<const i2p::data::RoutingDestination> destination, int numTags):
 		m_Owner (owner), m_Destination (destination), m_NumTags (numTags), 
 		m_LeaseSetUpdated (numTags > 0)
 	{
@@ -67,18 +67,34 @@ namespace garlic
 			m_UnconfirmedTagsMsgs.erase (it);
 			delete tags;
 		}
+		CleanupExpiredTags ();
+	}
+
+	bool GarlicRoutingSession::CleanupExpiredTags ()
+	{
+		uint32_t ts = i2p::util::GetSecondsSinceEpoch ();
+		for (auto it = m_SessionTags.begin (); it != m_SessionTags.end ();)
+		{
+			if (ts >= it->creationTime + OUTGOING_TAGS_EXPIRATION_TIMEOUT)
+				it = m_SessionTags.erase (it);
+			else 
+				it++;
+		}
 		// delete expired unconfirmed tags
 		for (auto it = m_UnconfirmedTagsMsgs.begin (); it != m_UnconfirmedTagsMsgs.end ();)
 		{
 			if (ts >= it->second->tagsCreationTime + OUTGOING_TAGS_EXPIRATION_TIMEOUT)
 			{
+				if (m_Owner)
+					m_Owner->RemoveCreatedSession (it->first);
 				delete it->second;
 				it = m_UnconfirmedTagsMsgs.erase (it);
 			}	
 			else
 				it++;
 		}	
-	}
+		return !m_SessionTags.empty () || m_UnconfirmedTagsMsgs.empty ();
+ 	}
 
 	I2NPMessage * GarlicRoutingSession::WrapSingleMessage (I2NPMessage * msg)
 	{
@@ -149,7 +165,7 @@ namespace garlic
 	size_t GarlicRoutingSession::CreateAESBlock (uint8_t * buf, const I2NPMessage * msg)
 	{
 		size_t blockSize = 0;
-		bool createNewTags = m_Owner && m_NumTags && ((int)m_SessionTags.size () <= m_NumTags/2);
+		bool createNewTags = m_Owner && m_NumTags && ((int)m_SessionTags.size () <= m_NumTags*2/3);
 		UnconfirmedTags * newTags = createNewTags ? GenerateSessionTags () : nullptr;
 		htobuf16 (buf, newTags ? htobe16 (newTags->numTags) : 0); // tag count
 		blockSize += 2;
@@ -197,7 +213,7 @@ namespace garlic
 				{
 					(*numCloves)++;
 					m_UnconfirmedTagsMsgs[msgID] = newTags;
-					m_Owner->DeliveryStatusSent (this, msgID);
+					m_Owner->DeliveryStatusSent (shared_from_this (), msgID);
 				}
 				else
 					LogPrint ("DeliveryStatus clove was not created");
@@ -306,9 +322,6 @@ namespace garlic
 	
 	GarlicDestination::~GarlicDestination ()
 	{
-		for (auto it: m_Sessions)
-			delete it.second;
-		m_Sessions.clear ();
 	}
 
 	void GarlicDestination::AddSessionKey (const uint8_t * key, const uint8_t * tag)
@@ -462,7 +475,7 @@ namespace garlic
 					buf += 32;
 					uint32_t gwTunnel = bufbe32toh (buf);
 					buf += 4;
-					i2p::tunnel::OutboundTunnel * tunnel = nullptr;
+					std::shared_ptr<i2p::tunnel::OutboundTunnel> tunnel;
 					if (from && from->GetTunnelPool ())
 						tunnel = from->GetTunnelPool ()->GetNextOutboundTunnel ();
 					if (tunnel) // we have send it through an outbound tunnel
@@ -488,7 +501,7 @@ namespace garlic
 		}	
 	}	
 	
-	I2NPMessage * GarlicDestination::WrapMessage (const i2p::data::RoutingDestination& destination, 
+	I2NPMessage * GarlicDestination::WrapMessage (std::shared_ptr<const i2p::data::RoutingDestination> destination, 
 		I2NPMessage * msg, bool attachLeaseSet)	
 	{
 		if (attachLeaseSet) // we should maintain this session
@@ -498,28 +511,48 @@ namespace garlic
 		}
 		else // one time session
 		{
-			GarlicRoutingSession session (this, &destination, 0); // don't use tag if no LeaseSet
+			GarlicRoutingSession session (this, destination, 0); // don't use tag if no LeaseSet
 			return session.WrapSingleMessage (msg);
 		}	
 	}
 
-	GarlicRoutingSession * GarlicDestination::GetRoutingSession (
-		const i2p::data::RoutingDestination& destination, int numTags)
+	std::shared_ptr<GarlicRoutingSession> GarlicDestination::GetRoutingSession (
+		std::shared_ptr<const i2p::data::RoutingDestination> destination, int numTags)
 	{
-		auto it = m_Sessions.find (destination.GetIdentHash ());
-		GarlicRoutingSession * session = nullptr;
+		auto it = m_Sessions.find (destination->GetIdentHash ());
+		std::shared_ptr<GarlicRoutingSession> session;
 		if (it != m_Sessions.end ())
 			session = it->second;
 		if (!session)
 		{
-			session = new GarlicRoutingSession (this, &destination, numTags); 
+			session = std::make_shared<GarlicRoutingSession> (this, destination, numTags); 
 			std::unique_lock<std::mutex> l(m_SessionsMutex);
-			m_Sessions[destination.GetIdentHash ()] = session;
+			m_Sessions[destination->GetIdentHash ()] = session;
 		}	
 		return session;
 	}	
-		
-	void GarlicDestination::DeliveryStatusSent (GarlicRoutingSession * session, uint32_t msgID)
+	
+	void GarlicDestination::CleanupRoutingSessions ()
+	{
+		std::unique_lock<std::mutex> l(m_SessionsMutex);
+		for (auto it = m_Sessions.begin (); it != m_Sessions.end ();)
+		{
+			if (!it->second->CleanupExpiredTags ())
+			{
+				LogPrint (eLogInfo, "Routing session to ", it->first.ToBase32 (), " deleted");
+				it = m_Sessions.erase (it);
+			}
+			else
+				it++;
+		}
+	}
+	
+	void GarlicDestination::RemoveCreatedSession (uint32_t msgID)
+	{
+		m_CreatedSessions.erase (msgID);
+	}
+
+	void GarlicDestination::DeliveryStatusSent (std::shared_ptr<GarlicRoutingSession> session, uint32_t msgID)
 	{
 		m_CreatedSessions[msgID] = session;
 	}		
@@ -533,7 +566,7 @@ namespace garlic
 			{
 				it->second->TagsConfirmed (msgID);
 				m_CreatedSessions.erase (it);
-				LogPrint ("Garlic message ", msgID, " acknowledged");
+				LogPrint (eLogInfo, "Garlic message ", msgID, " acknowledged");
 			}	
 		}
 		DeleteI2NPMessage (msg);	
