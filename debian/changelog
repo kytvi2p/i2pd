@@ -1,3 +1,9 @@
+i2pd (0.8.0-1~trusty+1) trusty; urgency=medium
+
+  * Uploading to PPA
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Mon, 23 Feb 2015 12:31:31 +0000
+
 i2pd (0.8.0-1) unstable; urgency=medium
 
   [ Kill Your TV ]
