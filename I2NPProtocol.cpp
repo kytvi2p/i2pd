@@ -71,7 +71,7 @@ namespace i2p
 		return msg;
 	}	
 
-	I2NPMessage * CreateI2NPMessage (const uint8_t * buf, int len, i2p::tunnel::InboundTunnel * from)
+	I2NPMessage * CreateI2NPMessage (const uint8_t * buf, int len, std::shared_ptr<i2p::tunnel::InboundTunnel> from)
 	{
 		I2NPMessage * msg = NewI2NPMessage ();
 		memcpy (msg->GetBuffer (), buf, len);
@@ -82,7 +82,7 @@ namespace i2p
 	
 	I2NPMessage * CreateDeliveryStatusMsg (uint32_t msgID)
 	{
-		I2NPMessage * m = NewI2NPMessage ();
+		I2NPMessage * m = NewI2NPShortMessage ();
 		uint8_t * buf = m->GetPayload ();
 		if (msgID)
 		{
@@ -578,11 +578,9 @@ namespace i2p
 			switch (msg->GetTypeID ())
 			{	
 				case eI2NPTunnelData:
-					LogPrint ("TunnelData");
 					m_TunnelMsgs.push_back (msg);
 				break;
 				case eI2NPTunnelGateway:	
-					LogPrint ("TunnelGateway");
 					m_TunnelGatewayMsgs.push_back (msg);
 				break;	
 				default:

@@ -95,7 +95,7 @@ namespace transport
 	Transports transports;	
 	
 	Transports::Transports (): 
-		m_IsRunning (false), m_Thread (nullptr), m_Work (m_Service),
+		m_IsRunning (false), m_Thread (nullptr), m_Work (m_Service), m_PeerCleanupTimer (m_Service),
 		m_NTCPServer (nullptr), m_SSUServer (nullptr), 
 		m_DHKeysPairSupplier (5) // 5 pre-generated keys
 	{		
@@ -134,10 +134,13 @@ namespace transport
 					LogPrint ("SSU server already exists");
 			}
 		}	
+		m_PeerCleanupTimer.expires_from_now (boost::posix_time::seconds(5*SESSION_CREATION_TIMEOUT));
+		m_PeerCleanupTimer.async_wait (std::bind (&Transports::HandlePeerCleanupTimer, this, std::placeholders::_1));
 	}
 		
 	void Transports::Stop ()
 	{	
+		m_PeerCleanupTimer.cancel ();	
 		m_Peers.clear ();
 		if (m_SSUServer)
 		{
@@ -202,7 +205,8 @@ namespace transport
 		if (it == m_Peers.end ())
 		{
 			auto r = netdb.FindRouter (ident);
-			it = m_Peers.insert (std::pair<i2p::data::IdentHash, Peer>(ident, { 0, r, nullptr})).first;
+			it = m_Peers.insert (std::pair<i2p::data::IdentHash, Peer>(ident, { 0, r, nullptr,
+				i2p::util::GetSecondsSinceEpoch () })).first;
 			if (!ConnectToPeer (ident, it->second))
 			{
 				DeleteI2NPMessage (msg);
@@ -228,7 +232,8 @@ namespace transport
 		if (it == m_Peers.end ())
 		{
 			auto r = netdb.FindRouter (ident);
-			it = m_Peers.insert (std::pair<i2p::data::IdentHash, Peer>(ident, { 0, r, nullptr})).first;
+			it = m_Peers.insert (std::pair<i2p::data::IdentHash, Peer>(ident, { 0, r, nullptr,
+				i2p::util::GetSecondsSinceEpoch () })).first;
 			if (!ConnectToPeer (ident, it->second))
 			{
 				for (auto it1: msgs)
@@ -255,7 +260,13 @@ namespace transport
 				auto address = peer.router->GetNTCPAddress (!context.SupportsV6 ());
 				if (address)
 				{
+#if BOOST_VERSION >= 104900
 					if (!address->host.is_unspecified ()) // we have address now
+#else
+					boost::system::error_code ecode;
+					address->host.to_string (ecode);
+					if (!ecode)
+#endif
 					{
 						if (!peer.router->UsesIntroducer () && !peer.router->IsUnreachable ())
 						{	
@@ -285,6 +296,7 @@ namespace transport
 				}
 			}	
 			LogPrint (eLogError, "No NTCP and SSU addresses available");
+			if (peer.session) peer.session->Done ();
 			m_Peers.erase (ident);
 			return false;
 		}	
@@ -330,13 +342,13 @@ namespace transport
 	}
 
 	void Transports::HandleNTCPResolve (const boost::system::error_code& ecode, boost::asio::ip::tcp::resolver::iterator it, 
-		const i2p::data::IdentHash& ident, std::shared_ptr<boost::asio::ip::tcp::resolver> resolver)
+		i2p::data::IdentHash ident, std::shared_ptr<boost::asio::ip::tcp::resolver> resolver)
 	{
 		auto it1 = m_Peers.find (ident);
-		if (it1 != m_Peers.end () && it1->second.router)
+		if (it1 != m_Peers.end ())
 		{
 			auto& peer = it1->second;
-			if (!ecode)
+			if (!ecode && peer.router)
 			{
 				auto address = (*it).endpoint ().address ();
 				LogPrint (eLogInfo, (*it).host_name (), " has been resolved to ", address);
@@ -348,10 +360,9 @@ namespace transport
 					return;
 				}	
 			}
+			LogPrint (eLogError, "Unable to resolve NTCP address: ", ecode.message ());
+			m_Peers.erase (it1);
 		}
-
-		LogPrint (eLogError, "Unable to resolve NTCP address: ", ecode.message ());
-		m_Peers.erase (it1);
 	}
 
 	void Transports::CloseSession (std::shared_ptr<const i2p::data::RouterInfo> router)
@@ -399,12 +410,20 @@ namespace transport
 			auto it = m_Peers.find (ident);
 			if (it != m_Peers.end ())
 			{
-				it->second.session = session;
-				session->SendI2NPMessages (it->second.delayedMessages);
-				it->second.delayedMessages.clear ();
+				if (!it->second.session)
+				{
+					it->second.session = session;
+					session->SendI2NPMessages (it->second.delayedMessages);
+					it->second.delayedMessages.clear ();
+				}
+				else
+				{
+					LogPrint (eLogError, "Session for ", ident.ToBase64 ().substr (0, 4), " already exists");
+					session->Done ();
+				}
 			}
 			else // incoming connection
-				m_Peers[ident] = { 0, nullptr, session };
+				m_Peers.insert (std::make_pair (ident, Peer{ 0, nullptr, session, i2p::util::GetSecondsSinceEpoch () }));
 		});			
 	}
 		
@@ -414,7 +433,7 @@ namespace transport
 		{  
 			auto ident = session->GetRemoteIdentity ().GetIdentHash ();
 			auto it = m_Peers.find (ident);
-			if (it != m_Peers.end ())
+			if (it != m_Peers.end () && (!it->second.session || it->second.session == session))
 			{
 				if (it->second.delayedMessages.size () > 0)
 					ConnectToPeer (ident, it->second);
@@ -423,6 +442,26 @@ namespace transport
 			}
 		});	
 	}	
+
+	void Transports::HandlePeerCleanupTimer (const boost::system::error_code& ecode)
+	{
+		if (ecode != boost::asio::error::operation_aborted)
+		{
+			auto ts = i2p::util::GetSecondsSinceEpoch ();
+			for (auto it = m_Peers.begin (); it != m_Peers.end (); )
+			{
+				if (!it->second.session && ts > it->second.creationTime + SESSION_CREATION_TIMEOUT)
+				{
+					LogPrint (eLogError, "Session to peer ", it->first.ToBase64 (), " has not been created in ", SESSION_CREATION_TIMEOUT, " seconds");
+					it = m_Peers.erase (it);
+				}
+				else
+					it++;
+			}
+			m_PeerCleanupTimer.expires_from_now (boost::posix_time::seconds(5*SESSION_CREATION_TIMEOUT));
+			m_PeerCleanupTimer.async_wait (std::bind (&Transports::HandlePeerCleanupTimer, this, std::placeholders::_1));
+		}	
+	}
 }
 }
 

@@ -67,7 +67,7 @@ namespace data
 			
 			void AddRouterInfo (const uint8_t * buf, int len);
 			void AddRouterInfo (const IdentHash& ident, const uint8_t * buf, int len);
-			void AddLeaseSet (const IdentHash& ident, const uint8_t * buf, int len, i2p::tunnel::InboundTunnel * from);
+			void AddLeaseSet (const IdentHash& ident, const uint8_t * buf, int len, std::shared_ptr<i2p::tunnel::InboundTunnel> from);
 			std::shared_ptr<RouterInfo> FindRouter (const IdentHash& ident) const;
 			std::shared_ptr<LeaseSet> FindLeaseSet (const IdentHash& destination) const;
 
@@ -104,9 +104,6 @@ namespace data
 			void ManageLeaseSets ();
 			void ManageRequests ();
 
-			RequestedDestination * CreateRequestedDestination (const IdentHash& dest, bool isExploratory = false);
-			void DeleteRequestedDestination (RequestedDestination * dest);
-
 			template<typename Filter>
 			std::shared_ptr<const RouterInfo> GetRandomRouter (Filter filter) const;	
 		
@@ -118,7 +115,7 @@ namespace data
 			mutable std::mutex m_FloodfillsMutex;
 			std::list<std::shared_ptr<RouterInfo> > m_Floodfills;
 			std::mutex m_RequestedDestinationsMutex;
-			std::map<IdentHash, RequestedDestination *> m_RequestedDestinations;
+			std::map<IdentHash, std::unique_ptr<RequestedDestination> > m_RequestedDestinations;
 			
 			bool m_IsRunning;
 			std::thread * m_Thread;	
