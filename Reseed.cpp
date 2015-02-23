@@ -3,10 +3,11 @@
 #include <sstream>
 #include <boost/regex.hpp>
 #include <boost/filesystem.hpp>
-#include <cryptopp/osrng.h>
+#include <boost/lexical_cast.hpp>
 #include <cryptopp/asn.h>
 #include <cryptopp/base64.h>
 #include <cryptopp/crc.h>
+#include <cryptopp/hmac.h>
 #include <cryptopp/zinflate.h>
 #include "I2PEndian.h"
 #include "Reseed.h"
@@ -23,34 +24,29 @@ namespace data
 {
 
 	static std::vector<std::string> httpReseedHostList = {
-				"http://193.150.121.66/netDb/",
-				"http://netdb.i2p2.no/",
-				"http://reseed.i2p-projekt.de/",
-				"http://cowpuncher.drollette.com/netdb/",
+				// "http://193.150.121.66/netDb/",  // unstable
+				// "http://us.reseed.i2p2.no/",     // misconfigured, not serving reseed data
+				// "http://jp.reseed.i2p2.no/",     // Really outdated RIs
+				"http://netdb.i2p2.no/",            // only SU3 (v2) support
 				"http://i2p.mooo.com/netDb/",
-				"http://reseed.info/",
 				"http://uk.reseed.i2p2.no/",
-				"http://us.reseed.i2p2.no/",
-				"http://jp.reseed.i2p2.no/",
-				"http://i2p-netdb.innovatio.no/",
-				"http://ieb9oopo.mooo.com"
+				"http://i2p-netdb.innovatio.no/"
 			};
 
 	//TODO: Remember to add custom port support. Not all serves on 443
 	static std::vector<std::string> httpsReseedHostList = {
-				"https://193.150.121.66/netDb/",
-				"https://netdb.i2p2.no/",
-				"https://reseed.i2p-projekt.de/",
-				"https://cowpuncher.drollette.com/netdb/",
-				"https://i2p.mooo.com/netDb/",
-				"https://reseed.info/",
-				"https://i2p-netdb.innovatio.no/",
-				"https://ieb9oopo.mooo.com/",
-				"https://ssl.webpack.de/ivae2he9.sg4.e-plaza.de/" // Only HTTPS and SU3 (v2) support
+				// "https://193.150.121.66/netDb/",  // unstable
+				// "https://i2p-netdb.innovatio.no/",// Vuln to POODLE
+				"https://netdb.i2p2.no/",            // Only SU3 (v2) support
+				"https://reseed.i2p-projekt.de/",    // Only HTTPS
+				"https://cowpuncher.drollette.com/netdb/",  // Only HTTPS and SU3 (v2) support -- will move to a new location
+				// following hosts are fine but don't support AES256 
+				/*"https://i2p.mooo.com/netDb/",
+				"https://link.mx24.eu/",             // Only HTTPS and SU3 (v2) support
+				"https://i2pseed.zarrenspry.info/",  // Only HTTPS and SU3 (v2) support
+				"https://ieb9oopo.mooo.com/"         // Only HTTPS and SU3 (v2) support*/
 			};
 	
-	//TODO: Implement v2 reseeding. Lightweight zip library is needed.
-	//TODO: Implement SU3, utils.
 	Reseeder::Reseeder()
 	{
 	}
@@ -61,17 +57,9 @@ namespace data
 
 	bool Reseeder::reseedNow()
 	{
+		// This method is deprecated
 		try
 		{
-			// Seems like the best place to try to intercept with SSL
-			/*ssl_server = true;
-			try {
-				// SSL
-			}
-			catch (std::exception& e)
-			{
-				LogPrint("Exception in SSL: ", e.what());
-			}*/
 			std::string reseedHost = httpReseedHostList[(rand() % httpReseedHostList.size())];
 			LogPrint("Reseeding from ", reseedHost);
 			std::string content = i2p::util::http::httpRequest(reseedHost);
@@ -132,16 +120,17 @@ namespace data
 	int Reseeder::ReseedNowSU3 ()
 	{
 		CryptoPP::AutoSeededRandomPool rnd;
-		auto ind = rnd.GenerateWord32 (0, httpReseedHostList.size() - 1);
-		std::string reseedHost = httpReseedHostList[ind];
-		return ReseedFromSU3 (reseedHost);
+		auto ind = rnd.GenerateWord32 (0, httpReseedHostList.size() - 1 +  httpsReseedHostList.size () - 1);
+		std::string reseedHost = (ind < httpReseedHostList.size()) ? httpReseedHostList[ind] : 
+			httpsReseedHostList[ind - httpReseedHostList.size()]; 
+		return ReseedFromSU3 (reseedHost, ind >= httpReseedHostList.size());
 	}
 
-	int Reseeder::ReseedFromSU3 (const std::string& host)
+	int Reseeder::ReseedFromSU3 (const std::string& host, bool https)
 	{
 		std::string url = host + "i2pseeds.su3";
 		LogPrint (eLogInfo, "Dowloading SU3 from ", host);
-		std::string su3 = i2p::util::http::httpRequest (url);
+		std::string su3 = https ? HttpsRequest (url) : i2p::util::http::httpRequest (url);
 		if (su3.length () > 0)
 		{
 			std::stringstream s(su3);
@@ -404,75 +393,81 @@ namespace data
 			decoder.Attach (new CryptoPP::Redirector (queue));
 			decoder.Put ((const uint8_t *)base64.data(), base64.length());
 			decoder.MessageEnd ();
-
-			// extract X.509
-			CryptoPP::BERSequenceDecoder x509Cert (queue);
-			CryptoPP::BERSequenceDecoder tbsCert (x509Cert);
-			// version
-			uint32_t ver;
-			CryptoPP::BERGeneralDecoder context (tbsCert, CryptoPP::CONTEXT_SPECIFIC | CryptoPP::CONSTRUCTED);
-			CryptoPP::BERDecodeUnsigned<uint32_t>(context, ver, CryptoPP::INTEGER);
-			// serial
-			CryptoPP::Integer serial;
-       		serial.BERDecode(tbsCert);	
-			// signature
-			CryptoPP::BERSequenceDecoder signature (tbsCert);
-       		signature.SkipAll();
 			
-			// issuer
-			std::string name;
-			CryptoPP::BERSequenceDecoder issuer (tbsCert);
-			{
-				CryptoPP::BERSetDecoder c (issuer);	c.SkipAll();
-				CryptoPP::BERSetDecoder st (issuer); st.SkipAll();
-				CryptoPP::BERSetDecoder l (issuer); l.SkipAll();
-				CryptoPP::BERSetDecoder o (issuer); o.SkipAll();
-				CryptoPP::BERSetDecoder ou (issuer); ou.SkipAll();
-				CryptoPP::BERSetDecoder cn (issuer);
-				{		
-					CryptoPP::BERSequenceDecoder attributes (cn);
-					{			
-						CryptoPP::BERGeneralDecoder ident(attributes, CryptoPP::OBJECT_IDENTIFIER);
-						ident.SkipAll ();
-						CryptoPP::BERDecodeTextString (attributes, name, CryptoPP::UTF8_STRING);
-					}	
-				}	
-			}	
-       		issuer.SkipAll();
-			// validity
-			CryptoPP::BERSequenceDecoder validity (tbsCert);
-       		validity.SkipAll();
-			// subject
-			CryptoPP::BERSequenceDecoder subject (tbsCert);
-       		subject.SkipAll();
-			// public key
-			CryptoPP::BERSequenceDecoder publicKey (tbsCert);
-			{			
-				CryptoPP::BERSequenceDecoder ident (publicKey);
-				ident.SkipAll ();
-				CryptoPP::BERGeneralDecoder key (publicKey, CryptoPP::BIT_STRING);
-				key.Skip (1); // FIXME: probably bug in crypto++
-				CryptoPP::BERSequenceDecoder keyPair (key);
-				CryptoPP::Integer n;
-       			n.BERDecode (keyPair);
-				if (name.length () > 0) 
-				{	
-					PublicKey value;
-					n.Encode (value, 512);
-					m_SigningKeys[name] = value;
-				}		
-				else
-					LogPrint (eLogWarning, "Unknown issuer. Skipped");
-			}	
-       		publicKey.SkipAll();
-			
-			tbsCert.SkipAll();
-			x509Cert.SkipAll();
+			LoadCertificate (queue);
 		}
 		else
 			LogPrint (eLogError, "Can't open certificate file ", filename);
 	}
 
+	std::string Reseeder::LoadCertificate (CryptoPP::ByteQueue& queue)
+	{
+		// extract X.509
+		CryptoPP::BERSequenceDecoder x509Cert (queue);
+		CryptoPP::BERSequenceDecoder tbsCert (x509Cert);
+		// version
+		uint32_t ver;
+		CryptoPP::BERGeneralDecoder context (tbsCert, CryptoPP::CONTEXT_SPECIFIC | CryptoPP::CONSTRUCTED);
+		CryptoPP::BERDecodeUnsigned<uint32_t>(context, ver, CryptoPP::INTEGER);
+		// serial
+		CryptoPP::Integer serial;
+   		serial.BERDecode(tbsCert);	
+		// signature
+		CryptoPP::BERSequenceDecoder signature (tbsCert);
+   		signature.SkipAll();
+		
+		// issuer
+		std::string name;
+		CryptoPP::BERSequenceDecoder issuer (tbsCert);
+		{
+			CryptoPP::BERSetDecoder c (issuer);	c.SkipAll();
+			CryptoPP::BERSetDecoder st (issuer); st.SkipAll();
+			CryptoPP::BERSetDecoder l (issuer); l.SkipAll();
+			CryptoPP::BERSetDecoder o (issuer); o.SkipAll();
+			CryptoPP::BERSetDecoder ou (issuer); ou.SkipAll();
+			CryptoPP::BERSetDecoder cn (issuer);
+			{		
+				CryptoPP::BERSequenceDecoder attributes (cn);
+				{			
+					CryptoPP::BERGeneralDecoder ident(attributes, CryptoPP::OBJECT_IDENTIFIER);
+					ident.SkipAll ();
+					CryptoPP::BERDecodeTextString (attributes, name, CryptoPP::UTF8_STRING);
+				}	
+			}	
+		}	
+   		issuer.SkipAll();
+		// validity
+		CryptoPP::BERSequenceDecoder validity (tbsCert);
+   		validity.SkipAll();
+		// subject
+		CryptoPP::BERSequenceDecoder subject (tbsCert);
+   		subject.SkipAll();
+		// public key
+		CryptoPP::BERSequenceDecoder publicKey (tbsCert);
+		{			
+			CryptoPP::BERSequenceDecoder ident (publicKey);
+			ident.SkipAll ();
+			CryptoPP::BERGeneralDecoder key (publicKey, CryptoPP::BIT_STRING);
+			key.Skip (1); // FIXME: probably bug in crypto++
+			CryptoPP::BERSequenceDecoder keyPair (key);
+			CryptoPP::Integer n;
+   			n.BERDecode (keyPair);
+			if (name.length () > 0) 
+			{	
+				PublicKey value;
+				n.Encode (value, 512);
+				m_SigningKeys[name] = value;
+			}		
+			else
+				LogPrint (eLogWarning, "Unknown issuer. Skipped");
+		}	
+   		publicKey.SkipAll();
+		
+		tbsCert.SkipAll();
+		x509Cert.SkipAll();
+		return name;
+	}	
+	
 	void Reseeder::LoadCertificates ()
 	{
 		boost::filesystem::path reseedDir = i2p::util::filesystem::GetCertificatesDir() / "reseed";
@@ -495,7 +490,335 @@ namespace data
 		}	
 		LogPrint (eLogInfo, numCertificates, " certificates loaded");
 	}	
+
+	std::string Reseeder::HttpsRequest (const std::string& address)
+	{
+		i2p::util::http::url u(address);
+		TlsSession session (u.host_, 443);
+		
+		// send request		
+		std::stringstream ss;
+		ss << "GET " << u.path_ << " HTTP/1.1\r\nHost: " << u.host_
+		<< "\r\nAccept: */*\r\n" << "User-Agent: Wget/1.11.4\r\n" << "Connection: close\r\n\r\n";	
+		session.Send ((uint8_t *)ss.str ().c_str (), ss.str ().length ());
+
+		// read response
+		std::stringstream rs;
+		while (session.Receive (rs))
+			;
+		return i2p::util::http::GetHttpContent (rs);
+	}	
+
+	TlsSession::TlsSession (const std::string& host, int port):
+		m_Seqn (0)
+	{
+		m_Site.connect(host, boost::lexical_cast<std::string>(port));
+		if (m_Site.good ())
+		{
+			Handshake ();
+		}
+		else
+			LogPrint (eLogError, "Can't connect to ", host, ":", port);
+	}	
 	
+	void TlsSession::Handshake ()
+	{
+		static uint8_t clientHello[] = 
+		{
+			0x16, // handshake
+			0x03, 0x03, // version (TLS 1.2)
+			0x00, 0x2F, // length of handshake
+			// handshake
+			0x01, // handshake type (client hello)
+			0x00, 0x00, 0x2B, // length of handshake payload 
+			// client hello
+			0x03, 0x03, // highest version supported (TLS 1.2)
+			0x45, 0xFA, 0x01, 0x19, 0x74, 0x55, 0x18, 0x36, 
+			0x42, 0x05, 0xC1, 0xDD, 0x4A, 0x21, 0x80, 0x80, 
+			0xEC, 0x37, 0x11, 0x93, 0x16, 0xF4, 0x66, 0x00, 
+			0x12, 0x67, 0xAB, 0xBA, 0xFF, 0x29, 0x13, 0x9E, // 32 random bytes
+			0x00, // session id length
+			0x00, 0x02, // chiper suites length
+			0x00, 0x3D, // RSA_WITH_AES_256_CBC_SHA256
+			0x01, // compression methods length
+			0x00,  // no compression
+			0x00, 0x00 // extensions length
+		};	
+
+		static uint8_t changeCipherSpecs[] =
+		{
+			0x14, // change cipher specs
+			0x03, 0x03, // version (TLS 1.2)
+			0x00, 0x01, // length
+			0x01 // type
+		};
+
+		static uint8_t finished[] =
+		{
+			0x16, // handshake
+			0x03, 0x03, // version (TLS 1.2)
+			0x00, 0x50, // length of handshake (80 bytes)
+			// handshake (encrypted)
+			// unencrypted context
+			//  0x14 handshake type (finished)
+			// 0x00, 0x00, 0x0C  length of handshake payload 
+			// 12 bytes of verified data
+		};
+	
+		// send ClientHello
+		m_Site.write ((char *)clientHello, sizeof (clientHello));
+		m_FinishedHash.Update (clientHello + 5, sizeof (clientHello) - 5);
+		// read ServerHello
+		uint8_t type;
+		m_Site.read ((char *)&type, 1); 
+		uint16_t version;
+		m_Site.read ((char *)&version, 2); 
+		uint16_t length;
+		m_Site.read ((char *)&length, 2); 
+		length = be16toh (length);
+		char * serverHello = new char[length];
+		m_Site.read (serverHello, length);
+		m_FinishedHash.Update ((uint8_t *)serverHello, length);
+		uint8_t serverRandom[32];
+		if (serverHello[0] == 0x02) // handshake type server hello
+			memcpy (serverRandom, serverHello + 6, 32);
+		else
+			LogPrint (eLogError, "Unexpected handshake type ", (int)serverHello[0]);
+		delete[] serverHello;
+		// read Certificate
+		m_Site.read ((char *)&type, 1); 
+		m_Site.read ((char *)&version, 2); 
+		m_Site.read ((char *)&length, 2); 
+		length = be16toh (length);
+		char * certificate = new char[length];
+		m_Site.read (certificate, length);
+		m_FinishedHash.Update ((uint8_t *)certificate, length);
+		CryptoPP::RSA::PublicKey publicKey;
+		// 0 - handshake type
+		// 1 - 3 - handshake payload length
+		// 4 - 6 - length of array of certificates
+		// 7 - 9 - length of certificate
+		if (certificate[0] == 0x0B) // handshake type certificate
+			publicKey = ExtractPublicKey ((uint8_t *)certificate + 10, length - 10);
+		else
+			LogPrint (eLogError, "Unexpected handshake type ", (int)certificate[0]);
+		delete[] certificate;
+		// read ServerHelloDone
+		m_Site.read ((char *)&type, 1); 
+		m_Site.read ((char *)&version, 2); 
+		m_Site.read ((char *)&length, 2); 
+		length = be16toh (length);
+		char * serverHelloDone = new char[length];
+		m_Site.read (serverHelloDone, length);
+		m_FinishedHash.Update ((uint8_t *)serverHelloDone, length);
+		if (serverHelloDone[0] != 0x0E) // handshake type hello done
+			LogPrint (eLogError, "Unexpected handshake type ", (int)serverHelloDone[0]);
+		delete[] serverHelloDone;
+		// our turn now
+		// generate secret key
+		uint8_t secret[48]; 
+		secret[0] = 3; secret[1] = 3; // version
+		m_Rnd.GenerateBlock (secret + 2, 46); // 46 random bytes
+		// encrypt RSA
+ 		CryptoPP::RSAES_PKCS1v15_Encryptor encryptor(publicKey);
+		size_t encryptedLen = encryptor.CiphertextLength (48); // number of bytes for encrypted 48 bytes, usually 256 (2048 bits key)
+		uint8_t * encrypted = new uint8_t[encryptedLen + 2]; // + 2 bytes for length
+		htobe16buf (encrypted, encryptedLen); // first two bytes means length 
+		encryptor.Encrypt (m_Rnd, secret, 48, encrypted + 2);
+		// send ClientKeyExchange
+		// 0x10 - handshake type "client key exchange"
+		SendHandshakeMsg (0x10, encrypted, encryptedLen + 2);
+		delete[] encrypted;
+		// send ChangeCipherSpecs
+		m_Site.write ((char *)changeCipherSpecs, sizeof (changeCipherSpecs));
+		// calculate master secret
+		uint8_t masterSecret[48], random[64];
+		memcpy (random, clientHello + 11, 32);
+		memcpy (random + 32, serverRandom, 32);
+		PRF (secret, "master secret", random, 64, 48, masterSecret);
+		// expand master secret			
+		uint8_t keys[128]; // clientMACKey(32), serverMACKey(32), clientKey(32), serverKey(32)
+		memcpy (random, serverRandom, 32);
+		memcpy (random + 32, clientHello + 11, 32);
+		PRF (masterSecret, "key expansion", random, 64, 128, keys); 
+		memcpy (m_MacKey, keys, 32);
+		m_Encryption.SetKey (keys + 64);
+		m_Decryption.SetKey (keys + 96);
+
+		// send finished
+		uint8_t finishedHashDigest[32], finishedPayload[40], encryptedPayload[80];
+		finishedPayload[0] = 0x14; // handshake type (finished)
+		finishedPayload[1] = 0; finishedPayload[2] = 0; finishedPayload[3] = 0x0C; // 12 bytes
+		m_FinishedHash.Final (finishedHashDigest);
+		PRF (masterSecret, "client finished", finishedHashDigest, 32, 12, finishedPayload + 4);
+		uint8_t mac[32];
+		CalculateMAC (0x16, finishedPayload, 16, mac);
+		Encrypt (finishedPayload, 16, mac, encryptedPayload);
+		m_Site.write ((char *)finished, sizeof (finished));
+		m_Site.write ((char *)encryptedPayload, 80);
+		// read ChangeCipherSpecs
+		uint8_t changeCipherSpecs1[6];
+		m_Site.read ((char *)changeCipherSpecs1, 6);
+		// read finished
+		m_Site.read ((char *)&type, 1); 
+		m_Site.read ((char *)&version, 2); 
+		m_Site.read ((char *)&length, 2); 
+		length = be16toh (length);
+		char * finished1 = new char[length];
+		m_Site.read (finished1, length);
+		delete[] finished1;
+	}
+
+	void TlsSession::SendHandshakeMsg (uint8_t handshakeType, uint8_t * data, size_t len)
+	{
+		uint8_t handshakeHeader[9];
+		handshakeHeader[0] = 0x16; // handshake
+ 		handshakeHeader[1] = 0x03; handshakeHeader[2] = 0x03; // version is always TLS 1.2 (3,3) 
+		htobe16buf (handshakeHeader + 3, len + 4); // length of payload
+		//payload starts
+		handshakeHeader[5] = handshakeType; // handshake type
+		handshakeHeader[6] = 0; // highest byte of payload length is always zero
+		htobe16buf (handshakeHeader + 7, len); // length of data
+		m_Site.write ((char *)handshakeHeader, 9);
+		m_FinishedHash.Update (handshakeHeader + 5, 4); // only payload counts
+		m_Site.write ((char *)data, len);
+		m_FinishedHash.Update (data, len);
+	}
+
+	void TlsSession::PRF (const uint8_t * secret, const char * label, const uint8_t * random, size_t randomLen,
+		size_t len, uint8_t * buf)
+	{
+		// secret is assumed 48 bytes	
+		// random is not more than 64 bytes
+ 		CryptoPP::HMAC<CryptoPP::SHA256> hmac (secret, 48);	
+		uint8_t seed[96]; size_t seedLen;
+		seedLen = strlen (label);	
+		memcpy (seed, label, seedLen);
+		memcpy (seed + seedLen, random, randomLen);
+		seedLen += randomLen;
+
+		size_t offset = 0;
+		uint8_t a[128];
+		hmac.CalculateDigest (a, seed, seedLen);
+		while (offset < len)
+		{
+			memcpy (a + 32, seed, seedLen);
+			hmac.CalculateDigest (buf + offset, a, seedLen + 32);
+			offset += 32;
+			hmac.CalculateDigest (a, a, 32);
+		}
+	}
+
+	size_t TlsSession::Encrypt (const uint8_t * in, size_t len, const uint8_t * mac, uint8_t * out)
+	{
+		size_t size = 0;
+		m_Rnd.GenerateBlock (out, 16); // iv
+		size += 16;
+		m_Encryption.SetIV (out);
+		memcpy (out + size, in, len);
+		size += len;
+		memcpy (out + size, mac, 32);
+		size += 32;	
+		uint8_t paddingSize = len + 1;
+		paddingSize &= 0x0F;  // %16
+		if (paddingSize > 0) paddingSize = 16 - paddingSize;
+		memset (out + size, paddingSize, paddingSize + 1); // paddind and last byte are equal to padding size
+		size += paddingSize + 1;
+		m_Encryption.Encrypt (out + 16, size - 16, out + 16);
+		return size;	
+	}
+
+	size_t TlsSession::Decrypt (uint8_t * buf, size_t len)
+	{
+		m_Decryption.SetIV (buf);
+		m_Decryption.Decrypt (buf + 16, len - 16, buf + 16);
+		return len - 48 - buf[len -1] - 1; // IV(16), mac(32) and padding
+	}
+
+	void TlsSession::CalculateMAC (uint8_t type, const uint8_t * buf, size_t len, uint8_t * mac)
+	{
+		uint8_t header[13]; // seqn (8) + type (1) + version (2) + length (2)
+		htobe64buf (header, m_Seqn);
+		header[8] = type; header[9] = 3; header[10] = 3; // 3,3 means TLS 1.2 
+		htobe16buf (header + 11, len);
+		CryptoPP::HMAC<CryptoPP::SHA256> hmac (m_MacKey, 32);	
+		hmac.Update (header, 13);
+		hmac.Update (buf, len);
+		hmac.Final (mac);	
+		m_Seqn++;
+	}
+
+	CryptoPP::RSA::PublicKey TlsSession::ExtractPublicKey (const uint8_t * certificate, size_t len)
+	{
+		CryptoPP::ByteQueue queue;
+		queue.Put (certificate, len);	
+		queue.MessageEnd ();
+		// extract X.509
+		CryptoPP::BERSequenceDecoder x509Cert (queue);
+		CryptoPP::BERSequenceDecoder tbsCert (x509Cert);
+		// version
+		uint32_t ver;
+		CryptoPP::BERGeneralDecoder context (tbsCert, CryptoPP::CONTEXT_SPECIFIC | CryptoPP::CONSTRUCTED);
+		CryptoPP::BERDecodeUnsigned<uint32_t>(context, ver, CryptoPP::INTEGER);
+		// serial
+		CryptoPP::Integer serial;
+   		serial.BERDecode(tbsCert);	
+		// signature
+		CryptoPP::BERSequenceDecoder signature (tbsCert);
+   		signature.SkipAll();
+		// issuer
+		CryptoPP::BERSequenceDecoder issuer (tbsCert);
+   		issuer.SkipAll();
+		// validity
+		CryptoPP::BERSequenceDecoder validity (tbsCert);
+   		validity.SkipAll();
+		// subject
+		CryptoPP::BERSequenceDecoder subject (tbsCert);
+   		subject.SkipAll();
+		// public key
+		CryptoPP::BERSequenceDecoder publicKey (tbsCert);			
+		CryptoPP::BERSequenceDecoder ident (publicKey);
+		ident.SkipAll ();
+		CryptoPP::BERGeneralDecoder key (publicKey, CryptoPP::BIT_STRING);
+		key.Skip (1); // FIXME: probably bug in crypto++
+		CryptoPP::BERSequenceDecoder keyPair (key);
+		CryptoPP::Integer n, e;
+		n.BERDecode (keyPair);
+		e.BERDecode (keyPair);
+
+		CryptoPP::RSA::PublicKey ret; 
+		ret.Initialize (n, e);
+		return ret;
+	}		
+
+	void TlsSession::Send (const uint8_t * buf, size_t len)
+	{
+		uint8_t * out = new uint8_t[len + 64 + 5]; // 64 = 32 mac + 16 iv + upto 16 padding, 5 = header
+		out[0] = 0x17; // application data
+		out[1] = 0x03; out[2] = 0x03; // version
+		uint8_t mac[32];
+		CalculateMAC (0x17, buf, len, mac);
+		size_t encryptedLen = Encrypt (buf, len, mac, out + 5);
+		htobe16buf (out + 3, encryptedLen);
+		m_Site.write ((char *)out, encryptedLen + 5);
+		delete[] out;
+	}
+
+	bool TlsSession::Receive (std::ostream& rs)
+	{
+		if (m_Site.eof ()) return false;
+		uint8_t type; uint16_t version, length;
+		m_Site.read ((char *)&type, 1); 
+		m_Site.read ((char *)&version, 2); 
+		m_Site.read ((char *)&length, 2); 
+		length = be16toh (length);
+		uint8_t * buf = new uint8_t[length];
+		m_Site.read ((char *)buf, length);
+		size_t decryptedLen = Decrypt (buf, length);
+		rs.write ((char *)buf + 16, decryptedLen);
+		delete[] buf;
+		return true;
+	}
 }
 }
 

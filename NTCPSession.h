@@ -45,6 +45,7 @@ namespace transport
 	const size_t NTCP_BUFFER_SIZE = 4160; // fits 4 tunnel messages (4*1028)
 	const int NTCP_TERMINATION_TIMEOUT = 120; // 2 minutes
 	const size_t NTCP_DEFAULT_PHASE3_SIZE = 2/*size*/ + i2p::data::DEFAULT_IDENTITY_SIZE/*387*/ + 4/*ts*/ + 15/*padding*/ + 40/*signature*/; // 448 	
+	const int NTCP_BAN_EXPIRATION_TIMEOUT = 70; // in second
 
 	class NTCPServer;
 	class NTCPSession: public TransportSession, public std::enable_shared_from_this<NTCPSession>
@@ -54,6 +55,7 @@ namespace transport
 			NTCPSession (NTCPServer& server, std::shared_ptr<const i2p::data::RouterInfo> in_RemoteRouter = nullptr);
 			~NTCPSession ();
 			void Terminate ();
+			void Done ();
 
 			boost::asio::ip::tcp::socket& GetSocket () { return m_Socket; };
 			bool IsEstablished () const { return m_IsEstablished; };
@@ -113,7 +115,7 @@ namespace transport
 			NTCPServer& m_Server;
 			boost::asio::ip::tcp::socket m_Socket;
 			boost::asio::deadline_timer m_TerminationTimer;
-			bool m_IsEstablished;
+			bool m_IsEstablished, m_IsTerminated;
 			
 			i2p::crypto::CBCDecryption m_Decryption;
 			i2p::crypto::CBCEncryption m_Encryption;
@@ -137,6 +139,7 @@ namespace transport
 			std::vector<I2NPMessage *> m_SendQueue;
 			
 			size_t m_NumSentBytes, m_NumReceivedBytes;
+			boost::asio::ip::address m_ConnectedFrom; // for ban
 	};	
 
 	// TODO: move to NTCP.h/.cpp
@@ -156,7 +159,8 @@ namespace transport
 			void Connect (const boost::asio::ip::address& address, int port, std::shared_ptr<NTCPSession> conn);
 			
 			boost::asio::io_service& GetService () { return m_Service; };
-			
+			void Ban (const boost::asio::ip::address& addr);			
+
 		private:
 
 			void Run ();
@@ -174,6 +178,7 @@ namespace transport
 			boost::asio::ip::tcp::acceptor * m_NTCPAcceptor, * m_NTCPV6Acceptor;
 			std::mutex m_NTCPSessionsMutex;
 			std::map<i2p::data::IdentHash, std::shared_ptr<NTCPSession> > m_NTCPSessions;
+			std::map<boost::asio::ip::address, uint32_t> m_BanList; // IP -> ban expiration time in seconds
 
 		public:
 

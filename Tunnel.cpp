@@ -160,7 +160,7 @@ namespace tunnel
 	void InboundTunnel::HandleTunnelDataMsg (I2NPMessage * msg)
 	{
 		if (IsFailed ()) SetState (eTunnelStateEstablished); // incoming messages means a tunnel is alive			
-		msg->from = this;
+		msg->from = shared_from_this ();
 		EncryptTunnelMsg (msg);
 		m_Endpoint.HandleDecryptedTunnelDataMsg (msg);	
 	}	
@@ -317,7 +317,11 @@ namespace tunnel
 	void Tunnels::AddTransitTunnel (TransitTunnel * tunnel)
 	{
 		std::unique_lock<std::mutex> l(m_TransitTunnelsMutex);
-		m_TransitTunnels[tunnel->GetTunnelID ()] = tunnel;
+		if (!m_TransitTunnels.insert (std::make_pair (tunnel->GetTunnelID (), tunnel)).second)
+		{	
+			LogPrint (eLogError, "Transit tunnel ", tunnel->GetTunnelID (), " already exists");
+			delete tunnel;
+		}
 	}	
 
 	void Tunnels::Start ()

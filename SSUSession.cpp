@@ -15,10 +15,9 @@ namespace transport
 {
 	SSUSession::SSUSession (SSUServer& server, boost::asio::ip::udp::endpoint& remoteEndpoint,
 		std::shared_ptr<const i2p::data::RouterInfo> router, bool peerTest ): TransportSession (router), 
-		m_Server (server), m_RemoteEndpoint (remoteEndpoint), 
-		m_Timer (m_Server.GetService ()), m_PeerTest (peerTest),
- 		m_State (eSessionStateUnknown), m_IsSessionKey (false), m_RelayTag (0),
-		m_Data (*this), m_NumSentBytes (0), m_NumReceivedBytes (0)
+		m_Server (server), m_RemoteEndpoint (remoteEndpoint), m_Timer (GetService ()), 
+		m_PeerTest (peerTest),m_State (eSessionStateUnknown), m_IsSessionKey (false), m_RelayTag (0),
+		m_NumSentBytes (0), m_NumReceivedBytes (0), m_Data (*this), m_IsDataReceived (false)
 	{
 		m_CreationTime = i2p::util::GetSecondsSinceEpoch ();
 	}
@@ -26,6 +25,11 @@ namespace transport
 	SSUSession::~SSUSession ()
 	{		
 	}	
+
+	boost::asio::io_service& SSUSession::GetService () 
+	{ 
+		return IsV6 () ? m_Server.GetServiceV6 () : m_Server.GetService (); 
+	}
 	
 	void SSUSession::CreateAESandMacKey (const uint8_t * pubKey)
 	{
@@ -126,7 +130,6 @@ namespace transport
 		switch (header->GetPayloadType ())
 		{
 			case PAYLOAD_TYPE_DATA:
-				LogPrint (eLogDebug, "SSU data received");
 				ProcessData (buf + sizeof (SSUHeader), len - sizeof (SSUHeader));
 			break;
 			case PAYLOAD_TYPE_SESSION_REQUEST:
@@ -755,9 +758,17 @@ namespace transport
 
 	void SSUSession::Close ()
 	{
+		m_State = eSessionStateClosed;
 		SendSesionDestroyed ();
 		transports.PeerDisconnected (shared_from_this ());
+		m_Data.Stop ();
+		m_Timer.cancel ();
 	}	
+
+	void SSUSession::Done ()
+	{
+		GetService ().post (std::bind (&SSUSession::Failed, shared_from_this ()));
+	}
 
 	void SSUSession::Established ()
 	{
@@ -767,6 +778,7 @@ namespace transport
 			delete m_DHKeysPair;
 			m_DHKeysPair = nullptr;
 		}
+		m_Data.Start ();
 		m_Data.Send (CreateDatabaseStoreMsg ());
 		transports.PeerConnected (shared_from_this ());
 		if (m_PeerTest && (m_RemoteRouter && m_RemoteRouter->IsPeerTesting ()))
@@ -818,33 +830,53 @@ namespace transport
 
 	void SSUSession::SendI2NPMessage (I2NPMessage * msg)
 	{
-		boost::asio::io_service& service = IsV6 () ? m_Server.GetServiceV6 () : m_Server.GetService ();
-		service.post (std::bind (&SSUSession::PostI2NPMessage, shared_from_this (), msg));    
+		GetService ().post (std::bind (&SSUSession::PostI2NPMessage, shared_from_this (), msg)); 
 	}	
 
 	void SSUSession::PostI2NPMessage (I2NPMessage * msg)
 	{
 		if (msg)
-			m_Data.Send (msg);
+		{
+			if (m_State == eSessionStateEstablished)
+				m_Data.Send (msg);
+			else
+				DeleteI2NPMessage (msg);   
+		}
 	}		
 
 	void SSUSession::SendI2NPMessages (const std::vector<I2NPMessage *>& msgs)
 	{
-		boost::asio::io_service& service = IsV6 () ? m_Server.GetServiceV6 () : m_Server.GetService ();
-		service.post (std::bind (&SSUSession::PostI2NPMessages, shared_from_this (), msgs));    
+		GetService ().post (std::bind (&SSUSession::PostI2NPMessages, shared_from_this (), msgs));    
 	}
 
 	void SSUSession::PostI2NPMessages (std::vector<I2NPMessage *> msgs)
 	{
-		for (auto it: msgs)
-			if (it) m_Data.Send (it);
+		if (m_State == eSessionStateEstablished)
+		{
+			for (auto it: msgs)
+				if (it) m_Data.Send (it);
+		}
+		else
+		{
+			for (auto it: msgs)
+				DeleteI2NPMessage (it);
+		}
 	}	
 
 	void SSUSession::ProcessData (uint8_t * buf, size_t len)
 	{
 		m_Data.ProcessMessage (buf, len);
+		m_IsDataReceived = true;
 	}
 
+	void SSUSession::FlushData ()
+	{
+		if (m_IsDataReceived)
+		{	
+			m_Data.FlushReceivedMessage ();
+			m_IsDataReceived = false;
+		}		
+	}
 
 	void SSUSession::ProcessPeerTest (uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& senderEndpoint)
 	{
