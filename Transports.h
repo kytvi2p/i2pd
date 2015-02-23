@@ -56,15 +56,17 @@ namespace transport
 		int numAttempts;
 		std::shared_ptr<const i2p::data::RouterInfo> router;
 		std::shared_ptr<TransportSession> session;
+		uint64_t creationTime;
 		std::vector<i2p::I2NPMessage *> delayedMessages;
 
 		~Peer ()
 		{
 			for (auto it :delayedMessages)
-				i2p::DeleteI2NPMessage (it);
+				i2p::DeleteI2NPMessage (it);			
 		}	
 	};	
 	
+	const size_t SESSION_CREATION_TIMEOUT = 10; // in seconds
 	class Transports
 	{
 		public:
@@ -95,10 +97,11 @@ namespace transport
 			void PostMessages (i2p::data::IdentHash ident, std::vector<i2p::I2NPMessage *> msgs);
 			void PostCloseSession (std::shared_ptr<const i2p::data::RouterInfo> router);
 			bool ConnectToPeer (const i2p::data::IdentHash& ident, Peer& peer);
-			
+			void HandlePeerCleanupTimer (const boost::system::error_code& ecode);			
+
 			void NTCPResolve (const std::string& addr, const i2p::data::IdentHash& ident);
 			void HandleNTCPResolve (const boost::system::error_code& ecode, boost::asio::ip::tcp::resolver::iterator it,
- 				const i2p::data::IdentHash& ident, std::shared_ptr<boost::asio::ip::tcp::resolver> resolver);
+ 				i2p::data::IdentHash ident, std::shared_ptr<boost::asio::ip::tcp::resolver> resolver);
 
 			void DetectExternalIP ();
 			
@@ -108,6 +111,7 @@ namespace transport
 			std::thread * m_Thread;	
 			boost::asio::io_service m_Service;
 			boost::asio::io_service::work m_Work;
+			boost::asio::deadline_timer m_PeerCleanupTimer;
 
 			NTCPServer * m_NTCPServer;
 			SSUServer * m_SSUServer;
