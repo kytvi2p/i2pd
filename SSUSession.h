@@ -45,6 +45,7 @@ namespace transport
 		eSessionStateUnknown,	
 		eSessionStateIntroduced,
 		eSessionStateEstablished,
+		eSessionStateClosed,
 		eSessionStateFailed
 	};	
 
@@ -63,6 +64,7 @@ namespace transport
 			void Introduce (uint32_t iTag, const uint8_t * iKey);
 			void WaitForIntroduction ();
 			void Close ();
+			void Done ();
 			boost::asio::ip::udp::endpoint& GetRemoteEndpoint () { return m_RemoteEndpoint; };
 			bool IsV6 () const { return m_RemoteEndpoint.address ().is_v6 (); };
 			void SendI2NPMessage (I2NPMessage * msg);
@@ -77,8 +79,11 @@ namespace transport
 			uint32_t GetRelayTag () const { return m_RelayTag; };	
 			uint32_t GetCreationTime () const { return m_CreationTime; };
 
+			void FlushData ();
+			
 		private:
 
+			boost::asio::io_service& GetService ();
 			void CreateAESandMacKey (const uint8_t * pubKey); 
 
 			void PostI2NPMessage (I2NPMessage * msg);
@@ -133,9 +138,10 @@ namespace transport
 			i2p::crypto::CBCDecryption m_SessionKeyDecryption;
 			i2p::crypto::AESKey m_SessionKey;
 			i2p::crypto::MACKey m_MacKey;
-			SSUData m_Data;
 			size_t m_NumSentBytes, m_NumReceivedBytes;
 			uint32_t m_CreationTime; // seconds since epoch
+			SSUData m_Data;
+			bool m_IsDataReceived;
 	};
 
 
