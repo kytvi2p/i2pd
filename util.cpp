@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <string>
 #include <algorithm>
 #include <cctype>
@@ -241,40 +242,8 @@ namespace http
 				// User-Agent is needed to get the server list routerInfo files.
 				site << "GET " << u.path_ << " HTTP/1.1\r\nHost: " << u.host_
 				<< "\r\nAccept: */*\r\n" << "User-Agent: Wget/1.11.4\r\n" << "Connection: close\r\n\r\n";
-				// read response
-				std::string version, statusMessage;
-				site >> version; // HTTP version
-				int status;
-				site >> status; // status
-				std::getline (site, statusMessage);
-				if (status == 200) // OK
-				{
-					bool isChunked = false;
-					std::string header;
-					while (!site.eof () && header != "\r")
-					{
-						std::getline(site, header);
-						auto colon = header.find (':');
-						if (colon != std::string::npos)
-						{
-							std::string field = header.substr (0, colon);
-							if (field == i2p::util::http::TRANSFER_ENCODING)
-								isChunked = (header.find ("chunked", colon + 1) != std::string::npos);
-						}	
-					}
-	
-					std::stringstream ss;
-					if (isChunked)
-						MergeChunkedResponse (site, ss);
-					else	
-						ss << site.rdbuf();
-					return ss.str();
-				}
-				else
-				{
-					LogPrint ("HTTP response ", status);
-					return "";
-				}
+				// read response and extract content				
+				return GetHttpContent (site);
 			}
 			else
 			{
@@ -285,6 +254,43 @@ namespace http
 		catch (std::exception& ex)
 		{
 			LogPrint ("Failed to download ", address, " : ", ex.what ());
+			return "";
+		}
+	}
+
+	std::string GetHttpContent (std::istream& response)
+	{
+		std::string version, statusMessage;
+		response >> version; // HTTP version
+		int status;
+		response >> status; // status
+		std::getline (response, statusMessage);
+		if (status == 200) // OK
+		{
+			bool isChunked = false;
+			std::string header;
+			while (!response.eof () && header != "\r")
+			{
+				std::getline(response, header);
+				auto colon = header.find (':');
+				if (colon != std::string::npos)
+				{
+					std::string field = header.substr (0, colon);
+					if (field == i2p::util::http::TRANSFER_ENCODING)
+						isChunked = (header.find ("chunked", colon + 1) != std::string::npos);
+				}	
+			}
+
+			std::stringstream ss;
+			if (isChunked)
+				MergeChunkedResponse (response, ss);
+			else	
+				ss << response.rdbuf();
+			return ss.str();
+		}
+		else
+		{
+			LogPrint ("HTTP response ", status);
 			return "";
 		}
 	}
@@ -444,6 +450,16 @@ namespace http
 		query_.assign(query_i, url_s.end());
 	}
 
+	std::string urlDecode(const std::string& data)
+	{
+		std::string res(data);
+		for (size_t pos = res.find('%'); pos != std::string::npos; pos = res.find('%',pos+1))
+		{
+			char c = strtol(res.substr(pos+1,2).c_str(), NULL, 16);
+			res.replace(pos,3,1,c);
+		}
+		return res;
+	}
 } 
 
 namespace net

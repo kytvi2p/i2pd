@@ -1,3 +1,113 @@
+i2pd (0.8.0-1) unstable; urgency=medium
+
+  [ Kill Your TV ]
+  * New upstream version
+
+  [ orignal ]
+  * fixed build for boost below 1.49
+  * fixed compilation bug for boost < 1.49 and boost 1.49 with gcc 4.7
+  * cleand destination requests every 15 seconds
+  * fixed memory leak
+  * cleanup from extra log messages
+  * check for duplicate msgID
+  * use unique_ptr for incomplete message
+  * use unique_ptr for requested destination
+  * use shared_ptr for inbound tunnels
+  * teminate non-connected NTCP session
+  * check accepted socket for error
+  * drop second incoming connection with same identity
+  * check if connection to peer exists already
+  * fixed race condition
+
+  [ Francisco Blas (klondike) Izquierdo Riera ]
+  * Get Jump services working again although, at what price\!
+  * URLdecode the base64 part of the key
+
+  [ orignal ]
+  * fixed race condition
+  * fixed memory leak
+  * clean obsolete SSU data
+
+  [ Kill Your TV ]
+  * Sync reseed servers with the java router
+
+  [ orignal ]
+  * read more data from socket if available
+  * use 'available' method
+  * separate receivers thread
+  * terminate receivers
+  * receive multiple UDP packets
+  * don't look for session if a packet is from same endpoint as previous
+  * delete messages sent to disconnected session
+  * fxied race condition
+  * allow netDb cleanup after every 500 messages
+  * don't insert same transit tunnel twice
+  * terminate non-responding NTCP sessions by timeout
+  * ban abusing IPs
+  * fixed memory leak
+  * ban abusing ipv6 addresses
+  * use insert instead []
+  * complete session if presented
+  * cleanup dead peers
+  * fixed race condition
+
+  [ multikatt ]
+  * typo: stoped->stopped
+
+  [ orignal ]
+  * fixed hand at shutdown
+  * fixed race condition
+  * fixed memory leak
+  * config file for I2PTunnels
+  * read tunnels.cfg
+  * make sure only one I2P tunnel per local prot
+  * doesn't create same local destination twice
+  * multiple server I2P tunnels
+  * read all sections from tunnels.cfg
+  * don't throw exception
+  * catch sendto exception
+  * fixed typo
+  * unique_ptr for sent and incomplete messages
+  * fixed crash
+
+  [ Kill Your TV ]
+  * Remove reseed host, no longer in use
+
+  [ orignal ]
+  * SSU data receive batching
+
+  [ Kill Your TV ]
+  * New certificate; will be switched on the server for a future release.
+
+  [ orignal ]
+  * client hello for HTTPS
+  * process server certificate
+  * send ClientKeyExchange
+  * calculate master secret
+  * MAC and encryption keys
+  * reduced amount of logging
+  * hanshakes hash and finishes message
+  * tls 1.2 and RSA_WITH_AES_256_CBC_SHA256
+  * send ChangeCipherSpecs
+  * tls encrypt and decrypt
+  * encrypt finishes message
+  * moved https code to TlsSession
+  * calculate MAC
+  * use 256 bytes block for keys expansion
+  * fixed incorrect MAC calculation
+  * proper handshake messages hash calculations
+  * send and receive data
+  * extract https content
+  * ClientKeyExchange length depend on key length from ceritifcate
+  * include https hosts to reseeder's list
+  * show SAM sessions through web interface
+  * 128 bytes key expansion
+  * original_at_mail.i2p.crt added
+  * handle incoming connection failure
+  * Update version.h
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Mon, 23 Feb 2015 01:47:29 +0000
+
 i2pd (0.7.0-1~trusty+1) trusty; urgency=medium
 
   * Building for Trusty
