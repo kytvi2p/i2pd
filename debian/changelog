@@ -1,3 +1,173 @@
+i2pd (0.9.0-1) unstable; urgency=medium
+
+  [ orignal ]
+  * show uptime
+  * show uptime through I2PControl
+  * limit number of transit tunnels
+  * show uptime properly
+  * 1 hours expiration of RI in case of floodfill
+  * use shared_ptr for ClientDestination
+  * fixed incorrect instantiation in gcc 4.6
+  * global peer tests
+  * PeerTest from Alice to Charlie
+  * full implementation of peer test
+  * firewall detection
+  * select peer test capable routers
+  * cleanup expired peer tests
+  * start unsing introducers after firewall detection
+  * connect to introducer if not any yet
+  * fixed api build
+  * fixed crash
+  * fixed crash at startup
+  * show tunlel creation success ratio
+  * show base64 address
+  * don't use explicit unreachable parameter anymore
+  * fixed typo
+  * handle local destination port
+  * shared_ptr for streaming destination
+  * choose streaming destination for destination port
+  * create additional streaming destination
+  * bind streaming destination to port for server tunnel
+  * pass source and destination ports to datagram receiver
+  * fixed typo
+  * send outstanding data on close
+  * use v4 only sessions between Bob and Charlie
+  * resend message immediately if NACK recieved
+  * show router status through I2PControl
+  * exclude Token from requests
+  * save and check token
+  * send close after buffer
+  * send proper send time for NACK reply
+  * stream status
+  * handle stream close depending on state
+  * send FIN if closed by peer
+  * don't lost received data
+  * resend packing with RTO interval
+  * reduced memory usage
+  * drop RTO to initial if tunnels pair changes
+  * reduced memory usage
+  * reduce memory usage
+  * fixed crash
+  * reduce memory usage
+  * check I2NP message size for saved fragments
+  * don't return error if received data is available
+  * fixed memory corruption
+  * reduced memory usage
+  * reduce memory usage
+  * reduce memory usage
+  * pass destination port to client tunnel
+  * read tunnels.cfg using property tree
+  * .ini file format for tunnel.cfg
+  * create persistent destinations with ECDSA
+  * fill padding with random data
+  * read optional destination port form config
+
+  [ Yuriy Grishin ]
+  * Added MTU detection code for Windows
+  * Whitespace to follow coding style convention
+
+  [ orignal ]
+  * access list for server tunnels
+  * moved num sent/received bytes to TransportSession
+  * show total send/received bytes
+  * specify keys file for proxy's local destination
+  * calculate bandwidth
+  * handle i2p.router.net.bw requests
+  * proper badnwidth calculation
+  * send exporatory message directly if connected to a floodfill
+  * don't accept tunnels if bandwidth is exceeded
+  * make sure packet size is multiple of 16 bytes
+  * publish number of leasets and routers for floodfill
+  * UpdateStats for RouterContext
+  * made keys parameter optional for client tunnels
+  * badwidth parameter
+  * always use 'O' class for high-bandwidth
+  * RouterInfo version and status
+  * fixed outgoing message size
+  * use propery tree for params
+  * send I2PControl response without write_json
+  * wait for LeaseSet request completion
+  * use unique_ptr for socket in I2PTunnelConnection
+  * fixed misspelling
+
+  [ hagen ]
+  * * README : describe format of tunnels.cfg
+
+  [ orignal ]
+  * better resend and tunnel reselection algorithm
+  * proper formatting
+  * increased transit tunnels # to 2500
+  * DeliveryStatus for LeaseSet
+  * re-request remote LeaseSet
+  * Removed external IP detection step
+  * eliminate misalignment for LeaseSet
+  * fixed crash
+  * add random milliseconds to end date
+  * close stream is SYN has not been received
+  * select really other remote lease
+  * don't wait for remote LeaseSet request complete
+
+  [ multikatt ]
+  * adding docker and fig files
+
+  [ orignal ]
+  * Profiling added
+  * moved Dockerfile to build
+  * --host is deprectaed
+  * --host is deprecated
+  * collect and save participation agreed/declined stats
+  * load profiles
+  * fixed misalignment
+  * create keys only by DEST GENERATE
+  * pass data for streams only
+  * check lease expiration with threshold
+  * create datagram destination for DATAGRAM session
+
+  [ guanqun ]
+  * fix tab in README.md
+
+  [ orignal ]
+  * const buffer for ProcessPeerTest
+  * single buf for ProcessPeerTest
+  * store session with Alice with PeerTest
+  * handle DATAGRAM SEND
+  * proper verification for DSA_SHA1
+
+  [ guanqun ]
+  * fix the 'sleep_for' missing error on linux platform
+
+  [ orignal ]
+  * increase SAM connection buffer size
+  * send ports with datagram
+  * process multiple DATAGRAM SEND message
+  * merge incomplete DATAGRAM SEND message
+  * try to receive remanining message
+  * try to receive remanining message
+  * restore imcomplete string back
+  * fixed typo
+  * pass correct datagram size
+  * proper size of remaining data
+  * initial filtration of bad peers
+  * repeat peer test if previous was not successive
+  * count non-replied tunnel build requests
+  * schedule interoducers again if still testing
+
+  [ guanqun ]
+  * setup the correct buffer size
+
+  [ orignal ]
+  * fixed typo
+  * fixed addressbook crash at shutdown
+  * check # of block to encrypt/decrypt for zero
+  * delete trailing paddings of SSU packtes
+  * save last update time
+  * 0.9.0
+
+  [ Kill Your TV ]
+  * New upstream relese
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 31 Mar 2015 14:14:56 +0000
+
 i2pd (0.8.0-1) unstable; urgency=medium
 
   [ Kill Your TV ]

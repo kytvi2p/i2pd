@@ -1,4 +1,4 @@
-.TH I2PD "1" "November 29, 2014"
+.TH I2PD "1" "March 31, 2015"
 
 .SH NAME
 i2pd \- Load-balanced unspoofable packet switching network
@@ -19,7 +19,7 @@ Any of the configuration options below can be used in the \fBDAEMON_ARGS\fR vari
 .BR
 .TP
 \fB\-\-host=\fR
-The external IP
+The external IP (deprecated)
 .TP
 \fB\-\-port=\fR
 The external port to listen on
@@ -43,11 +43,20 @@ If enabled, system folders (\fB/var/run/i2pd.pid\fR, \fB/var/log/i2pd.log\fR, \f
 \fB\-\-v6=\fR[\fI1\fR|\fI0\fR]
 \fI1\fR if \fBi2pd\fR should communicate via IPv6. (default: \fI0\fR, off)
 .TP
+\fB\-\-floodfill=\fR[\fI1\fR|\fI0\fR]
+\fI1\fR if \fBi2pd\fR should become a floodfill. (default: \fI0\fR, off)
+.TP
+\fB\-\-bandwidth=\fR[\fI1\fR|\fI0\fR]
+\fIL\fR if \fBi2pd\fR should be limited to 32KiB/s. Enabling floodfill will automatically set this to \fI0\fR (default: \fI0\fR, no limit)
+.TP
 \fB\-\-httpproxyport=\fR
 The local port for the HTTP Proxy to listen on (default: \fI4446\fR)
 .TP
 \fB\-\-socksproxyport=\fR
 The local port for the SOCKS proxy to listen on (default: \fI4447\fR)
+.TP
+\fB\-\-proxykeys=\fR
+An optional keys file for tunnel's local destination
 .TP
 \fB\-\-ircport=\fR
 The local port of IRC tunnel to listen on. (default: \fI6668\fR)
@@ -72,6 +81,9 @@ Port of SAM bridge. Usually \fI7656\fR. SAM will not be enabled if this is not s
 .TP
 \fB\-\-bobport=\fR
 Port of BOB command channel. Usually \fI2827\fR. BOB will not be enabled if this is not set. (default: unset)
+.TP
+\fB\-\-i2pcontrolport=\fR
+Port of I2P control service. Usually \fI7650\fR. I2PControl will not be enabled if this is not set. (default: unset)
 .TP
 \fB\-\-conf=\fR
 Config file (default: \fI~/.i2pd/i2p.conf\fR or \fI/var/lib/i2pd/i2p.conf\fR)
