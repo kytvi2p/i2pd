@@ -1,5 +1,6 @@
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include "base64.h"
 #include "Log.h"
 #include "Tunnel.h"
@@ -645,9 +646,26 @@ namespace util
 
 	void HTTPConnection::FillContent (std::stringstream& s)
 	{
-		s << "<h2>Welcome to the Webconsole!</h2><br><br>";
-		s << "<b>Data path:</b> " << i2p::util::filesystem::GetDataDir().string() << "<br>" << "<br>";
-		s << "<b>Our external address:</b>" << "<br>";
+		s << "<h2>Welcome to the Webconsole!</h2><br>";
+		s << "<b>Uptime:</b> " << boost::posix_time::to_simple_string (
+			boost::posix_time::time_duration (boost::posix_time::seconds (
+			i2p::context.GetUptime ()))) << "<br>";
+		s << "<b>Status:</b> ";
+		switch (i2p::context.GetStatus ())
+		{
+			case eRouterStatusOK: s << "OK"; break;
+			case eRouterStatusTesting: s << "Testing"; break;
+			case eRouterStatusFirewalled: s << "Firewalled"; break; 
+			default: s << "Unknown";
+		} 
+		s << "<br>";
+		s << "<b>Tunnel creation success rate:</b> " << i2p::tunnel::tunnels.GetTunnelCreationSuccessRate () << "%<br>";
+		s << "<b>Received:</b> " << i2p::transport::transports.GetTotalReceivedBytes ()/1000 << "K";
+		s << " (" << i2p::transport::transports.GetInBandwidth () <<" Bps)<br>";
+		s << "<b>Sent:</b> " << i2p::transport::transports.GetTotalSentBytes ()/1000 << "K";
+		s << " (" << i2p::transport::transports.GetOutBandwidth () <<" Bps)<br>";
+		s << "<b>Data path:</b> " << i2p::util::filesystem::GetDataDir().string() << "<br><br>";
+		s << "<b>Our external address:</b>" << "<br>" ;
 		for (auto& address : i2p::context.GetRouterInfo().GetAddresses())
 		{
 			switch (address.transportStyle)
@@ -827,6 +845,7 @@ namespace util
 		auto dest = i2p::client::context.FindLocalDestination (ident);
 		if (dest)
 		{
+			s << "<b>Base64:</b><br>" << dest->GetIdentity ().ToBase64 () << "<br><br>";
 			s << "<b>LeaseSets:</b> <i>" << dest->GetNumRemoteLeaseSets () << "</i><br>";
 			auto pool = dest->GetTunnelPool ();
 			if (pool)

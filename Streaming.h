@@ -41,22 +41,21 @@ namespace stream
 	const size_t STREAMING_MTU = 1730;
 	const size_t MAX_PACKET_SIZE = 4096;
 	const size_t COMPRESSION_THRESHOLD_SIZE = 66;	
-	const int RESEND_TIMEOUT = 10; // in seconds
 	const int ACK_SEND_TIMEOUT = 200; // in milliseconds
-	const int MAX_NUM_RESEND_ATTEMPTS = 5;	
+	const int MAX_NUM_RESEND_ATTEMPTS = 6;	
 	const int WINDOW_SIZE = 6; // in messages
 	const int MIN_WINDOW_SIZE = 1;
 	const int MAX_WINDOW_SIZE = 128;		
 	const int INITIAL_RTT = 8000; // in milliseconds
+	const int INITIAL_RTO = 9000; // in milliseconds
 	
 	struct Packet
 	{
 		size_t len, offset;
 		uint8_t buf[MAX_PACKET_SIZE];	
-		int numResendAttempts;
 		uint64_t sendTime;
 		
-		Packet (): len (0), offset (0), numResendAttempts (0), sendTime (0) {};
+		Packet (): len (0), offset (0), sendTime (0) {};
 		uint8_t * GetBuffer () { return buf + offset; };
 		size_t GetLength () const { return len - offset; };
 
@@ -83,6 +82,15 @@ namespace stream
 			return p1->GetSeqn () < p2->GetSeqn (); 
 		};
 	};	
+
+	enum StreamStatus
+	{
+		eStreamStatusNew,
+		eStreamStatusOpen,
+		eStreamStatusReset,
+		eStreamStatusClosing,
+		eStreamStatusClosed
+	};	
 	
 	class StreamingDestination;
 	class Stream: public std::enable_shared_from_this<Stream>
@@ -98,7 +106,7 @@ namespace stream
 			uint32_t GetRecvStreamID () const { return m_RecvStreamID; };
 			std::shared_ptr<const i2p::data::LeaseSet> GetRemoteLeaseSet () const { return m_RemoteLeaseSet; };
 			const i2p::data::IdentityEx& GetRemoteIdentity () const { return m_RemoteIdentity; };
-			bool IsOpen () const { return m_IsOpen; };
+			bool IsOpen () const { return m_Status ==  eStreamStatusOpen; };
 			bool IsEstablished () const { return m_SendStreamID; };
 			StreamingDestination& GetLocalDestination () { return m_LocalDestination; };
 			
@@ -122,8 +130,11 @@ namespace stream
 			
 		private:
 
+			void Terminate ();
+
 			void SendBuffer ();
 			void SendQuickAck ();
+			void SendClose ();
 			bool SendPacket (Packet * packet);
 			void SendPackets (const std::vector<Packet *>& packets);
 
@@ -136,7 +147,7 @@ namespace stream
 			
 			template<typename Buffer, typename ReceiveHandler>
 			void HandleReceiveTimer (const boost::system::error_code& ecode, const Buffer& buffer, ReceiveHandler handler);
-
+			
 			void ScheduleResend ();
 			void HandleResendTimer (const boost::system::error_code& ecode);
 			void HandleAckSendTimer (const boost::system::error_code& ecode);
@@ -148,7 +159,8 @@ namespace stream
 			boost::asio::io_service& m_Service;
 			uint32_t m_SendStreamID, m_RecvStreamID, m_SequenceNumber;
 			int32_t m_LastReceivedSequenceNumber;
-			bool m_IsOpen, m_IsReset, m_IsAckSendScheduled;
+			StreamStatus m_Status;
+			bool m_IsAckSendScheduled;
 			StreamingDestination& m_LocalDestination;
 			i2p::data::IdentityEx m_RemoteIdentity;
 			std::shared_ptr<const i2p::data::LeaseSet> m_RemoteLeaseSet;
@@ -164,8 +176,9 @@ namespace stream
 
 			std::mutex m_SendBufferMutex;
 			std::stringstream m_SendBuffer;
-			int m_WindowSize, m_RTT;
+			int m_WindowSize, m_RTT, m_RTO;
 			uint64_t m_LastWindowSizeIncreaseTime;
+			int m_NumResendAttempts;
 	};
 
 	class StreamingDestination
@@ -174,7 +187,8 @@ namespace stream
 
 			typedef std::function<void (std::shared_ptr<Stream>)> Acceptor;
 
-			StreamingDestination (i2p::client::ClientDestination& owner): m_Owner (owner) {};
+			StreamingDestination (i2p::client::ClientDestination& owner, uint16_t localPort = 0): 
+				m_Owner (owner), m_LocalPort (localPort) {};
 			~StreamingDestination () {};	
 
 			void Start ();
@@ -186,6 +200,7 @@ namespace stream
 			void ResetAcceptor () { if (m_Acceptor) m_Acceptor (nullptr); m_Acceptor = nullptr; };
 			bool IsAcceptorSet () const { return m_Acceptor != nullptr; };	
 			i2p::client::ClientDestination& GetOwner () { return m_Owner; };
+			uint16_t GetLocalPort () const { return m_LocalPort; };
 
 			void HandleDataMessagePayload (const uint8_t * buf, size_t len);
 
@@ -197,6 +212,7 @@ namespace stream
 		private:
 
 			i2p::client::ClientDestination& m_Owner;
+			uint16_t m_LocalPort;
 			std::mutex m_StreamsMutex;
 			std::map<uint32_t, std::shared_ptr<Stream> > m_Streams;
 			Acceptor m_Acceptor;
@@ -232,26 +248,15 @@ namespace stream
 	void Stream::HandleReceiveTimer (const boost::system::error_code& ecode, const Buffer& buffer, ReceiveHandler handler)
 	{
 		size_t received = ConcatenatePackets (boost::asio::buffer_cast<uint8_t *>(buffer), boost::asio::buffer_size(buffer));
-		if (ecode == boost::asio::error::operation_aborted)
+		if (received > 0)
+			handler (boost::system::error_code (), received);
+		else if (ecode == boost::asio::error::operation_aborted)
 		{	
 			// timeout not expired	
-			if (m_IsOpen)
-				// no error
-				handler (boost::system::error_code (), received); 
+			if (m_Status == eStreamStatusReset)
+				handler (boost::asio::error::make_error_code (boost::asio::error::connection_reset), 0);
 			else
-			{	
-				// stream closed
-				if (m_IsReset)
-				{
-					// stream closed by peer
-					handler (received > 0 ? boost::system::error_code () : // we still have some data
-						boost::asio::error::make_error_code (boost::asio::error::connection_reset), // no more data
-						received);
-					
-				}
-				else // stream closed by us
-					handler (boost::asio::error::make_error_code (boost::asio::error::operation_aborted), received); 
-			}	
+				handler (boost::asio::error::make_error_code (boost::asio::error::operation_aborted), 0); 
 		}	
 		else
 			// timeout expired

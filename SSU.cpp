@@ -3,6 +3,7 @@
 #include "Log.h"
 #include "Timestamp.h"
 #include "RouterContext.h"
+#include "NetDb.h"
 #include "SSU.h"
 
 namespace i2p
@@ -13,7 +14,7 @@ namespace transport
 		m_Work (m_Service), m_WorkV6 (m_ServiceV6), m_ReceiversWork (m_ReceiversService), 
 		m_Endpoint (boost::asio::ip::udp::v4 (), port), m_EndpointV6 (boost::asio::ip::udp::v6 (), port), 
 		m_Socket (m_ReceiversService, m_Endpoint), m_SocketV6 (m_ReceiversService), 
-		m_IntroducersUpdateTimer (m_Service)	
+		m_IntroducersUpdateTimer (m_Service), m_PeerTestsCleanupTimer (m_Service)	
 	{
 		m_Socket.set_option (boost::asio::socket_base::receive_buffer_size (65535));
 		m_Socket.set_option (boost::asio::socket_base::send_buffer_size (65535));
@@ -41,9 +42,9 @@ namespace transport
 		{	
 			m_ThreadV6 = new std::thread (std::bind (&SSUServer::RunV6, this));
 			m_ReceiversService.post (std::bind (&SSUServer::ReceiveV6, this));  
-		}	
-		if (i2p::context.IsUnreachable ())
-			ScheduleIntroducersUpdateTimer ();
+		}
+		SchedulePeerTestsCleanupTimer ();	
+		ScheduleIntroducersUpdateTimer (); // wait for 30 seconds and decide if we need introducers
 	}
 
 	void SSUServer::Stop ()
@@ -384,7 +385,7 @@ namespace transport
 		return GetRandomSession (
 			[excluded](std::shared_ptr<SSUSession> session)->bool 
 			{ 
-				return session->GetState () == eSessionStateEstablished &&
+				return session->GetState () == eSessionStateEstablished && !session->IsV6 () && 
 					session != excluded; 
 			}
 								);
@@ -422,9 +423,18 @@ namespace transport
 
 	void SSUServer::HandleIntroducersUpdateTimer (const boost::system::error_code& ecode)
 	{
-		if (!ecode)
+		if (ecode != boost::asio::error::operation_aborted)
 		{
 			// timeout expired
+			if (i2p::context.GetStatus () == eRouterStatusTesting)
+			{
+				// we still don't know if we need introducers
+				ScheduleIntroducersUpdateTimer ();
+				return;
+			}	
+			if (i2p::context.GetStatus () == eRouterStatusOK) return; // we don't need introducers anymore
+			// we are firewalled
+			if (!i2p::context.IsUnreachable ()) i2p::context.SetUnreachable ();
 			std::list<boost::asio::ip::udp::endpoint> newList;
 			size_t numIntroducers = 0;
 			uint32_t ts = i2p::util::GetSecondsSinceEpoch ();
@@ -459,9 +469,79 @@ namespace transport
 				}	
 			}	
 			m_Introducers = newList;
+			if (m_Introducers.empty ())
+			{
+				auto introducer = i2p::data::netdb.GetRandomIntroducer ();
+				if (introducer)
+					GetSession (introducer);
+			}	
 			ScheduleIntroducersUpdateTimer ();
 		}	
+	}
+
+	void SSUServer::NewPeerTest (uint32_t nonce, PeerTestParticipant role, std::shared_ptr<SSUSession> session)
+	{
+		m_PeerTests[nonce] = { i2p::util::GetMillisecondsSinceEpoch (), role, session };
+	}
+
+	PeerTestParticipant SSUServer::GetPeerTestParticipant (uint32_t nonce)
+	{
+		auto it = m_PeerTests.find (nonce);
+		if (it != m_PeerTests.end ())
+			return it->second.role;
+		else
+			return ePeerTestParticipantUnknown;
 	}	
+
+	std::shared_ptr<SSUSession> SSUServer::GetPeerTestSession (uint32_t nonce)
+	{
+		auto it = m_PeerTests.find (nonce);
+		if (it != m_PeerTests.end ())
+			return it->second.session;
+		else
+			return nullptr;
+	}
+
+	void SSUServer::UpdatePeerTest (uint32_t nonce, PeerTestParticipant role)
+	{
+		auto it = m_PeerTests.find (nonce);
+		if (it != m_PeerTests.end ())
+			it->second.role = role;
+	}	
+	
+	void SSUServer::RemovePeerTest (uint32_t nonce)
+	{
+		m_PeerTests.erase (nonce);
+	}	
+
+	void SSUServer::SchedulePeerTestsCleanupTimer ()
+	{
+		m_PeerTestsCleanupTimer.expires_from_now (boost::posix_time::seconds(SSU_PEER_TEST_TIMEOUT));
+		m_PeerTestsCleanupTimer.async_wait (std::bind (&SSUServer::HandlePeerTestsCleanupTimer,
+			this, std::placeholders::_1));	
+	}
+
+	void SSUServer::HandlePeerTestsCleanupTimer (const boost::system::error_code& ecode)
+	{
+		if (ecode != boost::asio::error::operation_aborted)
+		{
+			int numDeleted = 0;	
+			uint64_t ts = i2p::util::GetMillisecondsSinceEpoch ();	
+			for (auto it = m_PeerTests.begin (); it != m_PeerTests.end ();)
+			{
+				if (ts > it->second.creationTime + SSU_PEER_TEST_TIMEOUT*1000LL)
+				{
+					numDeleted++;
+					it = m_PeerTests.erase (it);
+				}
+				else
+					it++;	 
+			}
+			if (numDeleted > 0)
+				LogPrint (eLogInfo, numDeleted, " peer tests have been expired");
+			SchedulePeerTestsCleanupTimer ();
+		}
+	}
 }
 }
 

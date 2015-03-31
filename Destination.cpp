@@ -48,7 +48,7 @@ namespace client
 		m_Pool = i2p::tunnel::tunnels.CreateTunnelPool (this, inboundTunnelLen, outboundTunnelLen);  
 		if (m_IsPublic)
 			LogPrint (eLogInfo, "Local address ", i2p::client::GetB32Address(GetIdentHash()), " created");
-		m_StreamingDestination = new i2p::stream::StreamingDestination (*this); // TODO:
+		m_StreamingDestination = std::make_shared<i2p::stream::StreamingDestination> (*this); // TODO:
 	}
 
 	ClientDestination::~ClientDestination ()
@@ -59,8 +59,6 @@ namespace client
 			delete it.second;
 		if (m_Pool)
 			i2p::tunnel::tunnels.DeleteTunnelPool (m_Pool);		
-		if (m_StreamingDestination)
-			delete m_StreamingDestination;
 		if (m_DatagramDestination)
 			delete m_DatagramDestination;
 	}	
@@ -89,7 +87,9 @@ namespace client
 			m_Pool->SetActive (true);
 			m_Thread = new std::thread (std::bind (&ClientDestination::Run, this));
 			m_StreamingDestination->Start ();	
-
+			for (auto it: m_StreamingDestinationsByPorts)
+				it.second->Start ();
+			
 			m_CleanupTimer.expires_from_now (boost::posix_time::minutes (DESTINATION_CLEANUP_TIMEOUT));
 			m_CleanupTimer.async_wait (std::bind (&ClientDestination::HandleCleanupTimer,
 				this, std::placeholders::_1));
@@ -103,6 +103,8 @@ namespace client
 			m_CleanupTimer.cancel ();
 			m_IsRunning = false;
 			m_StreamingDestination->Stop ();	
+			for (auto it: m_StreamingDestinationsByPorts)
+				it.second->Stop ();
 			if (m_DatagramDestination)
 			{
 				auto d = m_DatagramDestination;
@@ -368,19 +370,24 @@ namespace client
 		uint32_t length = bufbe32toh (buf);
 		buf += 4;
 		// we assume I2CP payload
+		uint16_t fromPort = bufbe16toh (buf + 4), // source
+			toPort = bufbe16toh (buf + 6); // destination 
 		switch (buf[9])
 		{
 			case PROTOCOL_TYPE_STREAMING:
+			{
 				// streaming protocol
-				if (m_StreamingDestination)
-					m_StreamingDestination->HandleDataMessagePayload (buf, length);
+				auto dest = GetStreamingDestination (toPort);
+				if (dest)
+					dest->HandleDataMessagePayload (buf, length);
 				else
 					LogPrint ("Missing streaming destination");
+			}
 			break;
 			case PROTOCOL_TYPE_DATAGRAM:
 				// datagram protocol
 				if (m_DatagramDestination)
-					m_DatagramDestination->HandleDataMessagePayload (buf, length);
+					m_DatagramDestination->HandleDataMessagePayload (fromPort, toPort, buf, length);
 				else
 					LogPrint ("Missing streaming destination");
 			break;
@@ -421,6 +428,18 @@ namespace client
 			return nullptr;
 	}
 
+	std::shared_ptr<i2p::stream::StreamingDestination> ClientDestination::GetStreamingDestination (int port) const 
+	{ 
+		if (port) 
+		{
+			auto it = m_StreamingDestinationsByPorts.find (port);
+			if (it != m_StreamingDestinationsByPorts.end ())
+				return it->second;
+		}	
+		// if port is zero or not found, use default destination
+		return m_StreamingDestination; 
+	}
+		
 	void ClientDestination::AcceptStreams (const i2p::stream::StreamingDestination::Acceptor& acceptor)
 	{
 		if (m_StreamingDestination)
@@ -432,7 +451,7 @@ namespace client
 		if (m_StreamingDestination)
 			m_StreamingDestination->ResetAcceptor ();
 	}
-
+		
 	bool ClientDestination::IsAcceptingStreams () const
 	{
 		if (m_StreamingDestination)
@@ -440,6 +459,16 @@ namespace client
 		return false;
 	}	
 
+	std::shared_ptr<i2p::stream::StreamingDestination> ClientDestination::CreateStreamingDestination (int port)
+	{
+		auto dest = std::make_shared<i2p::stream::StreamingDestination> (*this, port); 
+		if (port)
+			m_StreamingDestinationsByPorts[port] = dest;
+		else // update default 
+			m_StreamingDestination = dest;
+		return dest;
+	}	
+		
 	i2p::datagram::DatagramDestination * ClientDestination::CreateDatagramDestination ()
 	{
 		if (!m_DatagramDestination)
