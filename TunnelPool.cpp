@@ -101,20 +101,20 @@ namespace tunnel
 		return v;
 	}
 
-	std::shared_ptr<OutboundTunnel> TunnelPool::GetNextOutboundTunnel () const
+	std::shared_ptr<OutboundTunnel> TunnelPool::GetNextOutboundTunnel (std::shared_ptr<OutboundTunnel> excluded) const
 	{
 		std::unique_lock<std::mutex> l(m_OutboundTunnelsMutex);	
-		return GetNextTunnel (m_OutboundTunnels);
+		return GetNextTunnel (m_OutboundTunnels, excluded);
 	}	
 
-	std::shared_ptr<InboundTunnel> TunnelPool::GetNextInboundTunnel () const
+	std::shared_ptr<InboundTunnel> TunnelPool::GetNextInboundTunnel (std::shared_ptr<InboundTunnel> excluded) const
 	{
 		std::unique_lock<std::mutex> l(m_InboundTunnelsMutex);	
-		return GetNextTunnel (m_InboundTunnels);
+		return GetNextTunnel (m_InboundTunnels, excluded);
 	}
 
 	template<class TTunnels>
-	typename TTunnels::value_type TunnelPool::GetNextTunnel (TTunnels& tunnels) const
+	typename TTunnels::value_type TunnelPool::GetNextTunnel (TTunnels& tunnels, typename TTunnels::value_type excluded) const
 	{
 		if (tunnels.empty ()) return nullptr;		
 		CryptoPP::RandomNumberGenerator& rnd = i2p::context.GetRandomNumberGenerator ();
@@ -122,13 +122,14 @@ namespace tunnel
 		typename TTunnels::value_type tunnel = nullptr;
 		for (auto it: tunnels)
 		{	
-			if (it->IsEstablished ())
+			if (it->IsEstablished () && it != excluded)
 			{
 				tunnel = it;
 				i++;
 			}
 			if (i > ind && tunnel) break;
-		}	
+		}
+		if (!tunnel && excluded && excluded->IsEstablished ()) tunnel = excluded;
 		return tunnel;
 	}
 
@@ -260,8 +261,13 @@ namespace tunnel
 	std::shared_ptr<const i2p::data::RouterInfo> TunnelPool::SelectNextHop (std::shared_ptr<const i2p::data::RouterInfo> prevHop) const
 	{
 		bool isExploratory = (m_LocalDestination == &i2p::context); // TODO: implement it better
-		auto hop =  isExploratory ? i2p::data::netdb.GetRandomRouter (prevHop): 
+		auto hop = isExploratory ? i2p::data::netdb.GetRandomRouter (prevHop): 
 			i2p::data::netdb.GetHighBandwidthRandomRouter (prevHop);
+		if (!isExploratory && hop && hop->GetProfile ()->IsBad ())
+		{
+			LogPrint (eLogInfo, "Selected peer for tunnel has bad profile. Selecting another"); 
+			hop = i2p::data::netdb.GetHighBandwidthRandomRouter (prevHop);
+		}	
 			
 		if (!hop)
 			hop = i2p::data::netdb.GetRandomRouter ();

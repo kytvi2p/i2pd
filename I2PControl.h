@@ -6,8 +6,11 @@
 #include <memory>
 #include <array>
 #include <string>
+#include <sstream>
 #include <map>
+#include <set>
 #include <boost/asio.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 namespace i2p
 {
@@ -44,10 +47,16 @@ namespace client
 	const char I2P_CONTROL_I2PCONTROL_PORT[] = "i2pcontrol.port";		
 
 	// RouterInfo requests
+	const char I2P_CONTROL_ROUTER_INFO_UPTIME[] = "i2p.router.uptime";
+	const char I2P_CONTROL_ROUTER_INFO_VERSION[] = "i2p.router.version";
+	const char I2P_CONTROL_ROUTER_INFO_STATUS[] = "i2p.router.status";	
 	const char I2P_CONTROL_ROUTER_INFO_NETDB_KNOWNPEERS[] = "i2p.router.netdb.knownpeers";
 	const char I2P_CONTROL_ROUTER_INFO_NETDB_ACTIVEPEERS[] = "i2p.router.netdb.activepeers";
-	const char I2P_CONTROL_ROUTER_INFO_TUNNELS_PARTICIPATING[] = "i2p.router.net.tunnels.participating";	
-		
+	const char I2P_CONTROL_ROUTER_INFO_NET_STATUS[] = "i2p.router.net.status";	
+	const char I2P_CONTROL_ROUTER_INFO_TUNNELS_PARTICIPATING[] = "i2p.router.net.tunnels.participating";
+	const char I2P_CONTROL_ROUTER_INFO_BW_IB_1S[] = "i2p.router.net.bw.inbound.1s";			
+	const char I2P_CONTROL_ROUTER_INFO_BW_OB_1S[] = "i2p.router.net.bw.outbound.1s";		
+
 	// RouterManager requests
 	const char I2P_CONTROL_ROUTER_MANAGER_SHUTDOWN[] = "Shutdown";
 	const char I2P_CONTROL_ROUTER_MANAGER_SHUTDOWN_GRACEFUL[] = "ShutdownGraceful";
@@ -72,40 +81,49 @@ namespace client
 			void HandleRequestReceived (const boost::system::error_code& ecode, size_t bytes_transferred, 
 				std::shared_ptr<boost::asio::ip::tcp::socket> socket, std::shared_ptr<I2PControlBuffer> buf);
 			void SendResponse (std::shared_ptr<boost::asio::ip::tcp::socket> socket,
-				std::shared_ptr<I2PControlBuffer> buf, const std::string& id, 
-				const std::map<std::string, std::string>& results, bool isHtml);
+				std::shared_ptr<I2PControlBuffer> buf, std::ostringstream& response, bool isHtml);
 			void HandleResponseSent (const boost::system::error_code& ecode, std::size_t bytes_transferred,
 				std::shared_ptr<boost::asio::ip::tcp::socket> socket, std::shared_ptr<I2PControlBuffer> buf);
 
 		private:
 
-			// methods
-			typedef void (I2PControlService::*MethodHandler)(const std::map<std::string, std::string>& params, std::map<std::string, std::string>& results);
+			void InsertParam (std::ostringstream& ss, const std::string& name, int value) const;
+			void InsertParam (std::ostringstream& ss, const std::string& name, double value) const;
+			void InsertParam (std::ostringstream& ss, const std::string& name, const std::string& value) const;
 
-			void AuthenticateHandler (const std::map<std::string, std::string>& params, std::map<std::string, std::string>& results);
-			void EchoHandler (const std::map<std::string, std::string>& params, std::map<std::string, std::string>& results);
-			void I2PControlHandler (const std::map<std::string, std::string>& params, std::map<std::string, std::string>& results);
-			void RouterInfoHandler (const std::map<std::string, std::string>& params, std::map<std::string, std::string>& results);
-			void RouterManagerHandler (const std::map<std::string, std::string>& params, std::map<std::string, std::string>& results);
-			void NetworkSettingHandler (const std::map<std::string, std::string>& params, std::map<std::string, std::string>& results);			
+			// methods
+			typedef void (I2PControlService::*MethodHandler)(const boost::property_tree::ptree& params, std::ostringstream& results);
+
+			void AuthenticateHandler (const boost::property_tree::ptree& params, std::ostringstream& results);
+			void EchoHandler (const boost::property_tree::ptree& params, std::ostringstream& results);
+			void I2PControlHandler (const boost::property_tree::ptree& params, std::ostringstream& results);
+			void RouterInfoHandler (const boost::property_tree::ptree& params, std::ostringstream& results);
+			void RouterManagerHandler (const boost::property_tree::ptree& params, std::ostringstream& results);
+			void NetworkSettingHandler (const boost::property_tree::ptree& params, std::ostringstream& results);			
 
 			// I2PControl
 			typedef void (I2PControlService::*I2PControlRequestHandler)(const std::string& value);
 
 			// RouterInfo
-			typedef void (I2PControlService::*RouterInfoRequestHandler)(std::map<std::string, std::string>& results);
-			void NetDbKnownPeersHandler (std::map<std::string, std::string>& results);
-			void NetDbActivePeersHandler (std::map<std::string, std::string>& results);			
-			void TunnelsParticipatingHandler (std::map<std::string, std::string>& results);
+			typedef void (I2PControlService::*RouterInfoRequestHandler)(std::ostringstream& results);
+			void UptimeHandler (std::ostringstream& results);
+			void VersionHandler (std::ostringstream& results);
+			void StatusHandler (std::ostringstream& results);
+			void NetDbKnownPeersHandler (std::ostringstream& results);
+			void NetDbActivePeersHandler (std::ostringstream& results);	
+			void NetStatusHandler (std::ostringstream& results);		
+			void TunnelsParticipatingHandler (std::ostringstream& results);
+			void InboundBandwidth1S (std::ostringstream& results);
+			void OutboundBandwidth1S (std::ostringstream& results);
 
 			// RouterManager
-			typedef void (I2PControlService::*RouterManagerRequestHandler)(std::map<std::string, std::string>& results);
-			void ShutdownHandler (std::map<std::string, std::string>& results);
-			void ShutdownGracefulHandler (std::map<std::string, std::string>& results);
-			void ReseedHandler (std::map<std::string, std::string>& results);
+			typedef void (I2PControlService::*RouterManagerRequestHandler)(std::ostringstream& results);
+			void ShutdownHandler (std::ostringstream& results);
+			void ShutdownGracefulHandler (std::ostringstream& results);
+			void ReseedHandler (std::ostringstream& results);
 
 			// NetworkSetting
-			typedef void (I2PControlService::*NetworkSettingRequestHandler)(const std::string& value, std::map<std::string, std::string>& results);	
+			typedef void (I2PControlService::*NetworkSettingRequestHandler)(const std::string& value, std::ostringstream& results);	
 
 		private:
 
@@ -116,6 +134,7 @@ namespace client
 			boost::asio::io_service m_Service;
 			boost::asio::ip::tcp::acceptor m_Acceptor;
 			boost::asio::deadline_timer m_ShutdownTimer;
+			std::set<std::string> m_Tokens;
 			
 			std::map<std::string, MethodHandler> m_MethodHandlers;
 			std::map<std::string, I2PControlRequestHandler> m_I2PControlHandlers;

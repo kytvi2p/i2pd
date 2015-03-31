@@ -97,6 +97,8 @@ namespace i2p
 	const uint8_t DATABASE_LOOKUP_TYPE_ROUTERINFO_LOOKUP = 0x08; // 1000			
 	const uint8_t DATABASE_LOOKUP_TYPE_EXPLORATORY_LOOKUP = 0x0C; // 1100
 
+	const int MAX_NUM_TRANSIT_TUNNELS = 2500;
+
 namespace tunnel
 {		
 	class InboundTunnel;
@@ -104,7 +106,7 @@ namespace tunnel
 }
 
 	const size_t I2NP_MAX_MESSAGE_SIZE = 32768; 
-	const size_t I2NP_MAX_SHORT_MESSAGE_SIZE = 2400; 
+	const size_t I2NP_MAX_SHORT_MESSAGE_SIZE = 4096; 
 	struct I2NPMessage
 	{	
 		uint8_t * buf;	
@@ -143,6 +145,7 @@ namespace tunnel
 			
 		void Align (size_t alignment) 
 		{
+			if (len + alignment > maxLen) return;
 			size_t rem = ((size_t)GetBuffer ()) % alignment;
 			if (rem)
 			{
@@ -186,7 +189,7 @@ namespace tunnel
 	struct I2NPMessageBuffer: public I2NPMessage
 	{
 		I2NPMessageBuffer () { buf = m_Buffer; maxLen = sz; };
-		uint8_t m_Buffer[sz];
+		uint8_t m_Buffer[sz + 16];
 	};
 
 	I2NPMessage * NewI2NPMessage ();
