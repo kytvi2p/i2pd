@@ -1,3 +1,9 @@
+i2pd (0.9.0-1~deb7u+1) stable; urgency=medium
+
+  * Backport to Wheezy
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 31 Mar 2015 19:29:24 +0000
+
 i2pd (0.9.0-1) unstable; urgency=medium
 
   [ orignal ]
@@ -168,12 +174,6 @@ i2pd (0.9.0-1) unstable; urgency=medium
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 31 Mar 2015 14:14:56 +0000
 
-i2pd (0.8.0-1~deb7u+1) stable; urgency=medium
-
-  * Backport to Wheezy
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Mon, 23 Feb 2015 02:27:26 +0000
-
 i2pd (0.8.0-1) unstable; urgency=medium
 
   [ Kill Your TV ]
@@ -283,12 +283,6 @@ i2pd (0.8.0-1) unstable; urgency=medium
   * Update version.h
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Mon, 23 Feb 2015 01:47:29 +0000
-
-i2pd (0.7.0-1~deb7u+1) stable; urgency=medium
-
-  * Backport to Wheezy
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Wed, 04 Feb 2015 11:31:07 +0000
 
 i2pd (0.7.0-1) unstable; urgency=medium
 
@@ -467,12 +461,6 @@ i2pd (0.7.0-1) unstable; urgency=medium
   * Temporarily disable systemd unit
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Wed, 04 Feb 2015 02:36:15 +0000
-
-i2pd (0.6.0-1~deb7u+1) stable; urgency=medium
-
-  * Backport to Wheezy
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 06 Jan 2015 13:23:30 +0000
 
 i2pd (0.6.0-1) unstable; urgency=medium
 
@@ -658,18 +646,6 @@ i2pd (0.6.0-1) unstable; urgency=medium
   * Update version.h
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 06 Jan 2015 13:10:35 +0000
-
-i2pd (0.5.0-1~deb7u+2) stable; urgency=medium
-
-  * fix building in kFreeBSD
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 18 Dec 2014 10:40:25 +0000
-
-i2pd (0.5.0-1~deb7u+1) stable; urgency=medium
-
-  * Backport to Wheezy
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 18 Dec 2014 02:02:29 +0000
 
 i2pd (0.5.0-1) unstable; urgency=medium
 
@@ -877,6 +853,7 @@ i2pd (0.4.0-1) unstable; urgency=medium
 
   [ Kill Your TV ]
   * New upstream release
+
 i2pd (0.3.0-1) unstable; urgency=medium
 
   [ orignal ]
