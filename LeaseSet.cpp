@@ -1,6 +1,7 @@
 #include <string.h>
 #include "I2PEndian.h"
 #include <cryptopp/dsa.h>
+#include <cryptopp/osrng.h>
 #include "CryptoConst.h"
 #include "Log.h"
 #include "Timestamp.h"
@@ -40,16 +41,18 @@ namespace data
 		m_Buffer[m_BufferLen] = tunnels.size (); // num leases
 		m_BufferLen++;
 		// leases
+		CryptoPP::AutoSeededRandomPool rnd;	
 		for (auto it: tunnels)
 		{	
-			Lease lease;
-			memcpy (lease.tunnelGateway, it->GetNextIdentHash (), 32);
-			lease.tunnelID = htobe32 (it->GetNextTunnelID ());
-			uint64_t ts = it->GetCreationTime () + i2p::tunnel::TUNNEL_EXPIRATION_TIMEOUT - 60; // 1 minute before expiration
+			memcpy (m_Buffer + m_BufferLen, it->GetNextIdentHash (), 32);
+			m_BufferLen += 32; // gateway id
+			htobe32buf (m_Buffer + m_BufferLen, it->GetNextTunnelID ());
+			m_BufferLen += 4; // tunnel id
+			uint64_t ts = it->GetCreationTime () + i2p::tunnel::TUNNEL_EXPIRATION_TIMEOUT - i2p::tunnel::TUNNEL_EXPIRATION_THRESHOLD; // 1 minute before expiration
 			ts *= 1000; // in milliseconds
-			lease.endDate = htobe64 (ts);
-			memcpy(m_Buffer + m_BufferLen, &lease, sizeof(Lease));
-			m_BufferLen += sizeof (Lease);
+			ts += rnd.GenerateWord32 (0, 5); // + random milliseconds
+			htobe64buf (m_Buffer + m_BufferLen, ts);
+			m_BufferLen += 8; // end date
 		}
 		// signature
 		localDestination->Sign (m_Buffer, m_BufferLen, m_Buffer + m_BufferLen);
@@ -82,11 +85,13 @@ namespace data
 		for (int i = 0; i < num; i++)
 		{
 			Lease lease;
-			memcpy (&lease, leases, sizeof(Lease));
-			lease.tunnelID = be32toh (lease.tunnelID);
-			lease.endDate = be64toh (lease.endDate);
+			lease.tunnelGateway = leases;
+			leases += 32; // gateway
+			lease.tunnelID = bufbe32toh (leases);
+			leases += 4; // tunnel ID
+			lease.endDate = bufbe64toh (leases);
+			leases += 8; // end date
 			m_Leases.push_back (lease);
-			leases += sizeof (Lease);
 
 			// check if lease's gateway is in our netDb
 			if (!netdb.FindRouter (lease.tunnelGateway))
@@ -102,13 +107,18 @@ namespace data
 			LogPrint ("LeaseSet verification failed");
 	}				
 	
-	const std::vector<Lease> LeaseSet::GetNonExpiredLeases () const
+	const std::vector<Lease> LeaseSet::GetNonExpiredLeases (bool withThreshold) const
 	{
 		auto ts = i2p::util::GetMillisecondsSinceEpoch ();
 		std::vector<Lease> leases;
 		for (auto& it: m_Leases)
-			if (ts < it.endDate)
+		{
+			auto endDate = it.endDate;
+			if (!withThreshold)
+				endDate -= i2p::tunnel::TUNNEL_EXPIRATION_THRESHOLD*1000;
+			if (ts < endDate)
 				leases.push_back (it);
+		}	
 		return leases;	
 	}	
 

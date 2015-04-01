@@ -10,6 +10,7 @@
 #include <queue>
 #include <string>
 #include <memory>
+#include <atomic>
 #include <cryptopp/osrng.h>
 #include <boost/asio.hpp>
 #include "TransportSession.h"
@@ -67,6 +68,7 @@ namespace transport
 	};	
 	
 	const size_t SESSION_CREATION_TIMEOUT = 10; // in seconds
+	const uint32_t LOW_BANDWIDTH_LIMIT = 32*1024; // 32KBs
 	class Transports
 	{
 		public:
@@ -87,7 +89,16 @@ namespace transport
 
 			void PeerConnected (std::shared_ptr<TransportSession> session);
 			void PeerDisconnected (std::shared_ptr<TransportSession> session);
+			bool IsConnected (const i2p::data::IdentHash& ident) const;
 			
+			void UpdateSentBytes (uint64_t numBytes) { m_TotalSentBytes += numBytes; };
+			void UpdateReceivedBytes (uint64_t numBytes) { m_TotalReceivedBytes += numBytes; };
+			uint64_t GetTotalSentBytes () const { return m_TotalSentBytes; };
+			uint64_t GetTotalReceivedBytes () const { return m_TotalReceivedBytes; };		
+			uint32_t GetInBandwidth () const { return m_InBandwidth; }; // bytes per second
+			uint32_t GetOutBandwidth () const { return m_OutBandwidth; }; // bytes per second
+			bool IsBandwidthExceeded () const;
+
 		private:
 
 			void Run ();
@@ -103,6 +114,7 @@ namespace transport
 			void HandleNTCPResolve (const boost::system::error_code& ecode, boost::asio::ip::tcp::resolver::iterator it,
  				i2p::data::IdentHash ident, std::shared_ptr<boost::asio::ip::tcp::resolver> resolver);
 
+			void UpdateBandwidth ();
 			void DetectExternalIP ();
 			
 		private:
@@ -118,6 +130,11 @@ namespace transport
 			std::map<i2p::data::IdentHash, Peer> m_Peers;
 			
 			DHKeysPairSupplier m_DHKeysPairSupplier;
+
+			std::atomic<uint64_t> m_TotalSentBytes, m_TotalReceivedBytes;
+			uint32_t m_InBandwidth, m_OutBandwidth;
+			uint64_t m_LastInBandwidthUpdateBytes, m_LastOutBandwidthUpdateBytes;	
+			uint64_t m_LastBandwidthUpdateTime;		
 
 		public:
 

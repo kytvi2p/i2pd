@@ -282,7 +282,7 @@ namespace data
 			caps += CAPS_FLAG_FLOODFILL; // floodfill  
 		}	
 		else
-			caps += (m_Caps & eHighBandwidth) ? CAPS_FLAG_HIGH_BANDWIDTH1 : CAPS_FLAG_LOW_BANDWIDTH2; // bandwidth		
+			caps += (m_Caps & eHighBandwidth) ? CAPS_FLAG_HIGH_BANDWIDTH3 : CAPS_FLAG_LOW_BANDWIDTH2; // bandwidth		
 		if (m_Caps & eHidden) caps += CAPS_FLAG_HIDDEN; // hidden
 		if (m_Caps & eReachable) caps += CAPS_FLAG_REACHABLE; // reachable
 		if (m_Caps & eUnreachable) caps += CAPS_FLAG_UNREACHABLE; // unreachable
@@ -548,18 +548,15 @@ namespace data
 		ExtractCaps (caps);
 	}	
 		
-	void RouterInfo::SetProperty (const char * key, const char * value)
+	void RouterInfo::SetProperty (const std::string& key, const std::string& value)
 	{
 		m_Properties[key] = value;
 	}	
 
-	const char * RouterInfo::GetProperty (const char * key) const
+	void RouterInfo::DeleteProperty (const std::string& key)
 	{
-		auto it = m_Properties.find (key);
-		if (it != m_Properties.end ())
-			return it->second.c_str ();
-		return 0;
-	}	
+		m_Properties.erase (key);
+	}
 
 	bool RouterInfo::IsFloodfill () const
 	{
@@ -654,6 +651,13 @@ namespace data
 			}	
 		}	
 		return nullptr;
+	}	
+
+	std::shared_ptr<RouterProfile> RouterInfo::GetProfile () const 
+	{
+		if (!m_Profile)
+			m_Profile = GetRouterProfile (GetIdentHash ());
+		return m_Profile;
 	}	
 }
 }

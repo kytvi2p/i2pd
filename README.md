@@ -48,11 +48,9 @@ On Ubuntu/Debian based
 * $ cd i2pd
 * $ make
 
-Next, find out your public ip. (find it for example at http://www.whatismyip.com/)
+Then, run it:
 
-Then, run it with:
-
-$ ./i2p --host=YOUR_PUBLIC_IP
+$ ./i2p
 
 The client should now reseed by itself.
 
@@ -66,20 +64,21 @@ http://localhost:7070/4oes3rlgrpbkmzv4lqcfili23h3cvpwslqcfjlk6vvguxyggspwa.b32.i
 Cmdline options
 ---------------
 
-* --host=               - The external IP
+* --host=               - The external IP (deprecated). 
 * --port=               - The port to listen on
 * --httpport=           - The http port to listen on
 * --log=                - Enable or disable logging to file. 1 for yes, 0 for no.
 * --daemon=             - Enable or disable daemon mode. 1 for yes, 0 for no.
 * --service=            - 1 if uses system folders (/var/run/i2pd.pid, /var/log/i2pd.log, /var/lib/i2pd).
-* --unreachable=        - 1 if router is declared as unreachable and works through introducers.
 * --v6=                 - 1 if supports communication through ipv6, off by default
 * --floodfill=          - 1 if router is floodfill, off by default
+* --bandwidth=          - L if bandwidth is limited to 32Kbs/sec, O if not. Always O if floodfill, otherwise L by default.
 * --httpproxyport=      - The port to listen on (HTTP Proxy)
 * --socksproxyport=     - The port to listen on (SOCKS Proxy)
+* --proxykeys=          - optional keys file for proxy's local destination
 * --ircport=            - The local port of IRC tunnel to listen on. 6668 by default
 * --ircdest=            - I2P destination address of IRC server. For example irc.postman.i2p
-* --irckeys=            - optional keys file for local destination
+* --irckeys=            - optional keys file for tunnel's local destination 
 * --eepkeys=            - File name containing destination keys, for example privKeys.dat.
                           The file will be created if it does not already exist (issue #110).
 * --eephost=            - Address incoming trafic forward to. 127.0.0.1 by default
@@ -91,12 +90,35 @@ Cmdline options
                           This parameter will be silently ignored if the specified config file does not exist.
                           Options specified on the command line take precedence over those in the config file.
 
-Config file
------------
+Config files
+------------
 
 INI-like, syntax is the following : <key> = <value>.
 All command-line parameters are allowed as keys, for example:
 
+i2p.conf:
+
 	log = 1
 	v6 = 0
 	ircdest = irc.postman.i2p
+
+tunnels.cfg (filename of this config is subject of change):
+
+	 ; outgoing tunnel, to remote service    
+	[tunnel1]  
+	type = client      ; mandatory   
+	port = <integer>   ; mandatory, bind our side of tunnel to this local port  
+	keys = <filename>  ; optional  
+	destination     = <ident>    ; mandatory  
+	destinationport = <integer>  ; optional, port of remote i2p service  
+	   
+	 ; incoming tunnel, for local service(s)   
+	[tunnel2]   
+	type = server      ; mandatory   
+	host = <ident>     ; mandatory, hostname of our i2p service   
+	keys = <filename>  ; mandatory, hostname keys   
+	port = <integer>   ; mandatory, forward incoming connections from i2p to this port      
+	inport = <integer> ; optional, i2p service port   
+	accesslist = <ident>[,<ident>] ; optional, comma-separated list of i2p idents, allowed to connect to service  
+
+Note: '<ident>' type is a string like <hostname.i2p> or <abracadabra.b32.i2p>  

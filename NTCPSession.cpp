@@ -21,8 +21,7 @@ namespace transport
 	NTCPSession::NTCPSession (NTCPServer& server, std::shared_ptr<const i2p::data::RouterInfo> in_RemoteRouter): 
 		TransportSession (in_RemoteRouter),	m_Server (server), m_Socket (m_Server.GetService ()), 
 		m_TerminationTimer (m_Server.GetService ()), m_IsEstablished (false), m_IsTerminated (false),
-		m_ReceiveBufferOffset (0), m_NextMessage (nullptr), m_IsSending (false), 
-		m_NumSentBytes (0), m_NumReceivedBytes (0)
+		m_ReceiveBufferOffset (0), m_NextMessage (nullptr), m_IsSending (false)
 	{		
 		m_DHKeysPair = transports.GetNextDHKeysPair ();
 		m_Establisher = new Establisher;
@@ -394,6 +393,7 @@ namespace transport
 			Terminate ();
 			return;
 		}	
+		m_RemoteIdentity.DropVerifier (); 
 
 		SendPhase4 (tsA, tsB);
 	}
@@ -467,6 +467,7 @@ namespace transport
 				Terminate ();
 				return;
 			}	
+			m_RemoteIdentity.DropVerifier (); 
 			LogPrint (eLogInfo, "NTCP session to ", m_Socket.remote_endpoint (), " connected");
 			Connected ();
 						
@@ -495,6 +496,7 @@ namespace transport
 		else
 		{
 			m_NumReceivedBytes += bytes_transferred;
+			i2p::transport::transports.UpdateReceivedBytes (bytes_transferred);
 			m_ReceiveBufferOffset += bytes_transferred;
 
 			if (m_ReceiveBufferOffset >= 16)
@@ -551,22 +553,21 @@ namespace transport
 	{
 		if (!m_NextMessage) // new message, header expected
 		{	
-			m_NextMessage = i2p::NewI2NPMessage ();
-			m_NextMessageOffset = 0;
-			
-			m_Decryption.Decrypt (encrypted, m_NextMessage->buf);
-			uint16_t dataSize = bufbe16toh (m_NextMessage->buf);
+			// descrypt header and extract length
+			uint8_t buf[16];
+			m_Decryption.Decrypt (encrypted, buf);
+			uint16_t dataSize = bufbe16toh (buf);
 			if (dataSize)
 			{
 				// new message
 				if (dataSize > NTCP_MAX_MESSAGE_SIZE)
 				{
 					LogPrint (eLogError, "NTCP data size ", dataSize, " exceeds max size");
-					i2p::DeleteI2NPMessage (m_NextMessage);
-					m_NextMessage = nullptr;
 					return false;
 				}
-				m_NextMessageOffset += 16;
+				m_NextMessage = dataSize <= I2NP_MAX_SHORT_MESSAGE_SIZE - 2 ? NewI2NPShortMessage () : NewI2NPMessage ();
+				memcpy (m_NextMessage->buf, buf, 16);
+				m_NextMessageOffset = 16;
 				m_NextMessage->offset = 2; // size field
 				m_NextMessage->len = dataSize + 2; 
 			}	
@@ -574,8 +575,6 @@ namespace transport
 			{	
 				// timestamp
 				LogPrint ("Timestamp");	
-				i2p::DeleteI2NPMessage (m_NextMessage);
-				m_NextMessage = nullptr;
 				return true;
 			}	
 		}	
@@ -663,6 +662,7 @@ namespace transport
 		else
 		{	
 			m_NumSentBytes += bytes_transferred;
+			i2p::transport::transports.UpdateSentBytes (bytes_transferred);
 			if (!m_SendQueue.empty())
 			{
 				Send (m_SendQueue);

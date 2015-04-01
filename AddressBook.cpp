@@ -151,13 +151,29 @@ namespace client
 	}	
 
 //---------------------------------------------------------------------
-	AddressBook::AddressBook (): m_IsLoaded (false), m_IsDownloading (false), 
+	AddressBook::AddressBook (): m_Storage (nullptr), m_IsLoaded (false), m_IsDownloading (false), 
 		m_DefaultSubscription (nullptr), m_SubscriptionsUpdateTimer (nullptr)
 	{
 	}
 
 	AddressBook::~AddressBook ()
 	{	
+		Stop ();
+	}
+
+	void AddressBook::Start ()
+	{
+		StartSubscriptions ();
+	}
+	
+	void AddressBook::Stop ()
+	{
+		StopSubscriptions ();
+		if (m_SubscriptionsUpdateTimer)
+		{	
+			delete m_SubscriptionsUpdateTimer;	
+			m_SubscriptionsUpdateTimer = nullptr;
+		}	
 		if (m_IsDownloading)
 		{
 			LogPrint (eLogInfo, "Subscription is downloading. Waiting for temination...");
@@ -171,18 +187,24 @@ namespace client
 				std::this_thread::sleep_for (std::chrono::seconds (1)); // wait for 1 seconds
 			}	
 			LogPrint (eLogError, "Subscription download hangs");
+			m_IsDownloading = false;
 		}	
 		if (m_Storage)
 		{
 			m_Storage->Save (m_Addresses);
 			delete m_Storage;
+			m_Storage = nullptr;
 		}
-		delete m_DefaultSubscription;
+		if (m_DefaultSubscription)
+		{	
+			delete m_DefaultSubscription;
+			m_DefaultSubscription = nullptr;
+		}	
 		for (auto it: m_Subscriptions)
 			delete it;
-		delete m_SubscriptionsUpdateTimer;		
-	}
-
+		m_Subscriptions.clear ();	
+	}	
+	
 	AddressBookStorage * AddressBook::CreateStorage ()
 	{
 		return new AddressBookFilesystemStorage ();
@@ -465,7 +487,7 @@ namespace client
 				auto stream = i2p::client::context.GetSharedLocalDestination ()->CreateStream (leaseSet, u.port_);
 				stream->Send ((uint8_t *)request.str ().c_str (), request.str ().length ());
 				
-				uint8_t buf[4095];
+				uint8_t buf[4096];
 				bool end = false;
 				while (!end)
 				{
