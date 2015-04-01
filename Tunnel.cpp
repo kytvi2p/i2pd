@@ -32,7 +32,7 @@ namespace tunnel
 		CryptoPP::RandomNumberGenerator& rnd = i2p::context.GetRandomNumberGenerator ();
 		auto numHops = m_Config->GetNumHops ();
 		int numRecords = numHops <= STANDARD_NUM_RECORDS ? STANDARD_NUM_RECORDS : numHops; 
-		I2NPMessage * msg = NewI2NPMessage ();
+		I2NPMessage * msg = NewI2NPShortMessage ();
 		*msg->GetPayload () = numRecords;
 		msg->len += numRecords*TUNNEL_BUILD_RECORD_SIZE + 1;		
 
@@ -121,6 +121,7 @@ namespace tunnel
 			const uint8_t * record = msg + 1 + hop->recordIndex*TUNNEL_BUILD_RECORD_SIZE;
 			uint8_t ret = record[BUILD_RESPONSE_RECORD_RET_OFFSET];
 			LogPrint ("Ret code=", (int)ret);
+			hop->router->GetProfile ()->TunnelBuildResponse (ret);
 			if (ret) 
 				// if any of participants declined the tunnel is not established
 				established = false; 
@@ -203,7 +204,8 @@ namespace tunnel
 
 	Tunnels tunnels;
 	
-	Tunnels::Tunnels (): m_IsRunning (false), m_Thread (nullptr)
+	Tunnels::Tunnels (): m_IsRunning (false), m_Thread (nullptr),
+		m_NumSuccesiveTunnelCreations (0), m_NumFailedTunnelCreations (0)
 	{
 	}
 	
@@ -487,7 +489,21 @@ namespace tunnel
 					if (ts > tunnel->GetCreationTime () + TUNNEL_CREATION_TIMEOUT)
 					{
 						LogPrint ("Pending tunnel build request ", it->first, " timeout. Deleted");
+						// update stats
+						auto config = tunnel->GetTunnelConfig ();
+						if (config)
+						{
+							auto hop = config->GetFirstHop ();
+							while (hop)
+							{
+								if (hop->router) 
+									hop->router->GetProfile ()->TunnelNonReplied ();
+								hop = hop->next;
+							}	
+						}	
+						// delete
 						it = pendingTunnels.erase (it);
+						m_NumFailedTunnelCreations++;
 					}
 					else
 						it++;
@@ -495,13 +511,16 @@ namespace tunnel
 				case eTunnelStateBuildFailed:
 					LogPrint ("Pending tunnel build request ", it->first, " failed. Deleted");
 					it = pendingTunnels.erase (it);
+					m_NumFailedTunnelCreations++;
 				break;
 				case eTunnelStateBuildReplyReceived:
 					// intermediate state, will be either established of build failed
 					it++;
 				break;	
 				default:
+					// success
 					it = pendingTunnels.erase (it);
+					m_NumSuccesiveTunnelCreations++;
 			}	
 		}	
 	}

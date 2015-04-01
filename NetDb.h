@@ -80,6 +80,8 @@ namespace data
 			std::shared_ptr<const RouterInfo> GetRandomRouter () const;
 			std::shared_ptr<const RouterInfo> GetRandomRouter (std::shared_ptr<const RouterInfo> compatibleWith) const;
 			std::shared_ptr<const RouterInfo> GetHighBandwidthRandomRouter (std::shared_ptr<const RouterInfo> compatibleWith) const;
+			std::shared_ptr<const RouterInfo> GetRandomPeerTestRouter () const;
+			std::shared_ptr<const RouterInfo> GetRandomIntroducer () const;
 			std::shared_ptr<const RouterInfo> GetClosestFloodfill (const IdentHash& destination, const std::set<IdentHash>& excluded) const;
 			std::shared_ptr<const RouterInfo> GetClosestNonFloodfill (const IdentHash& destination, const std::set<IdentHash>& excluded) const;
 			void SetUnreachable (const IdentHash& ident, bool unreachable);			
@@ -88,7 +90,7 @@ namespace data
 
 			void Reseed ();
 
-			// for web interface
+			// for web interface and stats
 			int GetNumRouters () const { return m_RouterInfos.size (); };
 			int GetNumFloodfills () const { return m_Floodfills.size (); };
 			int GetNumLeaseSets () const { return m_LeaseSets.size (); };

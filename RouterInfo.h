@@ -8,6 +8,7 @@
 #include <iostream>
 #include <boost/asio.hpp>
 #include "Identity.h"
+#include "Profiling.h"
 
 namespace i2p
 {
@@ -105,8 +106,9 @@ namespace data
 			void AddSSUAddress (const char * host, int port, const uint8_t * key, int mtu = 0);
 			bool AddIntroducer (const Address * address, uint32_t tag);
 			bool RemoveIntroducer (const boost::asio::ip::udp::endpoint& e);
-			void SetProperty (const char * key, const char * value);
-			const char * GetProperty (const char * key) const;
+			void SetProperty (const std::string& key, const std::string& value); // called from RouterContext only
+			void DeleteProperty (const std::string& key); // called from RouterContext only
+			void ClearProperties () { m_Properties.clear (); };
 			bool IsFloodfill () const;
 			bool IsNTCP (bool v4only = true) const;
 			bool IsSSU (bool v4only = true) const;
@@ -118,6 +120,7 @@ namespace data
 			bool IsIntroducer () const { return m_Caps & eSSUIntroducer; };
 			bool IsPeerTesting () const { return m_Caps & eSSUTesting; };
 			bool IsHidden () const { return m_Caps & eHidden; };
+			bool IsHighBandwidth () const { return m_Caps & RouterInfo::eHighBandwidth; };
 
 			uint8_t GetCaps () const { return m_Caps; };	
 			void SetCaps (uint8_t caps);
@@ -135,6 +138,9 @@ namespace data
 			void SetUpdated (bool updated) { m_IsUpdated = updated; }; 
 			void SaveToFile (const std::string& fullPath);
 
+			std::shared_ptr<RouterProfile> GetProfile () const;
+			void SaveProfile () { if (m_Profile) m_Profile->Save (); };
+			
 			void Update (const uint8_t * buf, int len);
 			void DeleteBuffer () { delete m_Buffer; m_Buffer = nullptr; };
 			
@@ -168,6 +174,7 @@ namespace data
 			std::map<std::string, std::string> m_Properties;
 			bool m_IsUpdated, m_IsUnreachable;
 			uint8_t m_SupportedTransports, m_Caps;
+			mutable std::shared_ptr<RouterProfile> m_Profile;
 	};	
 }	
 }
