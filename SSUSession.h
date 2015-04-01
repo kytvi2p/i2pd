@@ -49,6 +49,15 @@ namespace transport
 		eSessionStateFailed
 	};	
 
+	enum PeerTestParticipant
+	{
+		ePeerTestParticipantUnknown = 0,
+		ePeerTestParticipantAlice1,
+		ePeerTestParticipantAlice2,
+		ePeerTestParticipantBob,
+		ePeerTestParticipantCharlie
+	};
+	
 	class SSUServer;
 	class SSUSession: public TransportSession, public std::enable_shared_from_this<SSUSession>
 	{
@@ -106,8 +115,8 @@ namespace transport
 			void Failed ();
 			void ScheduleConnectTimer ();
 			void HandleConnectTimer (const boost::system::error_code& ecode);
-			void ProcessPeerTest (uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& senderEndpoint);
-			void SendPeerTest (uint32_t nonce, uint32_t address, uint16_t port, const uint8_t * introKey, bool toAddress = true); 
+			void ProcessPeerTest (const uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& senderEndpoint);
+			void SendPeerTest (uint32_t nonce, uint32_t address, uint16_t port, const uint8_t * introKey, bool toAddress = true, bool sendAddress = true); 
 			void ProcessData (uint8_t * buf, size_t len);		
 			void SendSesionDestroyed ();
 			void Send (uint8_t type, const uint8_t * payload, size_t len); // with session key
@@ -133,12 +142,10 @@ namespace transport
 			SessionState m_State;
 			bool m_IsSessionKey;
 			uint32_t m_RelayTag;	
-			std::set<uint32_t> m_PeerTestNonces;
 			i2p::crypto::CBCEncryption m_SessionKeyEncryption;
 			i2p::crypto::CBCDecryption m_SessionKeyDecryption;
 			i2p::crypto::AESKey m_SessionKey;
 			i2p::crypto::MACKey m_MacKey;
-			size_t m_NumSentBytes, m_NumReceivedBytes;
 			uint32_t m_CreationTime; // seconds since epoch
 			SSUData m_Data;
 			bool m_IsDataReceived;

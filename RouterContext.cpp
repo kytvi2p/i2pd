@@ -1,10 +1,12 @@
 #include <fstream>
 #include <cryptopp/dh.h>
 #include <cryptopp/dsa.h>
+#include <boost/lexical_cast.hpp>
 #include "CryptoConst.h"
 #include "RouterContext.h"
 #include "Timestamp.h"
 #include "I2NPProtocol.h"
+#include "NetDb.h"
 #include "util.h"
 #include "version.h"
 
@@ -13,13 +15,14 @@ namespace i2p
 	RouterContext context;
 
 	RouterContext::RouterContext ():
-		m_LastUpdateTime (0), m_IsUnreachable (false), m_AcceptsTunnels (true),
-		m_IsFloodfill (false)
+		m_LastUpdateTime (0), m_AcceptsTunnels (true), m_IsFloodfill (false), 
+		m_StartupTime (0), m_Status (eRouterStatusOK )
 	{
 	}
 
 	void RouterContext::Init ()
 	{
+		m_StartupTime = i2p::util::GetSecondsSinceEpoch ();
 		if (!Load ())
 			CreateNewRouter ();
 		UpdateRouterInfo ();
@@ -114,13 +117,40 @@ namespace i2p
 		if (floodfill)
 			m_RouterInfo.SetCaps (m_RouterInfo.GetCaps () | i2p::data::RouterInfo::eFloodfill);
 		else
+		{
 			m_RouterInfo.SetCaps (m_RouterInfo.GetCaps () & ~i2p::data::RouterInfo::eFloodfill);
+			// we don't publish number of routers and leaseset for non-floodfill
+			m_RouterInfo.DeleteProperty (ROUTER_INFO_PROPERTY_LEASESETS);
+			m_RouterInfo.DeleteProperty (ROUTER_INFO_PROPERTY_ROUTERS);
+		}
 		UpdateRouterInfo ();
 	}
 
+	void RouterContext::SetHighBandwidth ()
+	{
+		if (!m_RouterInfo.IsHighBandwidth ())
+		{
+			m_RouterInfo.SetCaps (m_RouterInfo.GetCaps () | i2p::data::RouterInfo::eHighBandwidth);
+			UpdateRouterInfo ();
+		}
+	}
+
+	void RouterContext::SetLowBandwidth ()
+	{
+		if (m_RouterInfo.IsHighBandwidth ())
+		{
+			m_RouterInfo.SetCaps (m_RouterInfo.GetCaps () & ~i2p::data::RouterInfo::eHighBandwidth);
+			UpdateRouterInfo ();
+		}
+	}
+
+	bool RouterContext::IsUnreachable () const
+	{
+		return m_RouterInfo.GetCaps () & i2p::data::RouterInfo::eUnreachable;
+	}	
+		
 	void RouterContext::SetUnreachable ()
 	{
-		m_IsUnreachable = true;	
 		// set caps
 		m_RouterInfo.SetCaps (i2p::data::RouterInfo::eUnreachable | i2p::data::RouterInfo::eSSUTesting); // LU, B
 		// remove NTCP address
@@ -136,11 +166,41 @@ namespace i2p
 		// delete previous introducers
 		for (auto& addr : addresses)
 			addr.introducers.clear ();
-		
+	
 		// update
 		UpdateRouterInfo ();
 	}
 
+	void RouterContext::SetReachable ()
+	{
+		// update caps
+		uint8_t caps = m_RouterInfo.GetCaps ();
+		caps &= ~i2p::data::RouterInfo::eUnreachable;
+		caps |= i2p::data::RouterInfo::eReachable;
+		caps |= i2p::data::RouterInfo::eSSUIntroducer;
+		if (m_IsFloodfill)
+			caps |= i2p::data::RouterInfo::eFloodfill;
+		m_RouterInfo.SetCaps (caps);
+		
+		// insert NTCP back
+		auto& addresses = m_RouterInfo.GetAddresses ();
+		for (size_t i = 0; i < addresses.size (); i++)
+		{
+			if (addresses[i].transportStyle == i2p::data::RouterInfo::eTransportSSU)
+			{
+				// insert NTCP address with host/port form SSU
+				m_RouterInfo.AddNTCPAddress (addresses[i].host.to_string ().c_str (), addresses[i].port);
+				break;
+			}
+		}		
+		// delete previous introducers
+		for (auto& addr : addresses)
+			addr.introducers.clear ();
+		
+		// update
+		UpdateRouterInfo ();
+	}	
+		
 	void RouterContext::SetSupportsV6 (bool supportsV6)
 	{
 		if (supportsV6)
@@ -185,6 +245,17 @@ namespace i2p
 		if (updated)
 			UpdateRouterInfo ();
 	}
+
+	void RouterContext::UpdateStats ()
+	{
+		if (m_IsFloodfill)
+		{
+			// update routers and leasesets
+			m_RouterInfo.SetProperty (ROUTER_INFO_PROPERTY_LEASESETS, boost::lexical_cast<std::string>(i2p::data::netdb.GetNumLeaseSets ()));
+			m_RouterInfo.SetProperty (ROUTER_INFO_PROPERTY_ROUTERS, boost::lexical_cast<std::string>(i2p::data::netdb.GetNumRouters ()));
+			UpdateRouterInfo (); 
+		}
+	}
 		
 	bool RouterContext::Load ()
 	{
@@ -199,6 +270,9 @@ namespace i2p
 		m_RouterInfo.Update (routerInfo.GetBuffer (), routerInfo.GetBufferLen ());
 		m_RouterInfo.SetProperty ("coreVersion", I2P_VERSION);
 		m_RouterInfo.SetProperty ("router.version", I2P_VERSION);
+
+		if (IsUnreachable ())
+			SetReachable (); // we assume reachable until we discover firewall through peer tests
 		
 		return true;
 	}
@@ -218,5 +292,10 @@ namespace i2p
 	void RouterContext::HandleI2NPMessage (const uint8_t * buf, size_t len, std::shared_ptr<i2p::tunnel::InboundTunnel> from)
 	{
 		i2p::HandleI2NPMessage (CreateI2NPMessage (buf, GetI2NPMessageLength (buf), from));
+	}
+
+	uint32_t RouterContext::GetUptime () const
+	{
+		return i2p::util::GetSecondsSinceEpoch () - m_StartupTime;
 	}	
 }

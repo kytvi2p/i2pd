@@ -18,7 +18,7 @@ namespace i2p
 {
 namespace client
 {
-	const size_t SAM_SOCKET_BUFFER_SIZE = 4096;
+	const size_t SAM_SOCKET_BUFFER_SIZE = 8192;
 	const int SAM_SOCKET_CONNECTION_MAX_IDLE = 3600; // in seconds
 	const int SAM_SESSION_READINESS_CHECK_INTERVAL = 20; // in seconds	
 	const char SAM_HANDSHAKE[] = "HELLO VERSION";
@@ -34,12 +34,13 @@ namespace client
 	const char SAM_STREAM_STATUS_CANT_REACH_PEER[] = "STREAM STATUS RESULT=CANT_REACH_PEER\n";
 	const char SAM_STREAM_STATUS_I2P_ERROR[] = "STREAM STATUS RESULT=I2P_ERROR\n";
 	const char SAM_STREAM_ACCEPT[] = "STREAM ACCEPT";	
+	const char SAM_DATAGRAM_SEND[] = "DATAGRAM SEND";
 	const char SAM_DEST_GENERATE[] = "DEST GENERATE";
 	const char SAM_DEST_REPLY[] = "DEST REPLY PUB=%s PRIV=%s\n";	
 	const char SAM_DEST_REPLY_I2P_ERROR[] = "DEST REPLY RESULT=I2P_ERROR\n";
 	const char SAM_NAMING_LOOKUP[] = "NAMING LOOKUP";
 	const char SAM_NAMING_REPLY[] = "NAMING REPLY RESULT=OK NAME=ME VALUE=%s\n";
-	const char SAM_DATAGRAM_RECEIVED[] = "DATAGRAM_RECEIVED DESTINATION=%s SIZE=%lu\n";	
+	const char SAM_DATAGRAM_RECEIVED[] = "DATAGRAM RECEIVED DESTINATION=%s SIZE=%lu\n";	
 	const char SAM_NAMING_REPLY_INVALID_KEY[] = "NAMING REPLY RESULT=INVALID_KEY NAME=%s\n";
 	const char SAM_NAMING_REPLY_KEY_NOT_FOUND[] = "NAMING REPLY RESULT=INVALID_KEY_NOT_FOUND NAME=%s\n";
 	const char SAM_PARAM_MIN[] = "MIN";	
@@ -49,7 +50,8 @@ namespace client
 	const char SAM_PARAM_SILENT[] = "SILENT";
 	const char SAM_PARAM_DESTINATION[] = "DESTINATION";	
 	const char SAM_PARAM_NAME[] = "NAME";
-	const char SAM_PARAM_SIGNATURE_TYPE[] = "SIGNATURE_TYPE";		
+	const char SAM_PARAM_SIGNATURE_TYPE[] = "SIGNATURE_TYPE";	
+	const char SAM_PARAM_SIZE[] = "SIZE";
 	const char SAM_VALUE_TRANSIENT[] = "TRANSIENT";	
 	const char SAM_VALUE_STREAM[] = "STREAM";
 	const char SAM_VALUE_DATAGRAM[] = "DATAGRAM";
@@ -96,14 +98,15 @@ namespace client
 			void HandleI2PReceive (const boost::system::error_code& ecode, std::size_t bytes_transferred);
 			void HandleI2PAccept (std::shared_ptr<i2p::stream::Stream> stream);
 			void HandleWriteI2PData (const boost::system::error_code& ecode);
-			void HandleI2PDatagramReceive (const i2p::data::IdentityEx& ident, const uint8_t * buf, size_t len);
+			void HandleI2PDatagramReceive (const i2p::data::IdentityEx& from, uint16_t fromPort, uint16_t toPort, const uint8_t * buf, size_t len);
 
 			void ProcessSessionCreate (char * buf, size_t len);
 			void ProcessStreamConnect (char * buf, size_t len);
 			void ProcessStreamAccept (char * buf, size_t len);
 			void ProcessDestGenerate ();
 			void ProcessNamingLookup (char * buf, size_t len);
-			void ExtractParams (char * buf, size_t len, std::map<std::string, std::string>& params);
+			size_t ProcessDatagramSend (char * buf, size_t len, const char * data); // from SAM 1.0	
+			void ExtractParams (char * buf, std::map<std::string, std::string>& params);
 
 			void Connect (std::shared_ptr<const i2p::data::LeaseSet> remote);
 			void HandleConnectLeaseSetRequestComplete (bool success, i2p::data::IdentHash ident);
@@ -118,6 +121,7 @@ namespace client
 			boost::asio::ip::tcp::socket m_Socket;
 			boost::asio::deadline_timer m_Timer;
 			char m_Buffer[SAM_SOCKET_BUFFER_SIZE + 1];
+			size_t m_BufferOffset;
 			uint8_t m_StreamBuffer[SAM_SOCKET_BUFFER_SIZE];
 			SAMSocketType m_SocketType;
 			std::string m_ID; // nickname
@@ -128,10 +132,10 @@ namespace client
 
 	struct SAMSession
 	{
-		ClientDestination * localDestination;
+		std::shared_ptr<ClientDestination> localDestination;
 		std::list<std::shared_ptr<SAMSocket> > sockets;
 		
-		SAMSession (ClientDestination * localDestination);		
+		SAMSession (std::shared_ptr<ClientDestination> dest);		
 		~SAMSession ();
 
 		void CloseStreams ();

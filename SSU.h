@@ -21,6 +21,7 @@ namespace i2p
 namespace transport
 {
 	const int SSU_KEEP_ALIVE_INTERVAL = 30; // 30 seconds	
+	const int SSU_PEER_TEST_TIMEOUT = 60; // 60 seconds		
 	const int SSU_TO_INTRODUCER_SESSION_DURATION = 3600; // 1 hour
 	const size_t SSU_MAX_NUM_INTRODUCERS = 3;
 
@@ -53,6 +54,12 @@ namespace transport
 			void AddRelay (uint32_t tag, const boost::asio::ip::udp::endpoint& relay);
 			std::shared_ptr<SSUSession> FindRelaySession (uint32_t tag);
 
+			void NewPeerTest (uint32_t nonce, PeerTestParticipant role, std::shared_ptr<SSUSession> session = nullptr);
+			PeerTestParticipant GetPeerTestParticipant (uint32_t nonce);
+			std::shared_ptr<SSUSession> GetPeerTestSession (uint32_t nonce);
+			void UpdatePeerTest (uint32_t nonce, PeerTestParticipant role);
+			void RemovePeerTest (uint32_t nonce);
+
 		private:
 
 			void Run ();
@@ -70,20 +77,31 @@ namespace transport
 			std::set<SSUSession *> FindIntroducers (int maxNumIntroducers);	
 			void ScheduleIntroducersUpdateTimer ();
 			void HandleIntroducersUpdateTimer (const boost::system::error_code& ecode);
-			
+
+			void SchedulePeerTestsCleanupTimer ();
+			void HandlePeerTestsCleanupTimer (const boost::system::error_code& ecode);
+
 		private:
 
+			struct PeerTest
+			{
+				uint64_t creationTime;
+				PeerTestParticipant role;
+				std::shared_ptr<SSUSession> session; // for Bob to Alice
+			};	
+			
 			bool m_IsRunning;
 			std::thread * m_Thread, * m_ThreadV6, * m_ReceiversThread;	
 			boost::asio::io_service m_Service, m_ServiceV6, m_ReceiversService;
 			boost::asio::io_service::work m_Work, m_WorkV6, m_ReceiversWork;
 			boost::asio::ip::udp::endpoint m_Endpoint, m_EndpointV6;
 			boost::asio::ip::udp::socket m_Socket, m_SocketV6;
-			boost::asio::deadline_timer m_IntroducersUpdateTimer;
+			boost::asio::deadline_timer m_IntroducersUpdateTimer, m_PeerTestsCleanupTimer;
 			std::list<boost::asio::ip::udp::endpoint> m_Introducers; // introducers we are connected to
-			std::mutex m_SessionsMutex;
+			mutable std::mutex m_SessionsMutex;
 			std::map<boost::asio::ip::udp::endpoint, std::shared_ptr<SSUSession> > m_Sessions;
 			std::map<uint32_t, boost::asio::ip::udp::endpoint> m_Relays; // we are introducer
+			std::map<uint32_t, PeerTest> m_PeerTests; // nonce -> creation time in milliseconds
 
 		public:
 			// for HTTP only

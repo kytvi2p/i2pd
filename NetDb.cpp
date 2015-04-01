@@ -108,6 +108,9 @@ namespace data
 	
 	void NetDb::Stop ()
 	{
+		for (auto it: m_RouterInfos)
+			it.second->SaveProfile ();
+		m_RouterInfos.clear ();
 		if (m_Thread)
 		{	
 			m_IsRunning = false;
@@ -356,6 +359,7 @@ namespace data
 					if (!r->IsUnreachable () && (!r->UsesIntroducer () || ts < r->GetTimestamp () + 3600*1000LL)) // 1 hour
 					{	
 						r->DeleteBuffer ();
+						r->ClearProperties (); // properties are not used for regular routers
 						m_RouterInfos[r->GetIdentHash ()] = r;
 						if (r->IsFloodfill ())
 							m_Floodfills.push_back (r);
@@ -410,16 +414,30 @@ namespace data
 			else 
 			{
 				// RouterInfo expires after 1 hour if uses introducer
-				if ((it.second->UsesIntroducer () && ts > it.second->GetTimestamp () + 3600*1000LL) // 1 hour
-				// RouterInfo expires in 72 hours if more than 300
-					|| (total > 300 && ts > it.second->GetTimestamp () + 3*24*3600*1000LL)) // 3 days
-				{	
-					total--;
+				if (it.second->UsesIntroducer () && ts > it.second->GetTimestamp () + 3600*1000LL) // 1 hour
 					it.second->SetUnreachable (true);
-				}	
+				else if (total > 25 && ts > (i2p::context.GetStartupTime () + 600)*1000LL) // routers don't expire if less than 25 or uptime is less than 10 minutes
+				{
+					if (i2p::context.IsFloodfill ())
+					{
+						if (ts > it.second->GetTimestamp () + 3600*1000LL) // 1 hours
+							it.second->SetUnreachable (true);
+					}
+					else if (total > 300)
+					{
+						if (ts > it.second->GetTimestamp () + 30*3600*1000LL) // 30 hours
+							it.second->SetUnreachable (true);
+					}
+					else if (total > 120)
+					{
+						if (ts > it.second->GetTimestamp () + 72*3600*1000LL) // 72 hours
+							it.second->SetUnreachable (true);
+					}
+				}
 				
 				if (it.second->IsUnreachable ())
 				{	
+					total--;
 					// delete RI file
 					if (boost::filesystem::exists (GetFilePath (fullDirectory, it.second.get ())))
 					{    
@@ -445,7 +463,10 @@ namespace data
 			for (auto it = m_RouterInfos.begin (); it != m_RouterInfos.end ();)
 			{
 				if (it->second->IsUnreachable ())
+				{	
+					it->second->SaveProfile ();
 					it = m_RouterInfos.erase (it);
+				}	
 				else
 					it++;
 			}
@@ -552,8 +573,13 @@ namespace data
 				decompressor.MessageEnd();
 				uint8_t uncompressed[2048];
 				size_t uncomressedSize = decompressor.MaxRetrievable ();
-				decompressor.Get (uncompressed, uncomressedSize);
-				AddRouterInfo (buf + DATABASE_STORE_KEY_OFFSET, uncompressed, uncomressedSize);
+				if (uncomressedSize <= 2048)
+				{
+					decompressor.Get (uncompressed, uncomressedSize);
+					AddRouterInfo (buf + DATABASE_STORE_KEY_OFFSET, uncompressed, uncomressedSize);
+				}
+				else
+					LogPrint ("Invalid RouterInfo uncomressed length ", (int)uncomressedSize);
 			}
 			catch (CryptoPP::Exception& ex)
 			{
@@ -808,6 +834,8 @@ namespace data
 			if (floodfill && !floodfills.count (floodfill.get ())) // request floodfill only once
 			{	
 				floodfills.insert (floodfill.get ());
+				if (i2p::transport::transports.IsConnected (floodfill->GetIdentHash ()))
+					throughTunnels = false;
 				if (throughTunnels)
 				{	
 					msgs.push_back (i2p::tunnel::TunnelMessageBlock 
@@ -871,6 +899,24 @@ namespace data
 			});
 	}	
 
+	std::shared_ptr<const RouterInfo> NetDb::GetRandomPeerTestRouter () const
+	{
+		return GetRandomRouter (
+			[](std::shared_ptr<const RouterInfo> router)->bool 
+			{ 
+				return !router->IsHidden () && router->IsPeerTesting (); 
+			});
+	}
+
+	std::shared_ptr<const RouterInfo> NetDb::GetRandomIntroducer () const
+	{
+		return GetRandomRouter (
+			[](std::shared_ptr<const RouterInfo> router)->bool 
+			{ 
+				return !router->IsHidden () && router->IsIntroducer (); 
+			});
+	}	
+	
 	std::shared_ptr<const RouterInfo> NetDb::GetHighBandwidthRandomRouter (std::shared_ptr<const RouterInfo> compatibleWith) const
 	{
 		return GetRandomRouter (

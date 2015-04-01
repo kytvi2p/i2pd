@@ -1,7 +1,7 @@
 #include <fstream>
 #include <iostream>
-#include <boost/program_options/parsers.hpp>
-#include <boost/program_options/variables_map.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
 #include "util.h"
 #include "Log.h"
 #include "Identity.h"
@@ -37,11 +37,15 @@ namespace client
 			m_SharedLocalDestination->Start ();
 		}
 
+		std::shared_ptr<ClientDestination> localDestination;	
 		// proxies	
-		m_HttpProxy = new i2p::proxy::HTTPProxy(i2p::util::config::GetArg("-httpproxyport", 4446));
+		std::string proxyKeys = i2p::util::config::GetArg("-proxykeys", "");
+		if (proxyKeys.length () > 0)
+			localDestination = LoadLocalDestination (proxyKeys, false);
+		m_HttpProxy = new i2p::proxy::HTTPProxy(i2p::util::config::GetArg("-httpproxyport", 4446), localDestination);
 		m_HttpProxy->Start();
 		LogPrint("HTTP Proxy started");
-		m_SocksProxy = new i2p::proxy::SOCKSProxy(i2p::util::config::GetArg("-socksproxyport", 4447));
+		m_SocksProxy = new i2p::proxy::SOCKSProxy(i2p::util::config::GetArg("-socksproxyport", 4447), localDestination);
 		m_SocksProxy->Start();
 		LogPrint("SOCKS Proxy Started");
 	
@@ -49,7 +53,7 @@ namespace client
 		std::string ircDestination = i2p::util::config::GetArg("-ircdest", "");
 		if (ircDestination.length () > 0) // ircdest is presented
 		{
-			ClientDestination * localDestination = nullptr;
+			localDestination = nullptr;
 			std::string ircKeys = i2p::util::config::GetArg("-irckeys", "");	
 			if (ircKeys.length () > 0)
 				localDestination = LoadLocalDestination (ircKeys, false);
@@ -62,7 +66,7 @@ namespace client
 		std::string eepKeys = i2p::util::config::GetArg("-eepkeys", "");
 		if (eepKeys.length () > 0) // eepkeys file is presented
 		{
-			auto localDestination = LoadLocalDestination (eepKeys, true);
+			localDestination = LoadLocalDestination (eepKeys, true);
 			auto serverTunnel = new I2PServerTunnel (i2p::util::config::GetArg("-eephost", "127.0.0.1"),
  				i2p::util::config::GetArg("-eepport", 80), localDestination);
 			serverTunnel->Start ();
@@ -97,12 +101,11 @@ namespace client
 			m_I2PControlService->Start ();
 			LogPrint("I2PControl started");
 		}
-		m_AddressBook.StartSubscriptions ();
+		m_AddressBook.Start ();
 	}
 		
 	void ClientContext::Stop ()
 	{
-		m_AddressBook.StopSubscriptions ();	
 		m_HttpProxy->Stop();
 		delete m_HttpProxy;
 		m_HttpProxy = nullptr;
@@ -144,17 +147,14 @@ namespace client
 			m_I2PControlService = nullptr;
 			LogPrint("I2PControl stopped");	
 		}	
-
+		m_AddressBook.Stop ();		
 		for (auto it: m_Destinations)
-		{	
 			it.second->Stop ();
-			delete it.second;
-		}		
 		m_Destinations.clear ();
-		m_SharedLocalDestination = 0; // deleted through m_Destination
+		m_SharedLocalDestination = nullptr; 
 	}	
 	
-	ClientDestination * ClientContext::LoadLocalDestination (const std::string& filename, bool isPublic)
+	std::shared_ptr<ClientDestination> ClientContext::LoadLocalDestination (const std::string& filename, bool isPublic)
 	{
 		i2p::data::PrivateKeys keys;
 		std::string fullPath = i2p::util::filesystem::GetFullPath (filename);
@@ -173,7 +173,7 @@ namespace client
 		else
 		{
 			LogPrint ("Can't open file ", fullPath, " Creating new one");
-			keys = i2p::data::PrivateKeys::CreateRandomKeys (i2p::data::SIGNING_KEY_TYPE_DSA_SHA1); 
+			keys = i2p::data::PrivateKeys::CreateRandomKeys (i2p::data::SIGNING_KEY_TYPE_ECDSA_SHA256_P256); 
 			std::ofstream f (fullPath, std::ofstream::binary | std::ofstream::out);
 			size_t len = keys.GetFullLen ();
 			uint8_t * buf = new uint8_t[len];
@@ -184,7 +184,7 @@ namespace client
 			LogPrint ("New private keys file ", fullPath, " for ", m_AddressBook.ToAddress(keys.GetPublic ().GetIdentHash ()), " created");
 		}	
 
-		ClientDestination * localDestination = nullptr;	
+		std::shared_ptr<ClientDestination> localDestination = nullptr;	
 		std::unique_lock<std::mutex> l(m_DestinationsMutex);	
 		auto it = m_Destinations.find (keys.GetPublic ().GetIdentHash ()); 
 		if (it != m_Destinations.end ())
@@ -194,25 +194,25 @@ namespace client
 		}
 		else
 		{
-			localDestination = new ClientDestination (keys, isPublic);
+			localDestination = std::make_shared<ClientDestination> (keys, isPublic);
 			m_Destinations[localDestination->GetIdentHash ()] = localDestination;
 			localDestination->Start ();
 		}
 		return localDestination;
 	}
 
-	ClientDestination * ClientContext::CreateNewLocalDestination (bool isPublic, i2p::data::SigningKeyType sigType,
+	std::shared_ptr<ClientDestination> ClientContext::CreateNewLocalDestination (bool isPublic, i2p::data::SigningKeyType sigType,
 		const std::map<std::string, std::string> * params)
 	{
 		i2p::data::PrivateKeys keys = i2p::data::PrivateKeys::CreateRandomKeys (sigType);
-		auto localDestination = new ClientDestination (keys, isPublic, params);
+		auto localDestination = std::make_shared<ClientDestination> (keys, isPublic, params);
 		std::unique_lock<std::mutex> l(m_DestinationsMutex);
 		m_Destinations[localDestination->GetIdentHash ()] = localDestination;
 		localDestination->Start ();
 		return localDestination;
 	}
 
-	void ClientContext::DeleteLocalDestination (ClientDestination * destination)
+	void ClientContext::DeleteLocalDestination (std::shared_ptr<ClientDestination> destination)
 	{
 		if (!destination) return;
 		auto it = m_Destinations.find (destination->GetIdentHash ());
@@ -224,11 +224,10 @@ namespace client
 				m_Destinations.erase (it);
 			}	
 			d->Stop ();
-			delete d;
 		}
 	}
 
-	ClientDestination * ClientContext::CreateNewLocalDestination (const i2p::data::PrivateKeys& keys, bool isPublic,
+	std::shared_ptr<ClientDestination> ClientContext::CreateNewLocalDestination (const i2p::data::PrivateKeys& keys, bool isPublic,
 		const std::map<std::string, std::string> * params)
 	{
 		auto it = m_Destinations.find (keys.GetPublic ().GetIdentHash ());
@@ -242,14 +241,14 @@ namespace client
 			}	
 			return nullptr;
 		}	
-		auto localDestination = new ClientDestination (keys, isPublic, params);
+		auto localDestination = std::make_shared<ClientDestination> (keys, isPublic, params);
 		std::unique_lock<std::mutex> l(m_DestinationsMutex);
 		m_Destinations[keys.GetPublic ().GetIdentHash ()] = localDestination;
 		localDestination->Start ();
 		return localDestination;
 	}
 	
-	ClientDestination * ClientContext::FindLocalDestination (const i2p::data::IdentHash& destination) const
+	std::shared_ptr<ClientDestination> ClientContext::FindLocalDestination (const i2p::data::IdentHash& destination) const
 	{
 		auto it = m_Destinations.find (destination);
 		if (it != m_Destinations.end ())
@@ -259,77 +258,87 @@ namespace client
 
 	void ClientContext::ReadTunnels ()
 	{
-		std::ifstream ifs (i2p::util::filesystem::GetFullPath (TUNNELS_CONFIG_FILENAME));
-		if (ifs.good ())
+		boost::property_tree::ptree pt;
+		try
 		{
-			boost::program_options::options_description params ("I2P tunnels parameters");
-			params.add_options ()
-				// client
-				(I2P_CLIENT_TUNNEL_NAME, boost::program_options::value<std::vector<std::string> >(), "tunnel name")	
-				(I2P_CLIENT_TUNNEL_PORT, boost::program_options::value<std::vector<int> >(), "Local port")
-				(I2P_CLIENT_TUNNEL_DESTINATION, boost::program_options::value<std::vector<std::string> >(), "destination")
-				(I2P_CLIENT_TUNNEL_KEYS, boost::program_options::value<std::vector<std::string> >(), "keys")	
-				// server
-				(I2P_SERVER_TUNNEL_NAME, boost::program_options::value<std::vector<std::string> >(), "tunnel name")
-				(I2P_SERVER_TUNNEL_HOST, boost::program_options::value<std::vector<std::string> >(), "host")
-				(I2P_SERVER_TUNNEL_PORT, boost::program_options::value<std::vector<int> >(), "port")
-				(I2P_SERVER_TUNNEL_KEYS, boost::program_options::value<std::vector<std::string> >(), "keys")
-			;			
-
-
-			boost::program_options::variables_map vm;
+			boost::property_tree::read_ini (i2p::util::filesystem::GetFullPath (TUNNELS_CONFIG_FILENAME), pt);
+		}
+		catch (std::exception& ex)
+		{
+			LogPrint (eLogWarning, "Can't read ", TUNNELS_CONFIG_FILENAME, ": ", ex.what ());
+			return;
+		}
+			
+		int numClientTunnels = 0, numServerTunnels = 0;
+		for (auto& section: pt)
+		{
+			std::string name = section.first;			
 			try
 			{
-				boost::program_options::store (boost::program_options::parse_config_file (ifs, params), vm);
-				boost::program_options::notify (vm);
-			}
-			catch (boost::program_options::error& ex)
-			{
-				LogPrint (eLogError, "Can't parse ", TUNNELS_CONFIG_FILENAME,": ", ex.what ());
-				return;
-			}
-
-			if (vm.count (I2P_CLIENT_TUNNEL_NAME) > 0)
-			{
-				auto names = vm[I2P_CLIENT_TUNNEL_NAME].as<std::vector<std::string> >();
-				int numClientTunnels = names.size ();
-				auto ports = vm[I2P_CLIENT_TUNNEL_PORT].as<std::vector<int> >();
-				auto destinations = vm[I2P_CLIENT_TUNNEL_DESTINATION].as<std::vector<std::string> >();
-				auto keys = vm[I2P_CLIENT_TUNNEL_KEYS].as<std::vector<std::string> >(); 
-				
-				for (int i = 0; i < numClientTunnels; i++)
+				std::string type = section.second.get<std::string> (I2P_TUNNELS_SECTION_TYPE);
+				if (type == I2P_TUNNELS_SECTION_TYPE_CLIENT)
 				{
-					ClientDestination * localDestination = nullptr;
-					if (keys[i].length () > 0)
-						localDestination = LoadLocalDestination (keys[i], false);
-					auto clientTunnel = new I2PClientTunnel (destinations[i], ports[i], localDestination);
-					if (m_ClientTunnels.insert (std::make_pair (ports[i], std::unique_ptr<I2PClientTunnel>(clientTunnel))).second)
+					// mandatory params
+					std::string dest = section.second.get<std::string> (I2P_CLIENT_TUNNEL_DESTINATION);
+					int port = section.second.get<int> (I2P_CLIENT_TUNNEL_PORT);
+					// optional params
+					std::string keys = section.second.get (I2P_CLIENT_TUNNEL_KEYS, "");
+					int destinationPort = section.second.get (I2P_CLIENT_TUNNEL_DESTINATION_PORT, 0);
+
+					std::shared_ptr<ClientDestination> localDestination = nullptr;
+					if (keys.length () > 0)
+						localDestination = LoadLocalDestination (keys, false);
+					auto clientTunnel = new I2PClientTunnel (dest, port, localDestination, destinationPort);
+					if (m_ClientTunnels.insert (std::make_pair (port, std::unique_ptr<I2PClientTunnel>(clientTunnel))).second)
 						clientTunnel->Start ();
 					else
-						LogPrint (eLogError, "I2P client tunnel with port ", ports[i], " already exists");
+						LogPrint (eLogError, "I2P client tunnel with port ", port, " already exists");
+					numClientTunnels++;
 				}
-				LogPrint (eLogInfo, numClientTunnels, " I2P client tunnels created");
-			}
+				else if (type == I2P_TUNNELS_SECTION_TYPE_SERVER)
+				{	
+					// mandatory params
+					std::string host = section.second.get<std::string> (I2P_SERVER_TUNNEL_HOST);
+					int port = section.second.get<int> (I2P_SERVER_TUNNEL_PORT);
+					std::string keys = section.second.get<std::string> (I2P_SERVER_TUNNEL_KEYS);
+					// optional params
+					int inPort = section.second.get (I2P_SERVER_TUNNEL_INPORT, 0);
+					std::string accessList = section.second.get (I2P_SERVER_TUNNEL_ACCESS_LIST, "");					
 
-			if (vm.count (I2P_SERVER_TUNNEL_NAME) > 0)
-			{
-				auto names = vm[I2P_SERVER_TUNNEL_NAME].as<std::vector<std::string> >();
-				int numServerTunnels = names.size ();
-				auto hosts = vm[I2P_SERVER_TUNNEL_HOST].as<std::vector<std::string> >();
-				auto ports = vm[I2P_SERVER_TUNNEL_PORT].as<std::vector<int> >();
-				auto keys = vm[I2P_SERVER_TUNNEL_KEYS].as<std::vector<std::string> >();
-				for (int i = 0; i < numServerTunnels; i++)
-				{
-					auto localDestination = LoadLocalDestination (keys[i], true);
-					auto serverTunnel = new I2PServerTunnel (hosts[i], ports[i], localDestination);
+					auto localDestination = LoadLocalDestination (keys, true);
+					auto serverTunnel = new I2PServerTunnel (host, port, localDestination, inPort);
+					if (accessList.length () > 0)
+					{
+						std::set<i2p::data::IdentHash> idents;
+						size_t pos = 0, comma;
+						do
+						{
+							comma = accessList.find (',', pos);
+							i2p::data::IdentHash ident;
+							ident.FromBase32 (accessList.substr (pos, comma != std::string::npos ? comma - pos : std::string::npos));	
+							idents.insert (ident);
+							pos = comma + 1;
+						}
+						while (comma != std::string::npos);
+						serverTunnel->SetAccessList (idents);
+					}
 					if (m_ServerTunnels.insert (std::make_pair (localDestination->GetIdentHash (), std::unique_ptr<I2PServerTunnel>(serverTunnel))).second)
 						serverTunnel->Start ();
 					else
-						LogPrint (eLogError, "I2P server tunnel for destination ",   m_AddressBook.ToAddress(localDestination->GetIdentHash ()), " already exists");
+						LogPrint (eLogError, "I2P server tunnel for destination ",   m_AddressBook.ToAddress(localDestination->GetIdentHash ()), " already exists");	
+					numServerTunnels++;
 				}
-				LogPrint (eLogInfo, numServerTunnels, " I2P server tunnels created");
+				else
+					LogPrint (eLogWarning, "Unknown section type=", type, " of ", name, " in ", TUNNELS_CONFIG_FILENAME);
+				
 			}
-		}
-	}
+			catch (std::exception& ex)
+			{
+				LogPrint (eLogError, "Can't read tunnel ", name, " params: ", ex.what ());
+			}
+		}	
+		LogPrint (eLogInfo, numClientTunnels, " I2P client tunnels created");
+		LogPrint (eLogInfo, numServerTunnels, " I2P server tunnels created");
+	}	
 }		
 }	

@@ -17,7 +17,7 @@ namespace datagram
 	{
 	}
 
-	void DatagramDestination::SendDatagramTo (const uint8_t * payload, size_t len, std::shared_ptr<const i2p::data::LeaseSet> remote)
+	void DatagramDestination::SendDatagramTo (const uint8_t * payload, size_t len, const i2p::data::IdentHash& ident, uint16_t fromPort, uint16_t toPort)
 	{
 		uint8_t buf[MAX_DATAGRAM_SIZE];
 		auto identityLen = m_Owner.GetIdentity ().ToBuffer (buf, MAX_DATAGRAM_SIZE);
@@ -35,11 +35,30 @@ namespace datagram
 		}
 		else
 			m_Owner.Sign (buf1, len, signature);
-		
-		m_Owner.GetService ().post (std::bind (&DatagramDestination::SendMsg, this, 
-			CreateDataMessage (buf, len + headerLen), remote));
+
+		auto msg = CreateDataMessage (buf, len + headerLen, fromPort, toPort); 
+		auto remote = m_Owner.FindLeaseSet (ident);
+		if (remote)
+			m_Owner.GetService ().post (std::bind (&DatagramDestination::SendMsg, this, msg, remote));
+		else
+			m_Owner.RequestDestination (ident, std::bind (&DatagramDestination::HandleLeaseSetRequestComplete, 
+				this, std::placeholders::_1, msg, ident));
 	}
 
+	void DatagramDestination::HandleLeaseSetRequestComplete (bool success, I2NPMessage * msg, i2p::data::IdentHash ident)
+	{
+		if (success)
+		{
+			auto remote = m_Owner.FindLeaseSet (ident);
+			if (remote)
+			{
+				SendMsg (msg, remote);
+				return;
+			}	
+		}
+		DeleteI2NPMessage (msg);
+	}	
+		
 	void DatagramDestination::SendMsg (I2NPMessage * msg, std::shared_ptr<const i2p::data::LeaseSet> remote)
 	{
 		auto outboundTunnel = m_Owner.GetTunnelPool ()->GetNextOutboundTunnel ();
@@ -67,7 +86,7 @@ namespace datagram
 		}	
 	}
 
-	void DatagramDestination::HandleDatagram (const uint8_t * buf, size_t len)
+	void DatagramDestination::HandleDatagram (uint16_t fromPort, uint16_t toPort, const uint8_t * buf, size_t len)
 	{
 		i2p::data::IdentityEx identity;
 		size_t identityLen = identity.FromBuffer (buf, len);
@@ -76,14 +95,18 @@ namespace datagram
 
 		bool verified = false;
 		if (identity.GetSigningKeyType () == i2p::data::SIGNING_KEY_TYPE_DSA_SHA1)
-			verified = CryptoPP::SHA256().VerifyDigest (signature, buf + headerLen, len - headerLen);
+		{
+			uint8_t hash[32];
+			CryptoPP::SHA256().CalculateDigest (hash, buf + headerLen, len - headerLen);
+			verified = identity.Verify (hash, 32, signature);
+		}	
 		else	
 			verified = identity.Verify (buf + headerLen, len - headerLen, signature);
 				
 		if (verified)
 		{
 			if (m_Receiver != nullptr)
-				m_Receiver (identity, buf + headerLen, len -headerLen);
+				m_Receiver (identity, fromPort, toPort, buf + headerLen, len -headerLen);
 			else
 				LogPrint (eLogWarning, "Receiver for datagram is not set");	
 		}
@@ -91,7 +114,7 @@ namespace datagram
 			LogPrint (eLogWarning, "Datagram signature verification failed");	
 	}
 
-	void DatagramDestination::HandleDataMessagePayload (const uint8_t * buf, size_t len)
+	void DatagramDestination::HandleDataMessagePayload (uint16_t fromPort, uint16_t toPort, const uint8_t * buf, size_t len)
 	{
 		// unzip it
 		CryptoPP::Gunzip decompressor;
@@ -102,14 +125,14 @@ namespace datagram
 		if (uncompressedLen <= MAX_DATAGRAM_SIZE)
 		{
 			decompressor.Get (uncompressed, uncompressedLen);
-			HandleDatagram (uncompressed, uncompressedLen); 
+			HandleDatagram (fromPort, toPort, uncompressed, uncompressedLen); 
 		}
 		else
 			LogPrint ("Received datagram size ", uncompressedLen,  " exceeds max size");
 
 	}
 
-	I2NPMessage * DatagramDestination::CreateDataMessage (const uint8_t * payload, size_t len)
+	I2NPMessage * DatagramDestination::CreateDataMessage (const uint8_t * payload, size_t len, uint16_t fromPort, uint16_t toPort)
 	{
 		I2NPMessage * msg = NewI2NPMessage ();
 		CryptoPP::Gzip compressor; // default level
@@ -120,7 +143,8 @@ namespace datagram
 		htobe32buf (buf, size); // length
 		buf += 4;
 		compressor.Get (buf, size);
-		memset (buf + 4, 0, 4); // source and destination are zeroes
+		htobe16buf (buf + 4, fromPort); // source port
+		htobe16buf (buf + 6, toPort); // destination port 
 		buf[9] = i2p::client::PROTOCOL_TYPE_DATAGRAM; // datagram protocol
 		msg->len += size + 4; 
 		FillI2NPMessageHeader (msg, eI2NPData);
