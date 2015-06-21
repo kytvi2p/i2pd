@@ -196,6 +196,8 @@ namespace tunnel
 	I2NPMessage * NewI2NPShortMessage ();
 	I2NPMessage * NewI2NPMessage (size_t len);
 	void DeleteI2NPMessage (I2NPMessage * msg);
+	std::shared_ptr<I2NPMessage> ToSharedI2NPMessage (I2NPMessage * msg);
+	
 	void FillI2NPMessageHeader (I2NPMessage * msg, I2NPMessageType msgType, uint32_t replyMsgID = 0);
 	void RenewI2NPMessageHeader (I2NPMessage * msg);
 	I2NPMessage * CreateI2NPMessage (I2NPMessageType msgType, const uint8_t * buf, int len, uint32_t replyMsgID = 0);	
@@ -209,8 +211,8 @@ namespace tunnel
 		const i2p::tunnel::InboundTunnel * replyTunnel, const uint8_t * replyKey, const uint8_t * replyTag);
 	I2NPMessage * CreateDatabaseSearchReply (const i2p::data::IdentHash& ident, std::vector<i2p::data::IdentHash> routers);
 	
-	I2NPMessage * CreateDatabaseStoreMsg (const i2p::data::RouterInfo * router = nullptr, uint32_t replyToken = 0);
-	I2NPMessage * CreateDatabaseStoreMsg (const i2p::data::LeaseSet * leaseSet, uint32_t replyToken = 0);		
+	I2NPMessage * CreateDatabaseStoreMsg (std::shared_ptr<const i2p::data::RouterInfo> router = nullptr, uint32_t replyToken = 0);
+	I2NPMessage * CreateDatabaseStoreMsg (std::shared_ptr<const i2p::data::LeaseSet> leaseSet, uint32_t replyToken = 0);		
 		
 	bool HandleBuildRequestRecords (int num, uint8_t * records, uint8_t * clearText);
 	void HandleVariableTunnelBuildMsg (uint32_t replyMsgID, uint8_t * buf, size_t len);
@@ -223,11 +225,11 @@ namespace tunnel
 	I2NPMessage * CreateTunnelGatewayMsg (uint32_t tunnelID, const uint8_t * buf, size_t len);
 	I2NPMessage * CreateTunnelGatewayMsg (uint32_t tunnelID, I2NPMessageType msgType, 
 		const uint8_t * buf, size_t len, uint32_t replyMsgID = 0);
-	I2NPMessage * CreateTunnelGatewayMsg (uint32_t tunnelID, I2NPMessage * msg);
+	std::shared_ptr<I2NPMessage> CreateTunnelGatewayMsg (uint32_t tunnelID, std::shared_ptr<I2NPMessage> msg);
 
 	size_t GetI2NPMessageLength (const uint8_t * msg);
 	void HandleI2NPMessage (uint8_t * msg, size_t len);
-	void HandleI2NPMessage (I2NPMessage * msg);
+	void HandleI2NPMessage (std::shared_ptr<I2NPMessage> msg);
 
 	class I2NPMessagesHandler
 	{
@@ -239,7 +241,7 @@ namespace tunnel
 			
 		private:
 
-			std::vector<I2NPMessage *> m_TunnelMsgs, m_TunnelGatewayMsgs;
+			std::vector<std::shared_ptr<I2NPMessage> > m_TunnelMsgs, m_TunnelGatewayMsgs;
 	};
 }	
 

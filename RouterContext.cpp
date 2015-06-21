@@ -289,11 +289,28 @@ namespace i2p
 		fk.write ((char *)&keys, sizeof (keys));	
 	}
 
+	std::shared_ptr<i2p::tunnel::TunnelPool> RouterContext::GetTunnelPool () const
+	{
+		return i2p::tunnel::tunnels.GetExploratoryPool (); 
+	}	
+		
 	void RouterContext::HandleI2NPMessage (const uint8_t * buf, size_t len, std::shared_ptr<i2p::tunnel::InboundTunnel> from)
 	{
-		i2p::HandleI2NPMessage (CreateI2NPMessage (buf, GetI2NPMessageLength (buf), from));
+		i2p::HandleI2NPMessage (ToSharedI2NPMessage(CreateI2NPMessage (buf, GetI2NPMessageLength (buf), from)));
 	}
 
+	void RouterContext::ProcessGarlicMessage (std::shared_ptr<I2NPMessage> msg)
+	{
+		std::unique_lock<std::mutex> l(m_GarlicMutex);
+		i2p::garlic::GarlicDestination::ProcessGarlicMessage (msg);
+	}	
+			
+	void RouterContext::ProcessDeliveryStatusMessage (std::shared_ptr<I2NPMessage> msg)
+	{
+		std::unique_lock<std::mutex> l(m_GarlicMutex);
+		i2p::garlic::GarlicDestination::ProcessDeliveryStatusMessage (msg);
+	}	
+		
 	uint32_t RouterContext::GetUptime () const
 	{
 		return i2p::util::GetSecondsSinceEpoch () - m_StartupTime;

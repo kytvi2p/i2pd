@@ -109,6 +109,10 @@ namespace transport
 
 	void Transports::Start ()
 	{
+#ifdef USE_UPNP
+		m_UPnP.Start ();
+		LogPrint(eLogInfo, "UPnP started");
+#endif
 		m_DHKeysPairSupplier.Start ();
 		m_IsRunning = true;
 		m_Thread = new std::thread (std::bind (&Transports::Run, this));
@@ -141,6 +145,10 @@ namespace transport
 		
 	void Transports::Stop ()
 	{	
+#ifdef USE_UPNP
+		m_UPnP.Stop ();
+		LogPrint(eLogInfo, "UPnP stopped");
+#endif
 		m_PeerCleanupTimer.cancel ();	
 		m_Peers.clear ();
 		if (m_SSUServer)
@@ -207,42 +215,28 @@ namespace transport
 
 	void Transports::SendMessage (const i2p::data::IdentHash& ident, i2p::I2NPMessage * msg)
 	{
-		m_Service.post (std::bind (&Transports::PostMessage, this, ident, msg));                             
+		SendMessage (ident, ToSharedI2NPMessage (msg));                             
 	}	
 
 	void Transports::SendMessages (const i2p::data::IdentHash& ident, const std::vector<i2p::I2NPMessage *>& msgs)
 	{
+		std::vector<std::shared_ptr<i2p::I2NPMessage> > msgs1;
+		for (auto it: msgs)
+			msgs1.push_back (ToSharedI2NPMessage (it));
+		SendMessages (ident, msgs1);
+	}	
+
+	void Transports::SendMessage (const i2p::data::IdentHash& ident, std::shared_ptr<i2p::I2NPMessage> msg)
+	{
+		m_Service.post (std::bind (&Transports::PostMessages, this, ident, std::vector<std::shared_ptr<i2p::I2NPMessage> > {msg }));                             
+	}	
+
+	void Transports::SendMessages (const i2p::data::IdentHash& ident, const std::vector<std::shared_ptr<i2p::I2NPMessage> >& msgs)
+	{
 		m_Service.post (std::bind (&Transports::PostMessages, this, ident, msgs));
 	}	
-		
-	void Transports::PostMessage (i2p::data::IdentHash ident, i2p::I2NPMessage * msg)
-	{
-		if (ident == i2p::context.GetRouterInfo ().GetIdentHash ())
-		{	
-			// we send it to ourself
-			i2p::HandleI2NPMessage (msg);
-			return;
-		}	
 
-		auto it = m_Peers.find (ident);
-		if (it == m_Peers.end ())
-		{
-			auto r = netdb.FindRouter (ident);
-			it = m_Peers.insert (std::pair<i2p::data::IdentHash, Peer>(ident, { 0, r, nullptr,
-				i2p::util::GetSecondsSinceEpoch () })).first;
-			if (!ConnectToPeer (ident, it->second))
-			{
-				DeleteI2NPMessage (msg);
-				return;
-			}	
-		}	
-		if (it->second.session)
-			it->second.session->SendI2NPMessage (msg);
-		else
-			it->second.delayedMessages.push_back (msg);
-	}	
-
-	void Transports::PostMessages (i2p::data::IdentHash ident, std::vector<i2p::I2NPMessage *> msgs)
+	void Transports::PostMessages (i2p::data::IdentHash ident, std::vector<std::shared_ptr<i2p::I2NPMessage> > msgs)
 	{
 		if (ident == i2p::context.GetRouterInfo ().GetIdentHash ())
 		{	
@@ -254,18 +248,22 @@ namespace transport
 		auto it = m_Peers.find (ident);
 		if (it == m_Peers.end ())
 		{
-			auto r = netdb.FindRouter (ident);
-			it = m_Peers.insert (std::pair<i2p::data::IdentHash, Peer>(ident, { 0, r, nullptr,
-				i2p::util::GetSecondsSinceEpoch () })).first;
-			if (!ConnectToPeer (ident, it->second))
+			bool connected = false; 
+			try
 			{
-				for (auto it1: msgs)
-					DeleteI2NPMessage (it1);
-				return;
-			}	
+				auto r = netdb.FindRouter (ident);
+				it = m_Peers.insert (std::pair<i2p::data::IdentHash, Peer>(ident, { 0, r, {},
+					i2p::util::GetSecondsSinceEpoch () })).first;
+				connected = ConnectToPeer (ident, it->second);
+			}
+			catch (std::exception& ex)
+			{
+				LogPrint (eLogError, "Transports::PostMessages ", ex.what ());
+			}
+			if (!connected) return;
 		}	
-		if (it->second.session)
-			it->second.session->SendI2NPMessages (msgs);
+		if (!it->second.sessions.empty ())
+			it->second.sessions.front ()->SendI2NPMessages (msgs);
 		else
 		{	
 			for (auto it1: msgs)
@@ -319,7 +317,7 @@ namespace transport
 				}
 			}	
 			LogPrint (eLogError, "No NTCP and SSU addresses available");
-			if (peer.session) peer.session->Done ();
+			peer.Done ();
 			m_Peers.erase (ident);
 			return false;
 		}	
@@ -446,20 +444,12 @@ namespace transport
 			auto it = m_Peers.find (ident);
 			if (it != m_Peers.end ())
 			{
-				if (!it->second.session)
-				{
-					it->second.session = session;
-					session->SendI2NPMessages (it->second.delayedMessages);
-					it->second.delayedMessages.clear ();
-				}
-				else
-				{
-					LogPrint (eLogError, "Session for ", ident.ToBase64 ().substr (0, 4), " already exists");
-					session->Done ();
-				}
+				it->second.sessions.push_back (session);
+				session->SendI2NPMessages (it->second.delayedMessages);
+				it->second.delayedMessages.clear ();
 			}
 			else // incoming connection
-				m_Peers.insert (std::make_pair (ident, Peer{ 0, nullptr, session, i2p::util::GetSecondsSinceEpoch () }));
+				m_Peers.insert (std::make_pair (ident, Peer{ 0, nullptr, { session }, i2p::util::GetSecondsSinceEpoch () }));
 		});			
 	}
 		
@@ -469,12 +459,16 @@ namespace transport
 		{  
 			auto ident = session->GetRemoteIdentity ().GetIdentHash ();
 			auto it = m_Peers.find (ident);
-			if (it != m_Peers.end () && (!it->second.session || it->second.session == session))
+			if (it != m_Peers.end ())
 			{
-				if (it->second.delayedMessages.size () > 0)
-					ConnectToPeer (ident, it->second);
-				else
-					m_Peers.erase (it);
+				it->second.sessions.remove (session);
+				if (it->second.sessions.empty ()) // TODO: why?
+				{	
+					if (it->second.delayedMessages.size () > 0)
+						ConnectToPeer (ident, it->second);
+					else
+						m_Peers.erase (it);
+				}
 			}
 		});	
 	}	
@@ -492,7 +486,7 @@ namespace transport
 			auto ts = i2p::util::GetSecondsSinceEpoch ();
 			for (auto it = m_Peers.begin (); it != m_Peers.end (); )
 			{
-				if (!it->second.session && ts > it->second.creationTime + SESSION_CREATION_TIMEOUT)
+				if (it->second.sessions.empty () && ts > it->second.creationTime + SESSION_CREATION_TIMEOUT)
 				{
 					LogPrint (eLogError, "Session to peer ", it->first.ToBase64 (), " has not been created in ", SESSION_CREATION_TIMEOUT, " seconds");
 					it = m_Peers.erase (it);
@@ -506,6 +500,14 @@ namespace transport
 			m_PeerCleanupTimer.expires_from_now (boost::posix_time::seconds(5*SESSION_CREATION_TIMEOUT));
 			m_PeerCleanupTimer.async_wait (std::bind (&Transports::HandlePeerCleanupTimer, this, std::placeholders::_1));
 		}	
+	}
+
+	std::shared_ptr<const i2p::data::RouterInfo> Transports::GetRandomPeer () const
+	{
+		CryptoPP::RandomNumberGenerator& rnd = i2p::context.GetRandomNumberGenerator ();
+		auto it = m_Peers.begin ();
+		std::advance (it, rnd.GenerateWord32 (0, m_Peers.size () - 1));	
+		return it != m_Peers.end () ? it->second.router : nullptr;
 	}
 }
 }

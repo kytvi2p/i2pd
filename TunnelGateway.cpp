@@ -12,8 +12,6 @@ namespace tunnel
 {
 	TunnelGatewayBuffer::~TunnelGatewayBuffer ()
 	{
-		for (auto it: m_TunnelDataMsgs)
-			DeleteI2NPMessage (it);
 	}	
 	
 	void TunnelGatewayBuffer::PutI2NPMsg (const TunnelMessageBlock& block)
@@ -42,7 +40,7 @@ namespace tunnel
 		di[0] = block.deliveryType << 5; // set delivery type
 
 		// create fragments
-		I2NPMessage * msg = block.data;
+		std::shared_ptr<I2NPMessage> msg = block.data;
 		auto fullMsgLen = diLen + msg->GetLength () + 2; // delivery instructions + payload + 2 bytes length
 		if (fullMsgLen <= m_RemainingSize)
 		{
@@ -55,7 +53,6 @@ namespace tunnel
 			m_RemainingSize -= diLen + msg->GetLength ();
 			if (!m_RemainingSize)
 				CompleteCurrentTunnelDataMessage ();
-			DeleteI2NPMessage (msg);
 		}	
 		else
 		{
@@ -119,7 +116,6 @@ namespace tunnel
 					size += s;
 					fragmentNumber++;
 				}
-				DeleteI2NPMessage (msg);
 			}	
 			else
 			{
@@ -138,7 +134,7 @@ namespace tunnel
 
 	void TunnelGatewayBuffer::CreateCurrentTunnelDataMessage ()
 	{
-		m_CurrentTunnelDataMsg = NewI2NPShortMessage ();
+		m_CurrentTunnelDataMsg = ToSharedI2NPMessage (NewI2NPShortMessage ());
 		m_CurrentTunnelDataMsg->Align (12);
 		// we reserve space for padding
 		m_CurrentTunnelDataMsg->offset += TUNNEL_DATA_MSG_SIZE + I2NP_HEADER_SIZE;
@@ -192,8 +188,8 @@ namespace tunnel
 		auto tunnelMsgs = m_Buffer.GetTunnelDataMsgs ();
 		for (auto tunnelMsg : tunnelMsgs)
 		{	
-			m_Tunnel->EncryptTunnelMsg (tunnelMsg);
-			FillI2NPMessageHeader (tunnelMsg, eI2NPTunnelData);
+			m_Tunnel->EncryptTunnelMsg (tunnelMsg); 
+			FillI2NPMessageHeader (tunnelMsg.get (), eI2NPTunnelData); // TODO:
 			m_NumSentBytes += TUNNEL_DATA_MSG_SIZE;
 		}	
 		i2p::transport::transports.SendMessages (m_Tunnel->GetNextIdentHash (), tunnelMsgs);

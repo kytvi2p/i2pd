@@ -36,7 +36,7 @@ namespace data
 
 	RouterInfo::~RouterInfo ()
 	{
-		delete m_Buffer;
+		delete[] m_Buffer;
 	}	
 		
 	void RouterInfo::Update (const uint8_t * buf, int len)
@@ -447,10 +447,13 @@ namespace data
 		if (m_Buffer)
 		{	
 			std::ofstream f (fullPath, std::ofstream::binary | std::ofstream::out);
-			f.write ((char *)m_Buffer, m_BufferLen);
-		}	
+			if (f.is_open ())
+				f.write ((char *)m_Buffer, m_BufferLen);
+			else
+				LogPrint(eLogError, "Can't save RouterInfo to ", fullPath);
+		}
 		else
-			LogPrint (eLogError, "Can't save to file");
+			LogPrint (eLogError, "Can't save RouterInfo m_Buffer==NULL");
 	}
 	
 	size_t RouterInfo::ReadString (char * str, std::istream& s)

@@ -20,6 +20,10 @@
 #include "I2NPProtocol.h"
 #include "Identity.h"
 
+#ifdef USE_UPNP
+#include "UPnP.h"
+#endif
+
 namespace i2p
 {
 namespace transport
@@ -56,14 +60,14 @@ namespace transport
 	{
 		int numAttempts;
 		std::shared_ptr<const i2p::data::RouterInfo> router;
-		std::shared_ptr<TransportSession> session;
+		std::list<std::shared_ptr<TransportSession> > sessions;
 		uint64_t creationTime;
-		std::vector<i2p::I2NPMessage *> delayedMessages;
+		std::vector<std::shared_ptr<i2p::I2NPMessage> > delayedMessages;
 
-		~Peer ()
+		void Done ()
 		{
-			for (auto it :delayedMessages)
-				i2p::DeleteI2NPMessage (it);			
+			for (auto it: sessions)
+				it->Done ();
 		}	
 	};	
 	
@@ -83,8 +87,10 @@ namespace transport
 			i2p::transport::DHKeysPair * GetNextDHKeysPair ();	
 			void ReuseDHKeysPair (DHKeysPair * pair);
 
-			void SendMessage (const i2p::data::IdentHash& ident, i2p::I2NPMessage * msg);
-			void SendMessages (const i2p::data::IdentHash& ident, const std::vector<i2p::I2NPMessage *>& msgs);
+			void SendMessage (const i2p::data::IdentHash& ident, i2p::I2NPMessage * msg); // deprecated
+			void SendMessages (const i2p::data::IdentHash& ident, const std::vector<i2p::I2NPMessage *>& msgs); // deprecated
+			void SendMessage (const i2p::data::IdentHash& ident, std::shared_ptr<i2p::I2NPMessage> msg);
+			void SendMessages (const i2p::data::IdentHash& ident, const std::vector<std::shared_ptr<i2p::I2NPMessage> >& msgs);
 			void CloseSession (std::shared_ptr<const i2p::data::RouterInfo> router);
 
 			void PeerConnected (std::shared_ptr<TransportSession> session);
@@ -98,14 +104,15 @@ namespace transport
 			uint32_t GetInBandwidth () const { return m_InBandwidth; }; // bytes per second
 			uint32_t GetOutBandwidth () const { return m_OutBandwidth; }; // bytes per second
 			bool IsBandwidthExceeded () const;
+			size_t GetNumPeers () const { return m_Peers.size (); };
+			std::shared_ptr<const i2p::data::RouterInfo> GetRandomPeer () const;
 
 		private:
 
 			void Run ();
 			void RequestComplete (std::shared_ptr<const i2p::data::RouterInfo> r, const i2p::data::IdentHash& ident);
 			void HandleRequestComplete (std::shared_ptr<const i2p::data::RouterInfo> r, const i2p::data::IdentHash& ident);
-			void PostMessage (i2p::data::IdentHash ident, i2p::I2NPMessage * msg);
-			void PostMessages (i2p::data::IdentHash ident, std::vector<i2p::I2NPMessage *> msgs);
+			void PostMessages (i2p::data::IdentHash ident, std::vector<std::shared_ptr<i2p::I2NPMessage> > msgs);
 			void PostCloseSession (std::shared_ptr<const i2p::data::RouterInfo> router);
 			bool ConnectToPeer (const i2p::data::IdentHash& ident, Peer& peer);
 			void HandlePeerCleanupTimer (const boost::system::error_code& ecode);			
@@ -135,6 +142,10 @@ namespace transport
 			uint32_t m_InBandwidth, m_OutBandwidth;
 			uint64_t m_LastInBandwidthUpdateBytes, m_LastOutBandwidthUpdateBytes;	
 			uint64_t m_LastBandwidthUpdateTime;		
+
+#ifdef USE_UPNP
+			UPnP m_UPnP;
+#endif
 
 		public:
 

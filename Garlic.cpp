@@ -15,9 +15,9 @@ namespace i2p
 namespace garlic
 {
 	GarlicRoutingSession::GarlicRoutingSession (GarlicDestination * owner, 
-	    std::shared_ptr<const i2p::data::RoutingDestination> destination, int numTags):
+	    std::shared_ptr<const i2p::data::RoutingDestination> destination, int numTags, bool attachLeaseSet):
 		m_Owner (owner), m_Destination (destination), m_NumTags (numTags), 
-		m_LeaseSetUpdateStatus (numTags > 0 ? eLeaseSetUpdated : eLeaseSetUpToDate)
+		m_LeaseSetUpdateStatus (attachLeaseSet ? eLeaseSetUpdated : eLeaseSetDoNotSend)
 	{
 		// create new session tags and session key
 		m_Rnd.GenerateBlock (m_SessionKey, 32);
@@ -25,7 +25,7 @@ namespace garlic
 	}	
 
 	GarlicRoutingSession::GarlicRoutingSession (const uint8_t * sessionKey, const SessionTag& sessionTag):
-		m_Owner (nullptr), m_Destination (nullptr), m_NumTags (1), m_LeaseSetUpdateStatus (eLeaseSetUpToDate)
+		m_Owner (nullptr), m_Destination (nullptr), m_NumTags (1), m_LeaseSetUpdateStatus (eLeaseSetDoNotSend)
 	{
 		memcpy (m_SessionKey, sessionKey, 32);
 		m_Encryption.SetKey (m_SessionKey);
@@ -225,9 +225,10 @@ namespace garlic
 			if (newTags || m_LeaseSetUpdateStatus == eLeaseSetUpdated) // new tags created or leaseset updated
 			{
 				// clove is DeliveryStatus 
-				size += CreateDeliveryStatusClove (payload + size, msgID);
-				if (size > 0) // successive?
+				auto cloveSize = CreateDeliveryStatusClove (payload + size, msgID);
+				if (cloveSize > 0) // successive?
 				{
+					size += cloveSize;
 					(*numCloves)++;
 					if (newTags) // new tags created
 						m_UnconfirmedTagsMsgs[msgID] = newTags;
@@ -297,16 +298,15 @@ namespace garlic
 		size_t size = 0;
 		if (m_Owner)
 		{
-			auto leases = m_Owner->GetLeaseSet ()->GetNonExpiredLeases ();
-			if (!leases.empty ())
+			auto inboundTunnel = m_Owner->GetTunnelPool ()->GetNextInboundTunnel ();
+			if (inboundTunnel)
 			{	
 				buf[size] = eGarlicDeliveryTypeTunnel << 5; // delivery instructions flag tunnel
 				size++;
-				uint32_t i = m_Rnd.GenerateWord32 (0, leases.size () - 1);
 				// hash and tunnelID sequence is reversed for Garlic 
-				memcpy (buf + size, leases[i].tunnelGateway, 32); // To Hash
+				memcpy (buf + size, inboundTunnel->GetNextIdentHash (), 32); // To Hash
 				size += 32;
-				htobe32buf (buf + size, leases[i].tunnelID); // tunnelID
+				htobe32buf (buf + size, inboundTunnel->GetNextTunnelID ()); // tunnelID
 				size += 4; 	
 				// create msg 
 				I2NPMessage * msg = CreateDeliveryStatusMsg (msgID);
@@ -333,7 +333,7 @@ namespace garlic
 				size += 3;
 			}
 			else	
-				LogPrint ("All tunnels of local LeaseSet expired");	
+				LogPrint (eLogError, "No inbound tunnels in the pool for DeliveryStatus");	
 		}
 		else
 			LogPrint ("Missing local LeaseSet");
@@ -362,27 +362,37 @@ namespace garlic
 		return true;
 	}
 
-	void GarlicDestination::HandleGarlicMessage (I2NPMessage * msg)
+	void GarlicDestination::HandleGarlicMessage (std::shared_ptr<I2NPMessage> msg)
 	{
 		uint8_t * buf = msg->GetPayload ();
 		uint32_t length = bufbe32toh (buf);
+		if (length > msg->GetLength ())
+		{
+			LogPrint (eLogError, "Garlic message length ", length, " exceeds I2NP message length ", msg->GetLength ());
+			return;
+		}	
 		buf += 4; // length
 		auto it = m_Tags.find (SessionTag(buf));
 		if (it != m_Tags.end ())
 		{
 			// tag found. Use AES
-			uint8_t iv[32]; // IV is first 16 bytes
-			CryptoPP::SHA256().CalculateDigest(iv, buf, 32);
-			it->second->SetIV (iv);
-			it->second->Decrypt (buf + 32, length - 32, buf + 32);
-			HandleAESBlock (buf + 32, length - 32, it->second, msg->from);
-			m_Tags.erase (it); // tag might be used only once
+			if (length >= 32)
+			{	
+				uint8_t iv[32]; // IV is first 16 bytes
+				CryptoPP::SHA256().CalculateDigest(iv, buf, 32);
+				it->second->SetIV (iv);
+				it->second->Decrypt (buf + 32, length - 32, buf + 32);
+				HandleAESBlock (buf + 32, length - 32, it->second, msg->from);
+			}	
+			else
+				LogPrint (eLogError, "Garlic message length ", length, " is less than 32 bytes");
+			m_Tags.erase (it); // tag might be used only once	
 		}
 		else
 		{
 			// tag not found. Use ElGamal
 			ElGamalBlock elGamal;
-			if (i2p::crypto::ElGamalDecrypt (GetEncryptionPrivateKey (), buf, (uint8_t *)&elGamal, true))
+			if (length >= 514 && i2p::crypto::ElGamalDecrypt (GetEncryptionPrivateKey (), buf, (uint8_t *)&elGamal, true))
 			{	
 				auto decryption = std::make_shared<i2p::crypto::CBCDecryption>();
 				decryption->SetKey (elGamal.sessionKey);
@@ -393,9 +403,8 @@ namespace garlic
 				HandleAESBlock (buf + 514, length - 514, decryption, msg->from);
 			}	
 			else
-				LogPrint ("Failed to decrypt garlic");
+				LogPrint (eLogError, "Failed to decrypt garlic");
 		}
-		DeleteI2NPMessage (msg);
 
 		// cleanup expired tags
 		uint32_t ts = i2p::util::GetSecondsSinceEpoch ();
@@ -462,6 +471,7 @@ namespace garlic
 
 	void GarlicDestination::HandleGarlicPayload (uint8_t * buf, size_t len, std::shared_ptr<i2p::tunnel::InboundTunnel> from)
 	{
+		const uint8_t * buf1 = buf;
 		int numCloves = buf[0];
 		LogPrint (numCloves," cloves");
 		buf++;
@@ -519,26 +529,23 @@ namespace garlic
 			buf += 4; // CloveID
 			buf += 8; // Date
 			buf += 3; // Certificate
+			if (buf - buf1  > (int)len)
+			{
+				LogPrint (eLogError, "Garlic clove is too long");
+				break;
+			}	
 		}	
 	}	
 	
 	I2NPMessage * GarlicDestination::WrapMessage (std::shared_ptr<const i2p::data::RoutingDestination> destination, 
 		I2NPMessage * msg, bool attachLeaseSet)	
 	{
-		if (attachLeaseSet) // we should maintain this session
-		{	
-			auto session = GetRoutingSession (destination, 32);  // 32 tags by default
-			return session->WrapSingleMessage (msg);	
-		}
-		else // one time session
-		{
-			GarlicRoutingSession session (this, destination, 0); // don't use tag if no LeaseSet
-			return session.WrapSingleMessage (msg);
-		}	
+		auto session = GetRoutingSession (destination, attachLeaseSet);  // 32 tags by default
+		return session->WrapSingleMessage (msg);	
 	}
 
 	std::shared_ptr<GarlicRoutingSession> GarlicDestination::GetRoutingSession (
-		std::shared_ptr<const i2p::data::RoutingDestination> destination, int numTags)
+		std::shared_ptr<const i2p::data::RoutingDestination> destination, bool attachLeaseSet)
 	{
 		auto it = m_Sessions.find (destination->GetIdentHash ());
 		std::shared_ptr<GarlicRoutingSession> session;
@@ -546,7 +553,8 @@ namespace garlic
 			session = it->second;
 		if (!session)
 		{
-			session = std::make_shared<GarlicRoutingSession> (this, destination, numTags); 
+			session = std::make_shared<GarlicRoutingSession> (this, destination, 
+				attachLeaseSet ? 40 : 4, attachLeaseSet); // 40 tags for connections and 4 for LS requests
 			std::unique_lock<std::mutex> l(m_SessionsMutex);
 			m_Sessions[destination->GetIdentHash ()] = session;
 		}	
@@ -578,7 +586,7 @@ namespace garlic
 		m_CreatedSessions[msgID] = session;
 	}		
 
-	void GarlicDestination::HandleDeliveryStatusMessage (I2NPMessage * msg)
+	void GarlicDestination::HandleDeliveryStatusMessage (std::shared_ptr<I2NPMessage> msg)
 	{
 		uint32_t msgID = bufbe32toh (msg->GetPayload ());
 		{
@@ -590,7 +598,6 @@ namespace garlic
 				LogPrint (eLogInfo, "Garlic message ", msgID, " acknowledged");
 			}	
 		}
-		DeleteI2NPMessage (msg);	
 	}
 
 	void GarlicDestination::SetLeaseSetUpdated ()
@@ -600,12 +607,12 @@ namespace garlic
 			it.second->SetLeaseSetUpdated ();
 	}
 
-	void GarlicDestination::ProcessGarlicMessage (I2NPMessage * msg)
+	void GarlicDestination::ProcessGarlicMessage (std::shared_ptr<I2NPMessage> msg)
 	{
 		HandleGarlicMessage (msg);
 	}
 
-	void GarlicDestination::ProcessDeliveryStatusMessage (I2NPMessage * msg)
+	void GarlicDestination::ProcessDeliveryStatusMessage (std::shared_ptr<I2NPMessage> msg)
 	{
 		HandleDeliveryStatusMessage (msg);
 	}
