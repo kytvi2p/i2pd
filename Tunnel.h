@@ -24,6 +24,7 @@ namespace tunnel
 {	
 	const int TUNNEL_EXPIRATION_TIMEOUT = 660; // 11 minutes	
 	const int TUNNEL_EXPIRATION_THRESHOLD = 60; // 1 minute	
+	const int TUNNEL_RECREATION_THRESHOLD = 90; // 1.5 minutes	
 	const int TUNNEL_CREATION_TIMEOUT = 30; // 30 seconds
 	const int STANDARD_NUM_RECORDS = 5; // in VariableTunnelBuild message
 
@@ -44,16 +45,18 @@ namespace tunnel
 	{
 		public:
 
-			Tunnel (TunnelConfig * config);
+			Tunnel (std::shared_ptr<const TunnelConfig> config);
 			~Tunnel ();
 
 			void Build (uint32_t replyMsgID, std::shared_ptr<OutboundTunnel> outboundTunnel = nullptr);
 			
-			TunnelConfig * GetTunnelConfig () const { return m_Config; }
+			std::shared_ptr<const TunnelConfig> GetTunnelConfig () const { return m_Config; }
 			TunnelState GetState () const { return m_State; };
 			void SetState (TunnelState state)  { m_State = state; };
 			bool IsEstablished () const { return m_State == eTunnelStateEstablished; };
 			bool IsFailed () const { return m_State == eTunnelStateFailed; };
+			bool IsRecreated () const { return m_IsRecreated; };
+			void SetIsRecreated () { m_IsRecreated = true; };
 
 			std::shared_ptr<TunnelPool> GetTunnelPool () const { return m_Pool; };
 			void SetTunnelPool (std::shared_ptr<TunnelPool> pool) { m_Pool = pool; };			
@@ -61,32 +64,33 @@ namespace tunnel
 			bool HandleTunnelBuildResponse (uint8_t * msg, size_t len);
 			
 			// implements TunnelBase
-			void SendTunnelDataMsg (i2p::I2NPMessage * msg);
-			void EncryptTunnelMsg (I2NPMessage * tunnelMsg); 
+			void SendTunnelDataMsg (std::shared_ptr<i2p::I2NPMessage> msg);
+			void EncryptTunnelMsg (std::shared_ptr<const I2NPMessage> in, std::shared_ptr<I2NPMessage> out); 
 			uint32_t GetNextTunnelID () const { return m_Config->GetFirstHop ()->tunnelID; };
 			const i2p::data::IdentHash& GetNextIdentHash () const { return m_Config->GetFirstHop ()->router->GetIdentHash (); };
 			
 		private:
 
-			TunnelConfig * m_Config;
+			std::shared_ptr<const TunnelConfig> m_Config;
 			std::shared_ptr<TunnelPool> m_Pool; // pool, tunnel belongs to, or null
 			TunnelState m_State;
+			bool m_IsRecreated;
 	};	
 
 	class OutboundTunnel: public Tunnel 
 	{
 		public:
 
-			OutboundTunnel (TunnelConfig * config): Tunnel (config), m_Gateway (this) {};
+			OutboundTunnel (std::shared_ptr<const TunnelConfig> config): Tunnel (config), m_Gateway (this) {};
 
-			void SendTunnelDataMsg (const uint8_t * gwHash, uint32_t gwTunnel, i2p::I2NPMessage * msg);
+			void SendTunnelDataMsg (const uint8_t * gwHash, uint32_t gwTunnel, std::shared_ptr<i2p::I2NPMessage> msg);
 			void SendTunnelDataMsg (const std::vector<TunnelMessageBlock>& msgs); // multiple messages
 			std::shared_ptr<const i2p::data::RouterInfo> GetEndpointRouter () const 
 				{ return GetTunnelConfig ()->GetLastHop ()->router; }; 
 			size_t GetNumSentBytes () const { return m_Gateway.GetNumSentBytes (); };
 
 			// implements TunnelBase
-			void HandleTunnelDataMsg (i2p::I2NPMessage * tunnelMsg);
+			void HandleTunnelDataMsg (std::shared_ptr<const i2p::I2NPMessage> tunnelMsg);
 			uint32_t GetTunnelID () const { return GetNextTunnelID (); };
 			
 		private:
@@ -99,8 +103,8 @@ namespace tunnel
 	{
 		public:
 
-			InboundTunnel (TunnelConfig * config): Tunnel (config), m_Endpoint (true) {};
-			void HandleTunnelDataMsg (I2NPMessage * msg);
+			InboundTunnel (std::shared_ptr<const TunnelConfig> config): Tunnel (config), m_Endpoint (true) {};
+			void HandleTunnelDataMsg (std::shared_ptr<const I2NPMessage> msg);
 			size_t GetNumReceivedBytes () const { return m_Endpoint.GetNumReceivedBytes (); };
 
 			// implements TunnelBase
@@ -131,13 +135,13 @@ namespace tunnel
 			void AddTransitTunnel (TransitTunnel * tunnel);
 			void AddOutboundTunnel (std::shared_ptr<OutboundTunnel> newTunnel);
 			void AddInboundTunnel (std::shared_ptr<InboundTunnel> newTunnel);
-			void PostTunnelData (I2NPMessage * msg);
-			void PostTunnelData (const std::vector<I2NPMessage *>& msgs);
+			void PostTunnelData (std::shared_ptr<I2NPMessage> msg);
+			void PostTunnelData (const std::vector<std::shared_ptr<I2NPMessage> >& msgs);
 			template<class TTunnel>
-			std::shared_ptr<TTunnel> CreateTunnel (TunnelConfig * config, std::shared_ptr<OutboundTunnel> outboundTunnel = nullptr);
+			std::shared_ptr<TTunnel> CreateTunnel (std::shared_ptr<TunnelConfig> config, std::shared_ptr<OutboundTunnel> outboundTunnel = nullptr);
 			void AddPendingTunnel (uint32_t replyMsgID, std::shared_ptr<InboundTunnel> tunnel);
 			void AddPendingTunnel (uint32_t replyMsgID, std::shared_ptr<OutboundTunnel> tunnel);
-			std::shared_ptr<TunnelPool> CreateTunnelPool (i2p::garlic::GarlicDestination * localDestination, int numInboundHops, int numOuboundHops);
+			std::shared_ptr<TunnelPool> CreateTunnelPool (i2p::garlic::GarlicDestination * localDestination, int numInboundHops, int numOuboundHops, int numInboundTunnels, int numOutboundTunnels);
 			void DeleteTunnelPool (std::shared_ptr<TunnelPool> pool);
 			void StopTunnelPool (std::shared_ptr<TunnelPool> pool);
 			
@@ -146,7 +150,7 @@ namespace tunnel
 			template<class TTunnel>
 			std::shared_ptr<TTunnel> GetPendingTunnel (uint32_t replyMsgID, const std::map<uint32_t, std::shared_ptr<TTunnel> >& pendingTunnels);			
 
-			void HandleTunnelGatewayMsg (TunnelBase * tunnel, I2NPMessage * msg);
+			void HandleTunnelGatewayMsg (TunnelBase * tunnel, std::shared_ptr<I2NPMessage> msg);
 
 			void Run ();	
 			void ManageTunnels ();
@@ -173,7 +177,7 @@ namespace tunnel
 			std::mutex m_PoolsMutex;
 			std::list<std::shared_ptr<TunnelPool>> m_Pools;
 			std::shared_ptr<TunnelPool> m_ExploratoryPool;
-			i2p::util::Queue<I2NPMessage> m_Queue;
+			i2p::util::Queue<std::shared_ptr<I2NPMessage> > m_Queue;
 
 			// some stats
 			int m_NumSuccesiveTunnelCreations, m_NumFailedTunnelCreations;

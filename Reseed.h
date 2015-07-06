@@ -47,34 +47,47 @@ namespace data
 			std::map<std::string, PublicKey> m_SigningKeys;
 	};
 
+
+	class TlsCipher
+	{
+		public:
+
+			virtual ~TlsCipher () {};
+
+			virtual void CalculateMAC (uint8_t type, const uint8_t * buf, size_t len, uint8_t * mac) = 0;
+			virtual size_t Encrypt (const uint8_t * in, size_t len, const uint8_t * mac, uint8_t * out) = 0;
+			virtual size_t Decrypt (uint8_t * buf, size_t len) = 0;
+			virtual size_t GetIVSize () const { return 0; }; // override for AES
+	};
+
+
 	class TlsSession
 	{
 		public:
 
 			TlsSession (const std::string& host, int port);
+			~TlsSession ();
 			void Send (const uint8_t * buf, size_t len);
 			bool Receive (std::ostream& rs);
-
+			bool IsEstablished () const { return m_IsEstablished; };
+			
 		private:
 
 			void Handshake ();
 			void SendHandshakeMsg (uint8_t handshakeType, uint8_t * data, size_t len);
+			void SendFinishedMsg ();
 			CryptoPP::RSA::PublicKey ExtractPublicKey (const uint8_t * certificate, size_t len);
+
 			void PRF (const uint8_t * secret, const char * label, const uint8_t * random, size_t randomLen,
 				size_t len, uint8_t * buf);
-			void CalculateMAC (uint8_t type, const uint8_t * buf, size_t len, uint8_t * mac);
-			size_t Encrypt (const uint8_t * in, size_t len, const uint8_t * mac, uint8_t * out);
-			size_t Decrypt (uint8_t * buf, size_t len); // pyaload is buf + 16		
 
 		private:
 
-			uint64_t m_Seqn;
+			bool m_IsEstablished;
 			boost::asio::ip::tcp::iostream m_Site;
 			CryptoPP::SHA256 m_FinishedHash;
-			CryptoPP::AutoSeededRandomPool m_Rnd;
-			i2p::crypto::CBCEncryption m_Encryption;
-			i2p::crypto::CBCDecryption m_Decryption; 
-			uint8_t m_MacKey[32]; // client	
+			uint8_t m_MasterSecret[64]; // actual size is 48, but must be multiple of 32
+			TlsCipher * m_Cipher;
 	};
 }
 }

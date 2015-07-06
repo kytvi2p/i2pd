@@ -6,6 +6,7 @@
 #include <sstream>
 #include <fstream>
 #include <functional>
+#include <chrono>
 #include "Queue.h"
 
 enum LogLevel
@@ -17,13 +18,14 @@ enum LogLevel
 	eNumLogLevels
 };
 
+class Log;
 struct LogMsg
 {
 	std::stringstream s;
-	std::ostream& output;	
+	Log * log;	
 	LogLevel level;
 
-	LogMsg (std::ostream& o = std::cout, LogLevel l = eLogInfo): output (o), level (l) {};
+	LogMsg (Log * l = nullptr, LogLevel lv = eLogInfo): log (l), level (lv) {};
 	
 	void Process();
 };
@@ -38,6 +40,7 @@ class Log: public i2p::util::MsgQueue<LogMsg>
 		void SetLogFile (const std::string& fullFilePath);
 		void SetLogStream (std::ostream * logStream);
 		std::ostream * GetLogStream () const { return m_LogStream; };	
+		const std::string& GetTimestamp ();
 
 	private:
 
@@ -46,6 +49,12 @@ class Log: public i2p::util::MsgQueue<LogMsg>
 	private:
 		
 		std::ostream * m_LogStream;
+		std::string m_Timestamp;
+#if (__GNUC__ == 4) && (__GNUC_MINOR__ <= 6) // gcc 4.6
+		std::chrono::monotonic_clock::time_point m_LastTimestampUpdate;
+#else		
+		std::chrono::steady_clock::time_point m_LastTimestampUpdate;	
+#endif		
 };
 
 extern Log * g_Log;
@@ -54,9 +63,10 @@ inline void StartLog (const std::string& fullFilePath)
 {
 	if (!g_Log)
 	{	
-		g_Log = new Log ();
+		auto log = new Log ();
 		if (fullFilePath.length () > 0)
-			g_Log->SetLogFile (fullFilePath);
+			log->SetLogFile (fullFilePath);
+		g_Log = log;
 	}	
 }
 
@@ -64,9 +74,10 @@ inline void StartLog (std::ostream * s)
 {
 	if (!g_Log)
 	{	
-		g_Log = new Log ();
+		auto log = new Log ();
 		if (s)
-			g_Log->SetLogStream (s);
+			log->SetLogStream (s);
+		g_Log = log;
 	}	
 }
 
@@ -74,8 +85,10 @@ inline void StopLog ()
 {
 	if (g_Log)
 	{
-		delete g_Log;
+		auto log = g_Log;
 		g_Log = nullptr;
+		log->Stop ();
+		delete log;
 	}		
 }
 
@@ -95,8 +108,7 @@ void LogPrint (std::stringstream& s, TValue arg, TArgs... args)
 template<typename... TArgs>
 void LogPrint (LogLevel level, TArgs... args) 
 {
-	LogMsg * msg = (g_Log && g_Log->GetLogStream ()) ? new LogMsg (*g_Log->GetLogStream (), level) : 
-		new LogMsg (std::cout, level);
+	LogMsg * msg = new LogMsg (g_Log, level);
 	LogPrint (msg->s, args...);
 	msg->s << std::endl;
 	if (g_Log)	

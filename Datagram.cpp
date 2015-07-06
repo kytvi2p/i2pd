@@ -16,7 +16,7 @@ namespace datagram
 		m_Owner (owner), m_Receiver (nullptr)
 	{
 	}
-
+		
 	void DatagramDestination::SendDatagramTo (const uint8_t * payload, size_t len, const i2p::data::IdentHash& ident, uint16_t fromPort, uint16_t toPort)
 	{
 		uint8_t buf[MAX_DATAGRAM_SIZE];
@@ -41,22 +41,15 @@ namespace datagram
 		if (remote)
 			m_Owner.GetService ().post (std::bind (&DatagramDestination::SendMsg, this, msg, remote));
 		else
-			m_Owner.RequestDestination (ident, std::bind (&DatagramDestination::HandleLeaseSetRequestComplete, 
-				this, std::placeholders::_1, msg, ident));
+			m_Owner.RequestDestination (ident, std::bind (&DatagramDestination::HandleLeaseSetRequestComplete, this, std::placeholders::_1, msg));
 	}
 
-	void DatagramDestination::HandleLeaseSetRequestComplete (bool success, I2NPMessage * msg, i2p::data::IdentHash ident)
+	void DatagramDestination::HandleLeaseSetRequestComplete (std::shared_ptr<i2p::data::LeaseSet> remote, I2NPMessage * msg)
 	{
-		if (success)
-		{
-			auto remote = m_Owner.FindLeaseSet (ident);
-			if (remote)
-			{
-				SendMsg (msg, remote);
-				return;
-			}	
-		}
-		DeleteI2NPMessage (msg);
+		if (remote)
+			SendMsg (msg, remote);
+		else
+			DeleteI2NPMessage (msg);
 	}	
 		
 	void DatagramDestination::SendMsg (I2NPMessage * msg, std::shared_ptr<const i2p::data::LeaseSet> remote)
@@ -67,7 +60,7 @@ namespace datagram
 		{
 			std::vector<i2p::tunnel::TunnelMessageBlock> msgs;			
 			uint32_t i = i2p::context.GetRandomNumberGenerator ().GenerateWord32 (0, leases.size () - 1);
-			auto garlic = m_Owner.WrapMessage (remote, msg, true);
+			auto garlic = m_Owner.WrapMessage (remote, ToSharedI2NPMessage (msg), true);
 			msgs.push_back (i2p::tunnel::TunnelMessageBlock 
 				{ 
 					i2p::tunnel::eDeliveryTypeTunnel,
@@ -105,7 +98,10 @@ namespace datagram
 				
 		if (verified)
 		{
-			if (m_Receiver != nullptr)
+			auto it = m_ReceiversByPorts.find (toPort);
+			if (it != m_ReceiversByPorts.end ())
+				it->second (identity, fromPort, toPort, buf + headerLen, len -headerLen);
+			else if (m_Receiver != nullptr)
 				m_Receiver (identity, fromPort, toPort, buf + headerLen, len -headerLen);
 			else
 				LogPrint (eLogWarning, "Receiver for datagram is not set");	
@@ -147,7 +143,7 @@ namespace datagram
 		htobe16buf (buf + 6, toPort); // destination port 
 		buf[9] = i2p::client::PROTOCOL_TYPE_DATAGRAM; // datagram protocol
 		msg->len += size + 4; 
-		FillI2NPMessageHeader (msg, eI2NPData);
+		msg->FillI2NPMessageHeader (eI2NPData);
 		return msg;
 	}	
 }

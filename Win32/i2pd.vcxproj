@@ -37,11 +37,13 @@
     <ClCompile Include="..\LeaseSet.cpp" />
     <ClCompile Include="..\Log.cpp" />
     <ClCompile Include="..\NetDb.cpp" />
+	<ClCompile Include="..\NetDbRequests.cpp" />
     <ClCompile Include="..\NTCPSession.cpp" />
 	<ClCompile Include="..\Profiling.cpp" />
     <ClCompile Include="..\Reseed.cpp" />
     <ClCompile Include="..\RouterContext.cpp" />
     <ClCompile Include="..\RouterInfo.cpp" />
+	<ClCompile Include="..\Signature.cpp" />	
     <ClCompile Include="..\SAM.cpp" />
     <ClCompile Include="..\SSU.cpp" />
     <ClCompile Include="..\SSUData.cpp" />
@@ -80,6 +82,7 @@
     <ClInclude Include="..\LeaseSet.h" />
     <ClInclude Include="..\LittleBigEndian.h" />
     <ClInclude Include="..\Log.h" />
+	<ClInclude Include="..\NetDbRequests.h" />
     <ClInclude Include="..\NetDb.h" />
     <ClInclude Include="..\NTCPSession.h" />
     <ClInclude Include="..\Queue.h" />
