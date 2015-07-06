@@ -1,3 +1,9 @@
+i2pd (0.10.0-1~deb7u+1) oldstable; urgency=medium
+
+  * Backport to Wheezy
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Mon, 06 Jul 2015 18:56:36 +0000
+
 i2pd (0.10.0-1) unstable; urgency=medium
 
   [ orignal ]
