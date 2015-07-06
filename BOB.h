@@ -57,9 +57,9 @@ namespace client
 	{
 			struct AddressReceiver
 			{
-				boost::asio::ip::tcp::socket * socket;
+				std::shared_ptr<boost::asio::ip::tcp::socket> socket;
 				char buffer[BOB_COMMAND_BUFFER_SIZE + 1]; // for destination base64 address
-				uint8_t * data; 
+				uint8_t * data; // pointer to buffer
 				size_t dataLen, bufferOffset; 
 
 				AddressReceiver (): data (nullptr), dataLen (0), bufferOffset (0) {};
@@ -76,15 +76,15 @@ namespace client
 		private:
 
 			void Accept ();
-			void HandleAccept (const boost::system::error_code& ecode, AddressReceiver * receiver);
+			void HandleAccept (const boost::system::error_code& ecode, std::shared_ptr<AddressReceiver> receiver);
 
-			void ReceiveAddress (AddressReceiver * receiver);
+			void ReceiveAddress (std::shared_ptr<AddressReceiver> receiver);
 			void HandleReceivedAddress (const boost::system::error_code& ecode, std::size_t bytes_transferred,
-				AddressReceiver * receiver);
+				std::shared_ptr<AddressReceiver> receiver);
 
-			void HandleDestinationRequestComplete (bool success, AddressReceiver * receiver, i2p::data::IdentHash ident);
+			void HandleDestinationRequestComplete (std::shared_ptr<i2p::data::LeaseSet> leaseSet, std::shared_ptr<AddressReceiver> receiver);
 
-			void CreateConnection (AddressReceiver * receiver, std::shared_ptr<const i2p::data::LeaseSet> leaseSet);
+			void CreateConnection (std::shared_ptr<AddressReceiver> receiver, std::shared_ptr<const i2p::data::LeaseSet> leaseSet);
 
 		private:
 
@@ -127,6 +127,7 @@ namespace client
 			void CreateInboundTunnel (int port);
 			void CreateOutboundTunnel (const std::string& address, int port, bool quiet);
 			const i2p::data::PrivateKeys& GetKeys () const { return m_LocalDestination->GetPrivateKeys (); };
+			std::shared_ptr<ClientDestination> GetLocalDestination () const { return m_LocalDestination; };
 			
 		private:	
 
