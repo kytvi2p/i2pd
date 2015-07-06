@@ -85,7 +85,7 @@ namespace stream
 
 	enum StreamStatus
 	{
-		eStreamStatusNew,
+		eStreamStatusNew = 0,
 		eStreamStatusOpen,
 		eStreamStatusReset,
 		eStreamStatusClosing,
@@ -97,6 +97,8 @@ namespace stream
 	{	
 		public:
 
+			typedef std::function<void (const boost::system::error_code& ecode)> SendHandler;
+
 			Stream (boost::asio::io_service& service, StreamingDestination& local, 
 				std::shared_ptr<const i2p::data::LeaseSet> remote, int port = 0); // outgoing
 			Stream (boost::asio::io_service& service, StreamingDestination& local); // incoming			
@@ -106,12 +108,14 @@ namespace stream
 			uint32_t GetRecvStreamID () const { return m_RecvStreamID; };
 			std::shared_ptr<const i2p::data::LeaseSet> GetRemoteLeaseSet () const { return m_RemoteLeaseSet; };
 			const i2p::data::IdentityEx& GetRemoteIdentity () const { return m_RemoteIdentity; };
-			bool IsOpen () const { return m_Status ==  eStreamStatusOpen; };
+			bool IsOpen () const { return m_Status == eStreamStatusOpen; };
 			bool IsEstablished () const { return m_SendStreamID; };
+			StreamStatus GetStatus () const { return m_Status; };
 			StreamingDestination& GetLocalDestination () { return m_LocalDestination; };
 			
 			void HandleNextPacket (Packet * packet);
 			size_t Send (const uint8_t * buf, size_t len);
+			void AsyncSend (const uint8_t * buf, size_t len, SendHandler handler);
 			
 			template<typename Buffer, typename ReceiveHandler>
 			void AsyncReceive (const Buffer& buffer, ReceiveHandler handler, int timeout = 0);
@@ -143,7 +147,7 @@ namespace stream
 			void ProcessAck (Packet * packet);
 			size_t ConcatenatePackets (uint8_t * buf, size_t len);
 
-			void UpdateCurrentRemoteLease ();
+			void UpdateCurrentRemoteLease (bool expired = false);
 			
 			template<typename Buffer, typename ReceiveHandler>
 			void HandleReceiveTimer (const boost::system::error_code& ecode, const Buffer& buffer, ReceiveHandler handler);
@@ -152,7 +156,7 @@ namespace stream
 			void HandleResendTimer (const boost::system::error_code& ecode);
 			void HandleAckSendTimer (const boost::system::error_code& ecode);
 
-			I2NPMessage * CreateDataMessage (const uint8_t * payload, size_t len);
+			std::shared_ptr<I2NPMessage> CreateDataMessage (const uint8_t * payload, size_t len);
 			
 		private:
 
@@ -179,6 +183,7 @@ namespace stream
 			int m_WindowSize, m_RTT, m_RTO;
 			uint64_t m_LastWindowSizeIncreaseTime;
 			int m_NumResendAttempts;
+			SendHandler m_SendHandler;
 	};
 
 	class StreamingDestination
@@ -228,20 +233,18 @@ namespace stream
 	template<typename Buffer, typename ReceiveHandler>
 	void Stream::AsyncReceive (const Buffer& buffer, ReceiveHandler handler, int timeout)
 	{
-		if (!m_ReceiveQueue.empty ())
+		auto s = shared_from_this();
+		m_Service.post ([=](void)
 		{
-			auto s = shared_from_this();
-			m_Service.post ([=](void) { s->HandleReceiveTimer (
-				boost::asio::error::make_error_code (boost::asio::error::operation_aborted),
-				buffer, handler); });
-		}
-		else
-		{
-			m_ReceiveTimer.expires_from_now (boost::posix_time::seconds(timeout));
-			auto s = shared_from_this();
-			m_ReceiveTimer.async_wait ([=](const boost::system::error_code& ecode)
-				{ s->HandleReceiveTimer (ecode, buffer, handler); });
-		}
+			if (!m_ReceiveQueue.empty () || m_Status == eStreamStatusReset)
+				s->HandleReceiveTimer (boost::asio::error::make_error_code (boost::asio::error::operation_aborted), buffer, handler);
+			else
+			{
+				s->m_ReceiveTimer.expires_from_now (boost::posix_time::seconds(timeout));
+				s->m_ReceiveTimer.async_wait ([=](const boost::system::error_code& ecode)
+					{ s->HandleReceiveTimer (ecode, buffer, handler); });
+			}
+		});	
 	}
 
 	template<typename Buffer, typename ReceiveHandler>

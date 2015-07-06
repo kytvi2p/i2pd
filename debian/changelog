@@ -1,3 +1,180 @@
+i2pd (0.10.0-1) unstable; urgency=medium
+
+  [ orignal ]
+  * count tunnel acceptance ratio for peer selection
+  * moved encryption/decryption to TlsCipher
+  * AES256 cipher template
+  * use SendFinished
+  * RSA_WITH_AES_256_CBC_SHA support
+  * https://netdb.rows.io:444/ added
+  * fixed typo
+  * RC4_SHA cipher suite
+  * Update README.md
+  * fixed crash if can't connect to a reseed
+  * fixed race condition
+  * fixed crash if no routers available
+  * set datagram receiver per port
+  * fixed memory leak
+  * select tunnel from TunnelPool rather than from LeaseSet for DeliveryStatus
+  * fixed race condition
+  * 4 tags for LeaseSet request
+  * lookup always takes full address from LeaseSet
+  * use shared_ptr for socket in I2PTunnelConnection
+  * use shared_ptr for AddressReceiver
+  * pass LeaseSet to callback of RequestDestination
+  * made Encrypt const
+  * use shared_ptr for local LeaseSet
+  * use shared_ptr for CreateDatabaseStore
+  * use unique_ptr for ElGamalEncryption
+
+  [ Robert Foss ]
+  * Fixed memory leak: delete -> delete[]
+
+  [ orignal ]
+  * fixed null pointer exception
+  * variable length buffer for LeaseSet
+  * validate leaseset for zero leases
+  * initial code for Ed25519 added
+  * multiplication by integer
+  * IsOnCurve added
+  * Decode point
+  * EdDSA signature type added
+  * fixed crash
+  * EdDSA signer added
+  * NetDb/NetDbRequests split
+  * implemented AsyncSend
+  * use AsyncSend
+  * send and handle RESET flag
+  * fixed crash
+  * show windows size and connection status
+  * show local destination for SAM sessions
+  * fixed infinite loop
+  * GetClosestFloodfills added
+  * reduced CPU load at floodfill
+  * reduced log file size
+
+  [ 7histle ]
+  * Fix for #179
+
+  [ orignal ]
+  * delete obsolete profiles
+  * check database lookup type
+  * check for zero ident
+  * don't send reset message due problem at other side
+  * always check profile for peer selection
+  * check profile for high bandwidth peer selection only
+  * version 0.9.19
+  * fixed potential memory leak
+  * some cleanup
+  * re-create tunnel before expiration
+  * router don't expire if less than 75
+  * double RTO after every resend attempt
+  * check outbound tunnles for readiness
+  * select next lease with same gateway if possible
+  * try to pick an outbound  tunnel with same endpoint instead expired
+  * recreate tunnel after 9.5 minutes
+  * fixed potential memory leak
+  * changed some profiling parameters
+  * uin32_t for elapsed time
+  * check garlic clove length
+
+  [ Kill Your TV ]
+  * reseed certificate updates
+
+  [ orignal ]
+  * check profile only once
+  * select first hop from existing connections if applicable
+  * handle tunnels quantity params
+  * Update README.md
+  * don't recalculate timestamp for each log message
+  * moved UPnP instance to Transports. Use actual port from RouterContext
+  * pass TunnelConfig as shared_ptr
+  * fixed build errors for gcc 4.6
+  * created paired inbound tunnel after outbound
+  * rewrite tunnel path inversion code
+  * fixed log crash at shutdown
+
+  [ David ]
+  * typo: Gralic -> Garlic
+
+  [ orignal ]
+  * check for I2NP message buffer boudary
+  * use shared_ptr for NetDb's I2NPMessages
+
+  [ ipslot ]
+  * Update Log.cpp
+
+  [ orignal ]
+  * excluded dead reseeds
+  * check length of garlic message
+  * http server tunnel added
+  * use random msg_id for I2NP messages
+  * I2PTunnelConnectionHTTP added
+  * use addresses in server tunnel configuration
+  * catch HTTP header of HTTP server tunnel connection
+  * replace Host: for server http tunnels
+  * version 0.9.20
+  * fixed bug with zero-size clove
+  * additional statistics for profiling
+  * skip missing sections
+  * don't pick node for 5 minutes if declined
+  * select first hop for inbound tunnel from connected peers
+  * support multiple transport sessions to the same peer
+  * very hash in one pass
+  * changed profiling algorithm
+  * fixed race condition
+  * handle explicitPeers I2CP parameter
+  * reduce CPU usage
+  * verify adler checksum
+  * use share_ptr for garlic messages
+  * more generic queue
+  * pass I2NP as shared_ptr to netDB
+  * pass I2NP message to transport session as shared_ptr
+  * send I2NP messages as shared_ptr
+  * create shared I2NP tunnel message in OBGW
+  * use shared_ptr for direct DatabaseLookup message
+  * use shared_ptr for outbound tunnel build messages
+  * use shared_ptr for transit tunnel participant
+  * use shared_ptr for I2NP messages through tunnels
+
+  [ Mikhail Titov ]
+  * Rearrange eol removal for handshake
+  * Materialize temporary string obtained from boost path
+  * Use static for now while returning HTTP 500 error
+
+  [ orignal ]
+  * fixed build error
+  * use shared_ptr for all incoming I2NP messages
+  * different in and out buffers for tunnel encryption
+  * use shared_ptr for garlic messages
+  *  shared_ptr for lookup messages
+  * deleted deprecated SendMessage
+  * use shared_ptr for DeliverStatus
+
+  [ Mikhail Titov ]
+  * Check for invalid SAM destination
+
+  [ orignal ]
+  * different input anf output I2NP message for tunnel encryption
+  * pass const I2NP message to HandleTunnelDataMsg
+  * random non-zero padding
+  * don't copy transit DatabaseStore
+  * handle DeliveryStatus garlic clove directly
+  * use shared flood message
+  * fixed race condition
+  * copy shared_ptr
+  * temporary fix of crash
+  * some cleanup
+  * move FillI2NPMessageHeader into I2NPMessage
+  * const I2NP messages
+  * don't send DatabaseStore until time sync complete
+  * check for buffer size
+
+  [ Kill Your TV ]
+  * New Release Version
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Mon, 06 Jul 2015 16:49:12 +0000
+
 i2pd (0.9.0-1ubuntu1) vivid; urgency=medium
 
   * Building for Vivid
