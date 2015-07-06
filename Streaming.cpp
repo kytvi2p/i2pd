@@ -22,7 +22,7 @@ namespace stream
 	{
 		m_RecvStreamID = i2p::context.GetRandomNumberGenerator ().GenerateWord32 ();
 		m_RemoteIdentity = remote->GetIdentity ();
-		UpdateCurrentRemoteLease ();
+		m_CurrentRemoteLease.endDate = 0;
 	}	
 
 	Stream::Stream (boost::asio::io_service& service, StreamingDestination& local):
@@ -61,6 +61,12 @@ namespace stream
 		m_AckSendTimer.cancel ();
 		m_ReceiveTimer.cancel ();
 		m_ResendTimer.cancel ();
+		if (m_SendHandler) 
+		{
+			auto handler = m_SendHandler;
+			m_SendHandler = nullptr;
+			handler (boost::asio::error::make_error_code (boost::asio::error::operation_aborted));
+		}
 	}	
 		
 	void Stream::HandleNextPacket (Packet * packet)
@@ -217,9 +223,9 @@ namespace stream
 		
 		m_LastReceivedSequenceNumber = receivedSeqn;
 
-		if (flags & PACKET_FLAG_CLOSE)
+		if (flags & (PACKET_FLAG_CLOSE | PACKET_FLAG_RESET))
 		{
-			LogPrint (eLogInfo, "Closed");
+			LogPrint (eLogInfo, (flags & PACKET_FLAG_RESET) ? "Reset" : "Closed");
 			m_Status = eStreamStatusReset;
 			Close ();
 		}
@@ -299,6 +305,15 @@ namespace stream
 		return len;
 	}	
 
+	void Stream::AsyncSend (const uint8_t * buf, size_t len, SendHandler handler)
+	{
+		if (m_SendHandler) 
+			handler (boost::asio::error::make_error_code (boost::asio::error::in_progress));
+		else
+			m_SendHandler = handler;
+		Send (buf, len);
+	}
+
 	void Stream::SendBuffer ()
 	{	
 		int numMsgs = m_WindowSize - m_SentPackets.size ();
@@ -366,6 +381,11 @@ namespace stream
 				p->len = size;
 				packets.push_back (p);
 				numMsgs--;
+			}
+			if (m_SendBuffer.eof () && m_SendHandler)
+			{
+				m_SendHandler (boost::system::error_code ());
+				m_SendHandler = nullptr;
 			}
 		}	
 		if (packets.size () > 0)
@@ -467,7 +487,7 @@ namespace stream
 					LogPrint (eLogInfo, "Trying to send stream data before closing");
 			break;
 			case eStreamStatusReset:
-				SendClose ();
+				SendClose (); 
 				Terminate ();
 				m_LocalDestination.DeleteStream (shared_from_this ());	
 			break;
@@ -577,7 +597,7 @@ namespace stream
 			}
 		}
 		if (!m_CurrentOutboundTunnel || !m_CurrentOutboundTunnel->IsEstablished ())
-			m_CurrentOutboundTunnel = m_LocalDestination.GetOwner ().GetTunnelPool ()->GetNextOutboundTunnel ();
+			m_CurrentOutboundTunnel = m_LocalDestination.GetOwner ().GetTunnelPool ()->GetNewOutboundTunnel (m_CurrentOutboundTunnel);
 		if (!m_CurrentOutboundTunnel)
 		{
 			LogPrint (eLogError, "No outbound tunnels in the pool");
@@ -586,7 +606,7 @@ namespace stream
 
 		auto ts = i2p::util::GetMillisecondsSinceEpoch ();
 		if (ts >= m_CurrentRemoteLease.endDate - i2p::tunnel::TUNNEL_EXPIRATION_THRESHOLD*1000)
-			UpdateCurrentRemoteLease ();
+			UpdateCurrentRemoteLease (true);
 		if (ts < m_CurrentRemoteLease.endDate)
 		{	
 			std::vector<i2p::tunnel::TunnelMessageBlock> msgs;
@@ -645,6 +665,7 @@ namespace stream
 			if (packets.size () > 0)
 			{
 				m_NumResendAttempts++;
+				m_RTO *= 2;
 				switch (m_NumResendAttempts)
 				{	
 					case 1: // congesion avoidance
@@ -652,9 +673,10 @@ namespace stream
 						if (m_WindowSize < MIN_WINDOW_SIZE) m_WindowSize = MIN_WINDOW_SIZE;
 					break;
 					case 2:
+						m_RTO = INITIAL_RTO; // drop RTO to initial upon tunnels pair change first time
+						// no break here
 					case 4:	
 						UpdateCurrentRemoteLease (); // pick another lease
-						m_RTO = INITIAL_RTO; // drop RTO to initial upon tunnels pair change
 						LogPrint (eLogWarning, "Another remote lease has been selected for stream");
 					break;	
 					case 3:
@@ -687,7 +709,7 @@ namespace stream
 		}	
 	}
 
-	void Stream::UpdateCurrentRemoteLease ()
+	void Stream::UpdateCurrentRemoteLease (bool expired)
 	{
 		if (!m_RemoteLeaseSet)
 		{
@@ -702,16 +724,31 @@ namespace stream
 			auto leases = m_RemoteLeaseSet->GetNonExpiredLeases (false); // try without threshold first
 			if (leases.empty ())
 			{
+				expired = false;
 				m_LocalDestination.GetOwner ().RequestDestination (m_RemoteIdentity.GetIdentHash ()); // time to re-request
 				leases = m_RemoteLeaseSet->GetNonExpiredLeases (true); // then with threshold
 			}
 			if (!leases.empty ())
 			{	
-				uint32_t i = i2p::context.GetRandomNumberGenerator ().GenerateWord32 (0, leases.size () - 1);
-				if (m_CurrentRemoteLease.endDate && leases[i].tunnelID == m_CurrentRemoteLease.tunnelID)
-					// make sure we don't select previous 	
-					i = (i + 1) % leases.size (); // if so, pick next
-				m_CurrentRemoteLease = leases[i];		
+				bool updated = false;	
+				if (expired)
+				{
+					for (auto it: leases)
+						if ((it.tunnelGateway == m_CurrentRemoteLease.tunnelGateway) && (it.tunnelID != m_CurrentRemoteLease.tunnelID))
+						{
+							m_CurrentRemoteLease = it;
+							updated = true;
+							break;
+						} 
+				}
+				if (!updated)
+				{
+					uint32_t i = i2p::context.GetRandomNumberGenerator ().GenerateWord32 (0, leases.size () - 1);
+					if (m_CurrentRemoteLease.endDate && leases[i].tunnelID == m_CurrentRemoteLease.tunnelID)
+						// make sure we don't select previous 	
+						i = (i + 1) % leases.size (); // if so, pick next
+					m_CurrentRemoteLease = leases[i];		
+				}
 			}	
 			else
 			{	
@@ -724,9 +761,9 @@ namespace stream
 			m_CurrentRemoteLease.endDate = 0;
 	}	
 
-	I2NPMessage * Stream::CreateDataMessage (const uint8_t * payload, size_t len)
+	std::shared_ptr<I2NPMessage> Stream::CreateDataMessage (const uint8_t * payload, size_t len)
 	{
-		I2NPMessage * msg = NewI2NPShortMessage ();
+		auto msg = ToSharedI2NPMessage (NewI2NPShortMessage ());
 		CryptoPP::Gzip compressor;
 		if (len <= i2p::stream::COMPRESSION_THRESHOLD_SIZE)
 			compressor.SetDeflateLevel (CryptoPP::Gzip::MIN_DEFLATE_LEVEL);
@@ -743,7 +780,7 @@ namespace stream
 		htobe16buf (buf + 6, m_Port); // destination port 
 		buf[9] = i2p::client::PROTOCOL_TYPE_STREAMING; // streaming protocol
 		msg->len += size + 4; 
-		FillI2NPMessageHeader (msg, eI2NPData);
+		msg->FillI2NPMessageHeader (eI2NPData);
 		
 		return msg;
 	}	

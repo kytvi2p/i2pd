@@ -526,15 +526,14 @@ namespace util
 			{
 				m_Stream.reset ();
 				m_Stream = nullptr;
-				// delete this
 			});
 	}
 
 	void HTTPConnection::Receive ()
 	{
 		m_Socket->async_read_some (boost::asio::buffer (m_Buffer, HTTP_CONNECTION_BUFFER_SIZE),
-			 boost::bind(&HTTPConnection::HandleReceive, this,
-				 boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+			 std::bind(&HTTPConnection::HandleReceive, shared_from_this (),
+				 std::placeholders::_1, std::placeholders::_2));
 	}
 
 	void HTTPConnection::HandleReceive (const boost::system::error_code& ecode, std::size_t bytes_transferred)
@@ -831,17 +830,17 @@ namespace util
 	{
 		for (auto& it: i2p::client::context.GetDestinations ())
 		{
-			std::string b32 = it.first.ToBase32 (); 
+			auto ident = it.second->GetIdentHash ();; 
 			s << "<a href=/?" << HTTP_COMMAND_LOCAL_DESTINATION;
-			s << "&" << HTTP_PARAM_BASE32_ADDRESS << "=" << b32 << ">"; 
-			s << i2p::client::context.GetAddressBook ().ToAddress(it.second->GetIdentHash()) << "</a><br>" << std::endl;
+			s << "&" << HTTP_PARAM_BASE32_ADDRESS << "=" << ident.ToBase32 () << ">"; 
+			s << i2p::client::context.GetAddressBook ().ToAddress(ident) << "</a><br>" << std::endl;
 		}
 	}	
 
 	void  HTTPConnection::ShowLocalDestination (const std::string& b32, std::stringstream& s)
 	{
 		i2p::data::IdentHash ident;
-		i2p::data::Base32ToByteStream (b32.c_str (), b32.length (), ident, 32);
+		ident.FromBase32 (b32);
 		auto dest = i2p::client::context.FindLocalDestination (ident);
 		if (dest)
 		{
@@ -879,7 +878,9 @@ namespace util
 				s << " [" << it.second->GetNumSentBytes () << ":" << it.second->GetNumReceivedBytes () << "]";
 				s << " [out:" << it.second->GetSendQueueSize () << "][in:" << it.second->GetReceiveQueueSize () << "]";
 				s << "[buf:" << it.second->GetSendBufferSize () << "]";
-				s << "[RTT:" << it.second->GetRTT () << "]"; 
+				s << "[RTT:" << it.second->GetRTT () << "]";
+				s << "[Window:" << it.second->GetWindowSize () << "]";
+				s << "[Status:" << (int)it.second->GetStatus () << "]"; 
 				s << "<br>"<< std::endl; 
 			}	
 		}	
@@ -907,6 +908,11 @@ namespace util
 			auto session = sam->FindSession (id);
 			if (session)
 			{
+				auto& ident = session->localDestination->GetIdentHash();
+				s << "<a href=/?" << HTTP_COMMAND_LOCAL_DESTINATION;
+				s << "&" << HTTP_PARAM_BASE32_ADDRESS << "=" << ident.ToBase32 () << ">"; 
+				s << i2p::client::context.GetAddressBook ().ToAddress(ident) << "</a><br>" << std::endl;
+				s << "<b>Streams:</b><br>";
 				for (auto it: session->sockets)
 				{
 					switch (it->GetSocketType ())
@@ -968,8 +974,8 @@ namespace util
 			m_BufferLen = len;
 			i2p::client::context.GetSharedLocalDestination ()->RequestDestination (destination);
 			m_Timer.expires_from_now (boost::posix_time::seconds(HTTP_DESTINATION_REQUEST_TIMEOUT));
-			m_Timer.async_wait (boost::bind (&HTTPConnection::HandleDestinationRequestTimeout,
-				this, boost::asio::placeholders::error, destination, port, m_Buffer, m_BufferLen));
+			m_Timer.async_wait (std::bind (&HTTPConnection::HandleDestinationRequestTimeout,
+				shared_from_this (), std::placeholders::_1, destination, port, m_Buffer, m_BufferLen));
 		}
 	}
 	
@@ -1002,8 +1008,8 @@ namespace util
 	{
 		if (m_Stream)
 			m_Stream->AsyncReceive (boost::asio::buffer (m_StreamBuffer, 8192),
-				boost::bind (&HTTPConnection::HandleStreamReceive, this,
-					boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred),
+				std::bind (&HTTPConnection::HandleStreamReceive, shared_from_this (),
+					std::placeholders::_1, std::placeholders::_2),
 				45); // 45 seconds timeout
 	}
 
@@ -1012,7 +1018,7 @@ namespace util
 		if (!ecode)
 		{
 			boost::asio::async_write (*m_Socket, boost::asio::buffer (m_StreamBuffer, bytes_transferred),
-        		boost::bind (&HTTPConnection::HandleWrite, this, boost::asio::placeholders::error));
+        		std::bind (&HTTPConnection::HandleWrite, shared_from_this (), std::placeholders::_1));
 		}
 		else
 		{
@@ -1033,8 +1039,7 @@ namespace util
 		m_Reply.headers[1].value = "text/html";
 
 		boost::asio::async_write (*m_Socket, m_Reply.to_buffers(status),
-			boost::bind (&HTTPConnection::HandleWriteReply, this,
-				boost::asio::placeholders::error));
+			std::bind (&HTTPConnection::HandleWriteReply, shared_from_this (), std::placeholders::_1));
 	}
 
 	HTTPServer::HTTPServer (int port):
@@ -1085,14 +1090,15 @@ namespace util
 	{
 		if (!ecode)
 		{
-			CreateConnection(m_NewSocket); // new HTTPConnection(m_NewSocket);
+			CreateConnection(m_NewSocket);
 			Accept ();
 		}
 	}
 
 	void HTTPServer::CreateConnection(boost::asio::ip::tcp::socket * m_NewSocket)
 	{
-		new HTTPConnection (m_NewSocket);
+		auto conn = std::make_shared<HTTPConnection> (m_NewSocket);
+		conn->Receive ();
 	}
 }
 }

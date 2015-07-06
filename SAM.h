@@ -28,6 +28,7 @@ namespace client
 	const char SAM_SESSION_CREATE_REPLY_OK[] = "SESSION STATUS RESULT=OK DESTINATION=%s\n";
 	const char SAM_SESSION_CREATE_DUPLICATED_ID[] = "SESSION STATUS RESULT=DUPLICATED_ID\n";
 	const char SAM_SESSION_CREATE_DUPLICATED_DEST[] = "SESSION STATUS RESULT=DUPLICATED_DEST\n";	
+	const char SAM_SESSION_STATUS_INVALID_KEY[] = "SESSION STATUS RESULT=INVALID_KEY\n";
 	const char SAM_STREAM_CONNECT[] = "STREAM CONNECT";
 	const char SAM_STREAM_STATUS_OK[] = "STREAM STATUS RESULT=OK\n";
 	const char SAM_STREAM_STATUS_INVALID_ID[] = "STREAM STATUS RESULT=INVALID_ID\n";
@@ -109,9 +110,9 @@ namespace client
 			void ExtractParams (char * buf, std::map<std::string, std::string>& params);
 
 			void Connect (std::shared_ptr<const i2p::data::LeaseSet> remote);
-			void HandleConnectLeaseSetRequestComplete (bool success, i2p::data::IdentHash ident);
+			void HandleConnectLeaseSetRequestComplete (std::shared_ptr<i2p::data::LeaseSet> leaseSet);
 			void SendNamingLookupReply (const i2p::data::IdentityEx& identity);
-			void HandleNamingLookupLeaseSetRequestComplete (bool success, i2p::data::IdentHash ident);
+			void HandleNamingLookupLeaseSetRequestComplete (std::shared_ptr<i2p::data::LeaseSet> leaseSet, i2p::data::IdentHash ident);
 			void HandleSessionReadinessCheckTimer (const boost::system::error_code& ecode);
 			void SendSessionCreateReplyOk ();
 

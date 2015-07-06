@@ -61,7 +61,8 @@ namespace garlic
 			{
 				eLeaseSetUpToDate = 0,
 				eLeaseSetUpdated,
-				eLeaseSetSubmitted 
+				eLeaseSetSubmitted,
+				eLeaseSetDoNotSend
 			};
 		
 			struct UnconfirmedTags
@@ -75,14 +76,18 @@ namespace garlic
 
 		public:
 
-			GarlicRoutingSession (GarlicDestination * owner, std::shared_ptr<const i2p::data::RoutingDestination> destination, int numTags);
+			GarlicRoutingSession (GarlicDestination * owner, std::shared_ptr<const i2p::data::RoutingDestination> destination, 
+				int numTags, bool attachLeaseSet);
 			GarlicRoutingSession (const uint8_t * sessionKey, const SessionTag& sessionTag); // one time encryption
 			~GarlicRoutingSession ();
-			I2NPMessage * WrapSingleMessage (I2NPMessage * msg);
+			std::shared_ptr<I2NPMessage> WrapSingleMessage (std::shared_ptr<I2NPMessage> msg);
 			void MessageConfirmed (uint32_t msgID);
 			bool CleanupExpiredTags (); // returns true if something left 
 
-			void SetLeaseSetUpdated () { m_LeaseSetUpdateStatus = eLeaseSetUpdated; };
+			void SetLeaseSetUpdated () 
+			{ 
+				if (m_LeaseSetUpdateStatus != eLeaseSetDoNotSend) m_LeaseSetUpdateStatus = eLeaseSetUpdated; 
+			};
 			
 		private:
 
@@ -110,7 +115,7 @@ namespace garlic
 			i2p::crypto::CBCEncryption m_Encryption;
 			CryptoPP::AutoSeededRandomPool m_Rnd;
 	};	
-
+	
 	class GarlicDestination: public i2p::data::LocalDestination
 	{
 		public:
@@ -118,27 +123,28 @@ namespace garlic
 			GarlicDestination (): m_LastTagsCleanupTime (0) {};
 			~GarlicDestination ();
 
-			std::shared_ptr<GarlicRoutingSession> GetRoutingSession (std::shared_ptr<const i2p::data::RoutingDestination> destination, int numTags);	
+			std::shared_ptr<GarlicRoutingSession> GetRoutingSession (std::shared_ptr<const i2p::data::RoutingDestination> destination, bool attachLeaseSet);	
 			void CleanupRoutingSessions ();
 			void RemoveCreatedSession (uint32_t msgID);
-			I2NPMessage * WrapMessage (std::shared_ptr<const i2p::data::RoutingDestination> destination, 
-			    I2NPMessage * msg, bool attachLeaseSet = false);
+			std::shared_ptr<I2NPMessage> WrapMessage (std::shared_ptr<const i2p::data::RoutingDestination> destination, 
+			    std::shared_ptr<I2NPMessage> msg, bool attachLeaseSet = false);
 
 			void AddSessionKey (const uint8_t * key, const uint8_t * tag); // one tag
 			virtual bool SubmitSessionKey (const uint8_t * key, const uint8_t * tag); // from different thread
 			void DeliveryStatusSent (std::shared_ptr<GarlicRoutingSession> session, uint32_t msgID);
 			
-			virtual void ProcessGarlicMessage (I2NPMessage * msg);
-			virtual void ProcessDeliveryStatusMessage (I2NPMessage * msg);			
+			virtual void ProcessGarlicMessage (std::shared_ptr<I2NPMessage> msg);
+			virtual void ProcessDeliveryStatusMessage (std::shared_ptr<I2NPMessage> msg);			
 			virtual void SetLeaseSetUpdated ();
 			
-			virtual const i2p::data::LeaseSet * GetLeaseSet () = 0; // TODO
+			virtual std::shared_ptr<const i2p::data::LeaseSet> GetLeaseSet () = 0; // TODO
+			virtual std::shared_ptr<i2p::tunnel::TunnelPool> GetTunnelPool () const = 0;
 			virtual void HandleI2NPMessage (const uint8_t * buf, size_t len, std::shared_ptr<i2p::tunnel::InboundTunnel> from) = 0;
 			
 		protected:
 
-			void HandleGarlicMessage (I2NPMessage * msg);
-			void HandleDeliveryStatusMessage (I2NPMessage * msg);			
+			void HandleGarlicMessage (std::shared_ptr<I2NPMessage> msg);
+			void HandleDeliveryStatusMessage (std::shared_ptr<I2NPMessage> msg);			
 	
 		private:
 
