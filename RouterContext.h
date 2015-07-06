@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <string>
 #include <memory>
+#include <mutex>
 #include <boost/asio.hpp>
 #include <cryptopp/dsa.h>
 #include <cryptopp/osrng.h>
@@ -72,8 +73,13 @@ namespace i2p
 			void SetLeaseSetUpdated () {};
 
 			// implements GarlicDestination
-			const i2p::data::LeaseSet * GetLeaseSet () { return nullptr; };
+			std::shared_ptr<const i2p::data::LeaseSet> GetLeaseSet () { return nullptr; };
+			std::shared_ptr<i2p::tunnel::TunnelPool> GetTunnelPool () const;
 			void HandleI2NPMessage (const uint8_t * buf, size_t len, std::shared_ptr<i2p::tunnel::InboundTunnel> from);
+
+			// override GarlicDestination
+			void ProcessGarlicMessage (std::shared_ptr<I2NPMessage> msg);
+			void ProcessDeliveryStatusMessage (std::shared_ptr<I2NPMessage> msg);	
 			
 		private:
 
@@ -92,6 +98,7 @@ namespace i2p
 			bool m_AcceptsTunnels, m_IsFloodfill;
 			uint64_t m_StartupTime; // in seconds since epoch
 			RouterStatus m_Status;
+			std::mutex m_GarlicMutex;
 	};
 
 	extern RouterContext context;
