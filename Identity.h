@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <string>
+#include <memory>
 #include "base64.h"
 #include "ElGamal.h"
 #include "Signature.h"
@@ -40,6 +41,13 @@ namespace data
 			bool operator== (const Tag<sz>& other) const { return !memcmp (m_Buf, other.m_Buf, sz); };
 			bool operator< (const Tag<sz>& other) const { return memcmp (m_Buf, other.m_Buf, sz) < 0; };
 
+			bool IsZero () const
+			{
+				for (int i = 0; i < sz/8; i++)
+					if (ll[i]) return false;
+				return true;
+			}
+			
 			std::string ToBase64 () const
 			{
 				char str[sz*2];
@@ -59,6 +67,11 @@ namespace data
 			void FromBase32 (const std::string& s)
 			{
 				i2p::data::Base32ToByteStream (s.c_str (), s.length (), m_Buf, sz);
+			}
+
+			void FromBase64 (const std::string& s)
+			{
+				i2p::data::Base64ToByteStream (s.c_str (), s.length (), m_Buf, sz);
 			}
 
 		private:
@@ -116,6 +129,7 @@ namespace data
 	const uint16_t SIGNING_KEY_TYPE_RSA_SHA256_2048 = 4;
 	const uint16_t SIGNING_KEY_TYPE_RSA_SHA384_3072 = 5;
 	const uint16_t SIGNING_KEY_TYPE_RSA_SHA512_4096 = 6;
+	const uint16_t SIGNING_KEY_TYPE_EDDSA_SHA512_ED25519 = 7;
 	typedef uint16_t SigningKeyType;
 	typedef uint16_t CryptoKeyType;	
 	
@@ -219,23 +233,23 @@ namespace data
 	{
 		public:
 
-			RoutingDestination (): m_ElGamalEncryption (nullptr) {};
-			virtual ~RoutingDestination () { delete m_ElGamalEncryption; };
+			RoutingDestination () {};
+			virtual ~RoutingDestination () {};
 			
 			virtual const IdentHash& GetIdentHash () const = 0;
 			virtual const uint8_t * GetEncryptionPublicKey () const = 0;
 			virtual bool IsDestination () const = 0; // for garlic 
 
-			i2p::crypto::ElGamalEncryption * GetElGamalEncryption () const
+			std::unique_ptr<const i2p::crypto::ElGamalEncryption>& GetElGamalEncryption () const
 			{
 				if (!m_ElGamalEncryption)
-					m_ElGamalEncryption = new i2p::crypto::ElGamalEncryption (GetEncryptionPublicKey ());
+					m_ElGamalEncryption.reset (new i2p::crypto::ElGamalEncryption (GetEncryptionPublicKey ()));
 				return m_ElGamalEncryption;
 			}
 			
 		private:
 
-			mutable i2p::crypto::ElGamalEncryption * m_ElGamalEncryption; // use lazy initialization
+			mutable std::unique_ptr<const i2p::crypto::ElGamalEncryption> m_ElGamalEncryption; // use lazy initialization
 	};	
 
 	class LocalDestination 
