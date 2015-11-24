@@ -1,7 +1,9 @@
+#include <ctime>
+#include <iomanip>
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include "base64.h"
+#include "Base.h"
 #include "Log.h"
 #include "Tunnel.h"
 #include "TransitTunnel.h"
@@ -466,7 +468,8 @@ namespace util
 	const char HTTP_COMMAND_TRANSIT_TUNNELS[] = "transit_tunnels";
 	const char HTTP_COMMAND_TRANSPORTS[] = "transports";	
 	const char HTTP_COMMAND_START_ACCEPTING_TUNNELS[] = "start_accepting_tunnels";	
-	const char HTTP_COMMAND_STOP_ACCEPTING_TUNNELS[] = "stop_accepting_tunnels";		
+	const char HTTP_COMMAND_STOP_ACCEPTING_TUNNELS[] = "stop_accepting_tunnels";	
+	const char HTTP_COMMAND_RUN_PEER_TEST[] = "run_peer_test";	
 	const char HTTP_COMMAND_LOCAL_DESTINATIONS[] = "local_destinations";
 	const char HTTP_COMMAND_LOCAL_DESTINATION[] = "local_destination";
 	const char HTTP_PARAM_BASE32_ADDRESS[] = "b32";
@@ -487,21 +490,25 @@ namespace util
 		std::vector<boost::asio::const_buffer> buffers;
 		if (headers.size () > 0)
 		{
+			status_string = "HTTP/1.1 ";
+			status_string += std::to_string (status);
+			status_string += " ";
 			switch (status)
 			{
-				case 105: buffers.push_back(boost::asio::buffer("HTTP/1.1 105 Name Not Resolved\r\n")); break;
-				case 200: buffers.push_back(boost::asio::buffer("HTTP/1.1 200 OK\r\n")); break;
-				case 400: buffers.push_back(boost::asio::buffer("HTTP/1.1 400 Bad Request\r\n")); break;
-				case 404: buffers.push_back(boost::asio::buffer("HTTP/1.1 404 Not Found\r\n")); break;
-				case 408: buffers.push_back(boost::asio::buffer("HTTP/1.1 408 Request Timeout\r\n")); break;
-				case 500: buffers.push_back(boost::asio::buffer("HTTP/1.1 500 Internal Server Error\r\n")); break;
-				case 502: buffers.push_back(boost::asio::buffer("HTTP/1.1 502 Bad Gateway\r\n")); break;
-				case 503: buffers.push_back(boost::asio::buffer("HTTP/1.1 503 Not Implemented\r\n")); break;
-				case 504: buffers.push_back(boost::asio::buffer("HTTP/1.1 504 Gateway Timeout\r\n")); break;
-				default:
-					buffers.push_back(boost::asio::buffer("HTTP/1.1 200 OK\r\n"));
+				case 105: status_string += "Name Not Resolved"; break;
+                case 200: status_string += "OK"; break;
+                case 400: status_string += "Bad Request"; break;
+                case 404: status_string += "Not Found"; break;
+                case 408: status_string += "Request Timeout"; break;
+                case 500: status_string += "Internal Server Error"; break;
+                case 502: status_string += "Bad Gateway"; break;
+                case 503: status_string += "Not Implemented"; break;
+                case 504: status_string += "Gateway Timeout"; break;
+				default: status_string += "WTF";
 			}
-
+			buffers.push_back(boost::asio::buffer(status_string, status_string.size()));
+            buffers.push_back(boost::asio::buffer(misc_strings::crlf));
+			
 			for (std::size_t i = 0; i < headers.size(); ++i)
 			{
 				header& h = headers[i];
@@ -519,14 +526,9 @@ namespace util
 	void HTTPConnection::Terminate ()
 	{
 		if (!m_Stream) return;
-		m_Socket->close ();
 		m_Stream->Close ();
-			
-		m_Socket->get_io_service ().post ([=](void)
-			{
-				m_Stream.reset ();
-				m_Stream = nullptr;
-			});
+		m_Stream = nullptr;
+		m_Socket->close ();
 	}
 
 	void HTTPConnection::Receive ()
@@ -702,6 +704,7 @@ namespace util
 			s << "<br><b><a href=/?" << HTTP_COMMAND_STOP_ACCEPTING_TUNNELS << ">Stop accepting tunnels</a></b><br>";
 		else	
 			s << "<br><b><a href=/?" << HTTP_COMMAND_START_ACCEPTING_TUNNELS << ">Start accepting tunnels</a></b><br>";
+		s << "<br><b><a href=/?" << HTTP_COMMAND_RUN_PEER_TEST << ">Run peer test</a></b><br>";	
 
 		s << "<p><a href=\"zmw2cyw2vj7f6obx3msmdvdepdhnw2ctc4okza2zjxlukkdfckhq.b32.i2p\">Flibusta</a></p>";
 	}
@@ -720,6 +723,8 @@ namespace util
 			StartAcceptingTunnels (s);
 		else if (cmd == HTTP_COMMAND_STOP_ACCEPTING_TUNNELS)
 			StopAcceptingTunnels (s);
+		else if (cmd == HTTP_COMMAND_RUN_PEER_TEST)
+			RunPeerTest (s);
 		else if (cmd == HTTP_COMMAND_LOCAL_DESTINATIONS)
 			ShowLocalDestinations (s);	
 		else if (cmd == HTTP_COMMAND_LOCAL_DESTINATION)
@@ -751,11 +756,10 @@ namespace util
 				if (it.second && it.second->IsEstablished ())
 				{
 					// incoming connection doesn't have remote RI
-					auto outgoing = it.second->GetRemoteRouter ();
-					if (outgoing) s << "-->";
-					s << it.second->GetRemoteIdentity ().GetIdentHash ().ToBase64 ().substr (0, 4) <<  ": "
+					if (it.second->IsOutgoing ()) s << "-->";
+					s << i2p::data::GetIdentHashAbbreviation (it.second->GetRemoteIdentity ()->GetIdentHash ()) <<  ": "
 						<< it.second->GetSocket ().remote_endpoint().address ().to_string ();
-					if (!outgoing) s << "-->";
+					if (!it.second->IsOutgoing ()) s << "-->";
 					s << " [" << it.second->GetNumSentBytes () << ":" << it.second->GetNumReceivedBytes () << "]";
 					s << "<br>";
 				}
@@ -769,11 +773,10 @@ namespace util
 			for (auto it: ssuServer->GetSessions ())
 			{
 				// incoming connections don't have remote router
-				auto outgoing = it.second->GetRemoteRouter ();
 				auto endpoint = it.second->GetRemoteEndpoint ();
-				if (outgoing) s << "-->";
+				if (it.second->IsOutgoing ()) s << "-->";
 				s << endpoint.address ().to_string () << ":" << endpoint.port ();
-				if (!outgoing) s << "-->";
+				if (!it.second->IsOutgoing ()) s << "-->";
 				s << " [" << it.second->GetNumSentBytes () << ":" << it.second->GetNumReceivedBytes () << "]";
 				if (it.second->GetRelayTag ())
 					s << " [itag:" << it.second->GetRelayTag () << "]";
@@ -789,7 +792,7 @@ namespace util
 
 		for (auto it: i2p::tunnel::tunnels.GetOutboundTunnels ())
 		{
-			it->GetTunnelConfig ()->Print (s);
+			it->Print (s);
 			auto state = it->GetState ();
 			if (state == i2p::tunnel::eTunnelStateFailed)
 				s << " " << "Failed";
@@ -801,7 +804,7 @@ namespace util
 
 		for (auto it: i2p::tunnel::tunnels.GetInboundTunnels ())
 		{
-			it.second->GetTunnelConfig ()->Print (s);
+			it.second->Print (s);
 			auto state = it.second->GetState ();
 			if (state == i2p::tunnel::eTunnelStateFailed)
 				s << " " << "Failed";
@@ -844,7 +847,7 @@ namespace util
 		auto dest = i2p::client::context.FindLocalDestination (ident);
 		if (dest)
 		{
-			s << "<b>Base64:</b><br>" << dest->GetIdentity ().ToBase64 () << "<br><br>";
+			s << "<b>Base64:</b><br>" << dest->GetIdentity ()->ToBase64 () << "<br><br>";
 			s << "<b>LeaseSets:</b> <i>" << dest->GetNumRemoteLeaseSets () << "</i><br>";
 			auto pool = dest->GetTunnelPool ();
 			if (pool)
@@ -852,7 +855,7 @@ namespace util
 				s << "<b>Tunnels:</b><br>";
 				for (auto it: pool->GetOutboundTunnels ())
 				{
-					it->GetTunnelConfig ()->Print (s);
+					it->Print (s);
 					auto state = it->GetState ();
 					if (state == i2p::tunnel::eTunnelStateFailed)
 						s << " " << "Failed";
@@ -862,7 +865,7 @@ namespace util
 				}
 				for (auto it: pool->GetInboundTunnels ())
 				{
-					it->GetTunnelConfig ()->Print (s);
+					it->Print (s);
 					auto state = it->GetState ();
 					if (state == i2p::tunnel::eTunnelStateFailed)
 						s << " " << "Failed";
@@ -948,9 +951,15 @@ namespace util
 		s << "Accepting tunnels stopped" <<  std::endl;
 	}
 
+	void HTTPConnection::RunPeerTest (std::stringstream& s)
+	{
+		i2p::transport::transports.PeerTest ();
+		s << "Peer test" <<  std::endl;
+	}
+
 	void HTTPConnection::HandleDestinationRequest (const std::string& address, const std::string& uri)
 	{
-		std::string request = "GET " + uri + " HTTP/1.1\r\nHost:" + address + "\r\n";
+		std::string request = "GET " + uri + " HTTP/1.1\r\nHost:" + address + "\r\n\r\n";
 		LogPrint("HTTP Client Request: ", request);
 		SendToAddress (address, 80, request.c_str (), request.size ());		
 	}
@@ -1032,22 +1041,28 @@ namespace util
 	void HTTPConnection::SendReply (const std::string& content, int status)
 	{
 		m_Reply.content = content;
-		m_Reply.headers.resize(2);
-		m_Reply.headers[0].name = "Content-Length";
-		m_Reply.headers[0].value = boost::lexical_cast<std::string>(m_Reply.content.size());
-		m_Reply.headers[1].name = "Content-Type";
-		m_Reply.headers[1].value = "text/html";
-
+		m_Reply.headers.resize(3);
+        // we need the date header to be complaint with http 1.1
+        std::time_t time_now = std::time(nullptr);
+        char time_buff[128];
+        if (std::strftime(time_buff, sizeof(time_buff), "%a, %d %b %Y %H:%M:%S GMT", std::gmtime(&time_now))) 
+		{
+            m_Reply.headers[0].name = "Date";
+            m_Reply.headers[0].value = std::string(time_buff);
+            m_Reply.headers[1].name = "Content-Length";
+            m_Reply.headers[1].value = boost::lexical_cast<std::string>(m_Reply.content.size());
+            m_Reply.headers[2].name = "Content-Type";
+            m_Reply.headers[2].value = "text/html";
+        }
+		
 		boost::asio::async_write (*m_Socket, m_Reply.to_buffers(status),
 			std::bind (&HTTPConnection::HandleWriteReply, shared_from_this (), std::placeholders::_1));
 	}
 
 	HTTPServer::HTTPServer (int port):
 		m_Thread (nullptr), m_Work (m_Service),
-		m_Acceptor (m_Service, boost::asio::ip::tcp::endpoint (boost::asio::ip::tcp::v4(), port)),
-		m_NewSocket (nullptr)
+		m_Acceptor (m_Service, boost::asio::ip::tcp::endpoint (boost::asio::ip::tcp::v4 (), port))
 	{
-
 	}
 
 	HTTPServer::~HTTPServer ()
@@ -1057,7 +1072,7 @@ namespace util
 
 	void HTTPServer::Start ()
 	{
-		m_Thread = new std::thread (std::bind (&HTTPServer::Run, this));
+		m_Thread = std::unique_ptr<std::thread>(new std::thread (std::bind (&HTTPServer::Run, this)));
 		m_Acceptor.listen ();
 		Accept ();
 	}
@@ -1069,7 +1084,6 @@ namespace util
 		if (m_Thread)
         {
             m_Thread->join ();
-            delete m_Thread;
             m_Thread = nullptr;
         }
 	}
@@ -1081,23 +1095,24 @@ namespace util
 
 	void HTTPServer::Accept ()
 	{
-		m_NewSocket = new boost::asio::ip::tcp::socket (m_Service);
-		m_Acceptor.async_accept (*m_NewSocket, boost::bind (&HTTPServer::HandleAccept, this,
-			boost::asio::placeholders::error));
+		auto newSocket = std::make_shared<boost::asio::ip::tcp::socket> (m_Service);
+		m_Acceptor.async_accept (*newSocket, boost::bind (&HTTPServer::HandleAccept, this,
+			boost::asio::placeholders::error, newSocket));
 	}
 
-	void HTTPServer::HandleAccept(const boost::system::error_code& ecode)
+	void HTTPServer::HandleAccept(const boost::system::error_code& ecode, 
+		std::shared_ptr<boost::asio::ip::tcp::socket> newSocket)
 	{
 		if (!ecode)
 		{
-			CreateConnection(m_NewSocket);
+			CreateConnection(newSocket);
 			Accept ();
 		}
 	}
 
-	void HTTPServer::CreateConnection(boost::asio::ip::tcp::socket * m_NewSocket)
+	void HTTPServer::CreateConnection(std::shared_ptr<boost::asio::ip::tcp::socket> newSocket)
 	{
-		auto conn = std::make_shared<HTTPConnection> (m_NewSocket);
+		auto conn = std::make_shared<HTTPConnection> (newSocket);
 		conn->Receive ();
 	}
 }
