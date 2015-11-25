@@ -1,5 +1,6 @@
 #include "I2PEndian.h"
 #include <string.h>
+#include <openssl/sha.h>
 #include "Log.h"
 #include "NetDb.h"
 #include "I2NPProtocol.h"
@@ -27,7 +28,7 @@ namespace tunnel
 			// verify checksum
 			memcpy (msg->GetPayload () + TUNNEL_DATA_MSG_SIZE, msg->GetPayload () + 4, 16); // copy iv to the end
 			uint8_t hash[32];
-			CryptoPP::SHA256().CalculateDigest (hash, fragment, TUNNEL_DATA_MSG_SIZE -(fragment - msg->GetPayload ()) + 16); // payload + iv
+			SHA256(fragment, TUNNEL_DATA_MSG_SIZE -(fragment - msg->GetPayload ()) + 16, hash); // payload + iv
 			if (memcmp (hash, decrypted, 4))
 			{
 				LogPrint (eLogError, "TunnelMessage: checksum verification failed");
@@ -92,7 +93,7 @@ namespace tunnel
 				if (fragment + size < decrypted + TUNNEL_DATA_ENCRYPTED_SIZE)
 				{
 					// this is not last message. we have to copy it
-					m.data = ToSharedI2NPMessage (NewI2NPShortMessage ());
+					m.data = NewI2NPShortMessage ();
 					m.data->offset += TUNNEL_GATEWAY_HEADER_SIZE; // reserve room for TunnelGateway header
 					m.data->len += TUNNEL_GATEWAY_HEADER_SIZE;
 					*(m.data) = *msg;
@@ -147,7 +148,7 @@ namespace tunnel
 					if (msg.data->len + size > msg.data->maxLen)
 					{
 						LogPrint (eLogInfo, "Tunnel endpoint I2NP message size ", msg.data->maxLen, " is not enough");
-						auto newMsg = ToSharedI2NPMessage (NewI2NPMessage ());
+						auto newMsg = NewI2NPMessage ();
 						*newMsg = *(msg.data);
 						msg.data = newMsg;
 					}
@@ -203,7 +204,7 @@ namespace tunnel
 				if (msg.data->len + size > msg.data->maxLen)
 				{
 					LogPrint (eLogInfo, "Tunnel endpoint I2NP message size ", msg.data->maxLen, " is not enough");
-					auto newMsg = ToSharedI2NPMessage (NewI2NPMessage ());
+					auto newMsg = NewI2NPMessage ();
 					*newMsg = *(msg.data);
 					msg.data = newMsg;
 				}

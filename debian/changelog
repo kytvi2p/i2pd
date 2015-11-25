@@ -1,3 +1,72 @@
+i2pd (2.1.0+git20151124-1) unstable; urgency=medium
+
+  [ orignal ]
+  * cumulative update from bitbucket
+  * Update README.md
+  * Update README.md
+  * removed autotools build
+  * use EdDSA as default for RouterInfo
+  * EdDSA speed improvement
+  * calculations in projective coordinates
+  * fixed build for gcc 4.6 and boost 1.46
+  * h%l for verification
+  * (h*a)%l for signing
+  * Makefile.mingw added
+  * fix build error
+
+  [ Mikhail Titov ]
+  * Minor omissions
+  * Reorder ssl/boost includes to avoid winsock complains
+  * Proper miniupnpc CMake detection
+  * Use OpenSSL & zlib with CMake instead of Crypto++
+  * Use OpenSSL & zlib in precompiled headers
+
+  [ orignal ]
+  * fixed clobbed z and t for Double
+  * eliminate some transient BIGNUM allocations
+
+  [ Mikhail Titov ]
+  * Bring CMake stuff in agreement with #294 discussion
+
+  [ orignal ]
+  * fixed complation error for boost 1.49 and gcc 4.7 and higher
+  * skip extended options in SSU header
+  * 0.9.23/2.1.0 version update
+  * fixed mingw build
+  * don't store B explicitly
+
+  [ Edward Tjörnhammar ]
+  * Make tunnels.cfg configurable
+
+  [ orignal ]
+  * backport openbsd support
+  * backport fix build for clang
+  * check for zero-length
+  * backport GetMTU
+  * fixed mingw build error
+  * use path.string () instead path.c_str ()
+  * fixed mingw build error
+  * reduce number of transient BIGNUM allocations
+  * more separation between api and executable builds
+  * backport of 'make http server http/1.1 compliant'
+  * moved status_string to reply structure
+  * Update README.md
+  * Update README.md
+  * use shared_ptr for sockets
+  * fixed access to eepsites from webconsole
+  * fixed race condition
+  * create certificate for https
+  * I2PControl through SSL
+  * fixed few SSL errors
+  * read complete request
+  * read Content-Length from http header
+  * always use shared_ptr for I2NPMessage
+
+  [ Kill Your TV ]
+  * New upstream git snapshot
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Tue, 24 Nov 2015 23:11:02 +0000
+
 i2pd (0.10.0-1~deb8u+1) stable; urgency=medium
 
   * Backport to Jessie

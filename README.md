@@ -2,6 +2,7 @@ i2pd
 ====
 
 I2P router written in C++
+Contains all ongoing changes from https://bitbucket.org/orignal/i2pd/src
 
 License
 -------
@@ -14,11 +15,12 @@ Donations
 
 BTC: 1K7Ds6KUeR8ya287UC4rYTjvC96vXyZbDY   
 LTC: LKQirrYrDeTuAPnpYq5y7LVKtywfkkHi59   
+ANC: AQJYweYYUqM1nVfLqfoSMpUMfzxvS4Xd7z
 
 Requirements for Linux/FreeBSD/OSX
 ----------------------------------
 
-GCC 4.6 or newer, Boost 1.46 or newer, crypto++. Clang can be used instead of
+GCC 4.6 or newer, Boost 1.46 or newer, openssl, zlib. Clang can be used instead of
 GCC.
 
 Requirements for Windows
@@ -50,7 +52,7 @@ Testing
 First, build it.
 
 On Ubuntu/Debian based
-* sudo apt-get install libboost-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev libcrypto++-dev libboost-date-time-dev
+* sudo apt-get install libboost-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev libboost-date-time-dev libssl-dev zlib1g-dev 
 * $ cd i2pd
 * $ make
 
@@ -59,12 +61,8 @@ Then, run it:
 $ ./i2p
 
 The client should now reseed by itself.
-
-To visit an I2P page, you need to find the b32 address of your destination.
-After that, go to the webconsole and add it behind the url. (Remove http:// from the address)
-
-This should resulting in for example:
-http://localhost:7070/4oes3rlgrpbkmzv4lqcfili23h3cvpwslqcfjlk6vvguxyggspwa.b32.i2p
+To visit an eepsite use HTTP proxy port 4446.
+For tunnels follow [instructions](https://github.com/PurpleI2P/i2pd/wiki/tunnels.cfg)
 
 
 Cmdline options
@@ -92,6 +90,7 @@ Cmdline options
 * --samport=            - Port of SAM bridge. Usually 7656. SAM is off if not specified
 * --bobport=            - Port of BOB command channel. Usually 2827. BOB is off if not specified
 * --i2pcontrolport=     - Port of I2P control service. Usually 7650. I2PControl is off if not specified
+* --tunnelscfg=         - Tunnels Config file (default: ~/.i2pd/tunnels.cfg or /var/lib/i2pd/tunnels.cfg)
 * --conf=               - Config file (default: ~/.i2pd/i2p.conf or /var/lib/i2pd/i2p.conf)
                           This parameter will be silently ignored if the specified config file does not exist.
                           Options specified on the command line take precedence over those in the config file.
