@@ -5,6 +5,7 @@
 #include <memory>
 #include <functional>
 #include <map>
+#include "Base.h"
 #include "Identity.h"
 #include "LeaseSet.h"
 #include "I2NPProtocol.h"
@@ -24,8 +25,8 @@ namespace datagram
 
 		public:
 
-			DatagramDestination (i2p::client::ClientDestination& owner);
-			~DatagramDestination () {};				
+			DatagramDestination (std::shared_ptr<i2p::client::ClientDestination> owner);
+			~DatagramDestination ();				
 
 			void SendDatagramTo (const uint8_t * payload, size_t len, const i2p::data::IdentHash& ident, uint16_t fromPort = 0, uint16_t toPort = 0);
 			void HandleDataMessagePayload (uint16_t fromPort, uint16_t toPort, const uint8_t * buf, size_t len);
@@ -38,17 +39,20 @@ namespace datagram
 
 		private:
 
-			void HandleLeaseSetRequestComplete (std::shared_ptr<i2p::data::LeaseSet> leaseSet, I2NPMessage * msg);
+			void HandleLeaseSetRequestComplete (std::shared_ptr<i2p::data::LeaseSet> leaseSet, std::shared_ptr<I2NPMessage> msg);
 			
-			I2NPMessage * CreateDataMessage (const uint8_t * payload, size_t len, uint16_t fromPort, uint16_t toPort);
-			void SendMsg (I2NPMessage * msg, std::shared_ptr<const i2p::data::LeaseSet> remote);
+			std::shared_ptr<I2NPMessage> CreateDataMessage (const uint8_t * payload, size_t len, uint16_t fromPort, uint16_t toPort);
+			void SendMsg (std::shared_ptr<I2NPMessage> msg, std::shared_ptr<const i2p::data::LeaseSet> remote);
 			void HandleDatagram (uint16_t fromPort, uint16_t toPort, const uint8_t * buf, size_t len);
 
 		private:
 
-			i2p::client::ClientDestination& m_Owner;
+			std::shared_ptr<i2p::client::ClientDestination> m_Owner;
 			Receiver m_Receiver; // default
 			std::map<uint16_t, Receiver> m_ReceiversByPorts;
+
+			i2p::data::GzipInflator m_Inflator;
+			i2p::data::GzipDeflator m_Deflator;
 	};		
 }
 }

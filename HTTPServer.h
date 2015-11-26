@@ -39,17 +39,15 @@ namespace util
 			struct reply
 			{
 				std::vector<header> headers;
-				std::string content;
-
+				std::string status_string, content;
 				std::vector<boost::asio::const_buffer> to_buffers (int status);
 			};
 
 		public:
 
-			HTTPConnection (boost::asio::ip::tcp::socket * socket): 
+			HTTPConnection (std::shared_ptr<boost::asio::ip::tcp::socket> socket): 
 				m_Socket (socket), m_Timer (socket->get_io_service ()), 
 				m_Stream (nullptr), m_BufferLen (0) {};
-			~HTTPConnection() { delete m_Socket; }
 			void Receive ();
 			
 		private:
@@ -73,6 +71,7 @@ namespace util
 			void ShowSAMSession (const std::string& id, std::stringstream& s);
 			void StartAcceptingTunnels (std::stringstream& s);
 			void StopAcceptingTunnels (std::stringstream& s);
+			void RunPeerTest (std::stringstream& s);
 			void FillContent (std::stringstream& s);
 			std::string ExtractAddress ();
 			void ExtractParams (const std::string& str, std::map<std::string, std::string>& params);
@@ -80,7 +79,7 @@ namespace util
 			
 		protected:
 
-			boost::asio::ip::tcp::socket * m_Socket;
+			std::shared_ptr<boost::asio::ip::tcp::socket> m_Socket;
 			boost::asio::deadline_timer m_Timer;
 			std::shared_ptr<i2p::stream::Stream> m_Stream;
 			char m_Buffer[HTTP_CONNECTION_BUFFER_SIZE + 1], m_StreamBuffer[HTTP_CONNECTION_BUFFER_SIZE + 1];
@@ -117,18 +116,18 @@ namespace util
 
 			void Run ();
  			void Accept ();
-			void HandleAccept(const boost::system::error_code& ecode);
+			void HandleAccept(const boost::system::error_code& ecode,
+				std::shared_ptr<boost::asio::ip::tcp::socket> newSocket);
 			
 		private:
 
-			std::thread * m_Thread;
+			std::unique_ptr<std::thread> m_Thread;
 			boost::asio::io_service m_Service;
 			boost::asio::io_service::work m_Work;
 			boost::asio::ip::tcp::acceptor m_Acceptor;
-			boost::asio::ip::tcp::socket * m_NewSocket;
 
 		protected:
-			virtual void CreateConnection(boost::asio::ip::tcp::socket * m_NewSocket);
+			virtual void CreateConnection(std::shared_ptr<boost::asio::ip::tcp::socket> newSocket);
 	};
 }
 }
