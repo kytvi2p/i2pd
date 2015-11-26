@@ -40,7 +40,8 @@ namespace transport
 			~SSUServer ();
 			void Start ();
 			void Stop ();
-			std::shared_ptr<SSUSession> GetSession (std::shared_ptr<const i2p::data::RouterInfo> router, bool peerTest = false);
+			void CreateSession (std::shared_ptr<const i2p::data::RouterInfo> router, bool peerTest = false);
+			void CreateSessionThroughIntroducer (std::shared_ptr<const i2p::data::RouterInfo> router, bool peerTest = false);
 			std::shared_ptr<SSUSession> FindSession (std::shared_ptr<const i2p::data::RouterInfo> router) const;
 			std::shared_ptr<SSUSession> FindSession (const boost::asio::ip::udp::endpoint& e) const;
 			std::shared_ptr<SSUSession> GetRandomEstablishedSession (std::shared_ptr<const SSUSession> excluded);

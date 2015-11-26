@@ -1,3 +1,26 @@
+i2pd (2.1.0+git20151126.r1995-1) unstable; urgency=medium
+
+  [ orignal ]
+  * eliminate session creation collision
+  * replace GetSession to CreateSession
+  * async handshake
+
+  [ hagen ]
+  * format '%lu' expects argument of type 'long unsigned int', but argument 5
+    has type 'size_t {aka unsigned int}
+
+  [ orignal ]
+  * use left sift instead multipilication by 2
+  * moved BN_CTX creation to curve's Verify and Sign
+  * copy constructor for Ed22519
+  * Ed25519 per thread
+  * split between CreateSession and CreateSessionThrough Introducer
+
+  [ Kill Your TV ]
+  * New upstream git snapshot
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 26 Nov 2015 23:18:47 +0000
+
 i2pd (2.1.0+git20151124-1~vivid+1) vivid; urgency=medium
 
   * Building for Vivid
