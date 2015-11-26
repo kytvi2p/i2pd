@@ -11,7 +11,6 @@
 #include "SAM.h"
 #include "BOB.h"
 #include "AddressBook.h"
-#include "I2PControl.h"
 
 namespace i2p
 {
@@ -30,7 +29,6 @@ namespace client
 	const char I2P_SERVER_TUNNEL_KEYS[] = "keys";
 	const char I2P_SERVER_TUNNEL_INPORT[] = "inport";
 	const char I2P_SERVER_TUNNEL_ACCESS_LIST[] = "accesslist";		
-	const char TUNNELS_CONFIG_FILENAME[] = "tunnels.cfg";
 
 	class ClientContext
 	{
@@ -72,7 +70,6 @@ namespace client
 			std::map<i2p::data::IdentHash, std::unique_ptr<I2PServerTunnel> > m_ServerTunnels; // destination->tunnel
 			SAMBridge * m_SamBridge;
 			BOBCommandChannel * m_BOBCommandChannel;
-			I2PControlService * m_I2PControlService;
 
 		public:
 			// for HTTP
