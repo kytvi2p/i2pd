@@ -1,3 +1,9 @@
+i2pd (2.1.0+git20151126.r1995-1ubuntu1) wily; urgency=medium
+
+  * Building for Wily
+
+ -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 26 Nov 2015 23:27:45 +0000
+
 i2pd (2.1.0+git20151126.r1995-1) unstable; urgency=medium
 
   [ orignal ]
@@ -20,12 +26,6 @@ i2pd (2.1.0+git20151126.r1995-1) unstable; urgency=medium
   * New upstream git snapshot
 
  -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 26 Nov 2015 23:18:47 +0000
-
-i2pd (2.1.0+git20151124-1ubuntu1) wily; urgency=medium
-
-  * Building for Wily
-
- -- Kill Your TV <killyourtv@i2pmail.org>  Thu, 26 Nov 2015 12:11:46 +0000
 
 i2pd (2.1.0+git20151124-1) unstable; urgency=medium
 
