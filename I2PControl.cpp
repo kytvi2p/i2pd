@@ -1,8 +1,9 @@
 // There is bug in boost 1.49 with gcc 4.7 coming with Debian Wheezy
-#define GCC47_BOOST149 ((BOOST_VERSION == 104900) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 7))
-
-#include "I2PControl.h"
+#define GCC47_BOOST149 ((BOOST_VERSION == 104900) && (__GNUC__ == 4) && (__GNUC_MINOR__ >= 7))
+#include <stdio.h>
 #include <sstream>
+#include <openssl/x509.h>
+#include <openssl/pem.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/local_time/local_time.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -17,6 +18,7 @@
 #include "Timestamp.h"
 #include "Transports.h"
 #include "version.h"
+#include "I2PControl.h"
 
 namespace i2p
 {
@@ -25,8 +27,28 @@ namespace client
 	I2PControlService::I2PControlService (int port):
 		m_Password (I2P_CONTROL_DEFAULT_PASSWORD), m_IsRunning (false), m_Thread (nullptr),
 		m_Acceptor (m_Service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
+		m_SSLContext (m_Service, boost::asio::ssl::context::sslv23),
 		m_ShutdownTimer (m_Service)
 	{
+		// certificate				
+		auto path = GetPath ();
+		if (!boost::filesystem::exists (path))
+		{
+			if (!boost::filesystem::create_directory (path))
+				LogPrint (eLogError, "Failed to create i2pcontrol directory");
+		}	
+		if (!boost::filesystem::exists (path / I2P_CONTROL_KEY_FILE) ||
+			!boost::filesystem::exists (path / I2P_CONTROL_CERT_FILE))
+		{
+			// create new certificate
+			CreateCertificate ();
+			LogPrint (eLogInfo, "I2PControl certificates created");
+		}
+		m_SSLContext.set_options (boost::asio::ssl::context::default_workarounds | boost::asio::ssl::context::no_sslv2 | boost::asio::ssl::context::single_dh_use);
+		m_SSLContext.use_certificate_file ((path / I2P_CONTROL_CERT_FILE).string (), boost::asio::ssl::context::pem);
+		m_SSLContext.use_private_key_file ((path / I2P_CONTROL_KEY_FILE).string (), boost::asio::ssl::context::pem);
+
+		// handlers
 		m_MethodHandlers[I2P_CONTROL_METHOD_AUTHENTICATE] = &I2PControlService::AuthenticateHandler; 
 		m_MethodHandlers[I2P_CONTROL_METHOD_ECHO] = &I2PControlService::EchoHandler; 
 		m_MethodHandlers[I2P_CONTROL_METHOD_I2PCONTROL] = &I2PControlService::I2PControlHandler; 
@@ -99,27 +121,34 @@ namespace client
 
 	void I2PControlService::Accept ()
 	{
-		auto newSocket = std::make_shared<boost::asio::ip::tcp::socket> (m_Service);
-		m_Acceptor.async_accept (*newSocket, std::bind (&I2PControlService::HandleAccept, this,
+		auto newSocket = std::make_shared<ssl_socket> (m_Service, m_SSLContext);
+		m_Acceptor.async_accept (newSocket->lowest_layer(), std::bind (&I2PControlService::HandleAccept, this,
 			std::placeholders::_1, newSocket));
 	}
 
-	void I2PControlService::HandleAccept(const boost::system::error_code& ecode, std::shared_ptr<boost::asio::ip::tcp::socket> socket)
+	void I2PControlService::HandleAccept(const boost::system::error_code& ecode, std::shared_ptr<ssl_socket> socket)
 	{
 		if (ecode != boost::asio::error::operation_aborted)
 			Accept ();
 
 		if (!ecode)
 		{
-			LogPrint (eLogInfo, "New I2PControl request from ", socket->remote_endpoint ());
-			std::this_thread::sleep_for (std::chrono::milliseconds(5));
-			ReadRequest (socket);	
+			LogPrint (eLogInfo, "New I2PControl request from ", socket->lowest_layer ().remote_endpoint ());
+			boost::system::error_code ec;
+			socket->handshake (boost::asio::ssl::stream_base::server, ec);
+			if (!ec)
+			{
+				std::this_thread::sleep_for (std::chrono::milliseconds(5));
+				ReadRequest (socket);
+			}
+			else
+ 				LogPrint (eLogError, "I2PControl handshake error: ",  ec.message ());	
 		}
 		else
 			LogPrint (eLogError, "I2PControl accept error: ",  ecode.message ());
 	}
 
-	void I2PControlService::ReadRequest (std::shared_ptr<boost::asio::ip::tcp::socket> socket)
+	void I2PControlService::ReadRequest (std::shared_ptr<ssl_socket> socket)
 	{
 		auto request = std::make_shared<I2PControlBuffer>();
 		socket->async_read_some (
@@ -133,7 +162,7 @@ namespace client
 	}
 
 	void I2PControlService::HandleRequestReceived (const boost::system::error_code& ecode,
- 		size_t bytes_transferred, std::shared_ptr<boost::asio::ip::tcp::socket> socket, 
+ 		size_t bytes_transferred, std::shared_ptr<ssl_socket> socket, 
 		std::shared_ptr<I2PControlBuffer> buf)
 	{
 		if (ecode)
@@ -150,13 +179,25 @@ namespace client
 				if (isHtml)
 				{
 					std::string header;
+					size_t contentLength = 0;
 					while (!ss.eof () && header != "\r")
+					{	
 						std::getline(ss, header);
+						auto colon = header.find (':');
+						if (colon != std::string::npos && header.substr (0, colon) == "Content-Length")
+							contentLength = std::stoi (header.substr (colon + 1));
+					}	
 					if (ss.eof ())
 					{
 						LogPrint (eLogError, "Malformed I2PControl request. HTTP header expected");
 						return; // TODO:
 					}
+					ssize_t rem = contentLength + ss.tellg () - bytes_transferred; // more bytes to read
+					if (rem > 0)
+					{	
+						bytes_transferred = boost::asio::read (*socket, boost::asio::buffer (buf->data (), rem));
+						ss.write (buf->data (), bytes_transferred);
+					}	
 				}
 #if GCC47_BOOST149
 				LogPrint (eLogError, "json_read is not supported due bug in boost 1.49 with gcc 4.7");
@@ -209,7 +250,7 @@ namespace client
 		ss << "\"" << name << "\":" << std::fixed << std::setprecision(2) << value;
 	}	
 
-	void I2PControlService::SendResponse (std::shared_ptr<boost::asio::ip::tcp::socket> socket,
+	void I2PControlService::SendResponse (std::shared_ptr<ssl_socket> socket,
 		std::shared_ptr<I2PControlBuffer> buf, std::ostringstream& response, bool isHtml)
 	{
 		size_t len = response.str ().length (), offset = 0;
@@ -236,11 +277,10 @@ namespace client
 	}
 
 	void I2PControlService::HandleResponseSent (const boost::system::error_code& ecode, std::size_t bytes_transferred,
-		std::shared_ptr<boost::asio::ip::tcp::socket> socket, std::shared_ptr<I2PControlBuffer> buf)
+		std::shared_ptr<ssl_socket> socket, std::shared_ptr<I2PControlBuffer> buf)
 	{
 		if (ecode)
 			LogPrint (eLogError, "I2PControl write error: ", ecode.message ());
-		socket->close ();
 	}
 
 // handlers
@@ -410,6 +450,55 @@ namespace client
 			else
 				LogPrint (eLogError, "I2PControl NetworkSetting unknown request ", it->first);			
 		}
+	}
+
+	// certificate	
+	void I2PControlService::CreateCertificate ()
+	{
+		EVP_PKEY * pkey = EVP_PKEY_new ();
+		RSA * rsa = RSA_new ();
+		RSA_generate_key_ex (rsa, 4096, i2p::crypto::rsae, NULL);
+		if (rsa)
+		{
+			EVP_PKEY_assign_RSA (pkey, rsa);
+			X509 * x509 = X509_new ();
+			ASN1_INTEGER_set (X509_get_serialNumber (x509), 1);
+			X509_gmtime_adj (X509_get_notBefore (x509), 0);
+			X509_gmtime_adj (X509_get_notAfter (x509), I2P_CONTROL_CERTIFICATE_VALIDITY*24*60*60); // expiration		
+			X509_set_pubkey (x509, pkey); // public key			
+			X509_NAME * name = X509_get_subject_name (x509);
+			X509_NAME_add_entry_by_txt (name, "C",  MBSTRING_ASC, (unsigned char *)"RU", -1, -1, 0); // country (Russia by default)
+			X509_NAME_add_entry_by_txt (name, "O",  MBSTRING_ASC, (unsigned char *)I2P_CONTROL_CERTIFICATE_ORGANIZATION, -1, -1, 0); // organization
+			X509_NAME_add_entry_by_txt (name, "CN", MBSTRING_ASC, (unsigned char *)I2P_CONTROL_CERTIFICATE_COMMON_NAME, -1, -1, 0); // common name
+			X509_set_issuer_name (x509, name); // set issuer to ourselves
+			X509_sign (x509, pkey, EVP_sha1 ()); // sign
+			// save key and certificate
+			// keys
+			auto filename = GetPath () / I2P_CONTROL_KEY_FILE; 
+			FILE * f= fopen (filename.string ().c_str (), "wb");
+			if (f)
+			{
+				PEM_write_PrivateKey (f, pkey, NULL, NULL, 0, NULL, NULL);
+				fclose (f);
+			}
+			else
+				LogPrint (eLogError, "Can't open file ", filename);
+			// certificate			
+			filename = GetPath () / I2P_CONTROL_CERT_FILE;
+			f= fopen (filename.string ().c_str (), "wb");
+			if (f)
+			{
+				PEM_write_X509 (f, x509);
+				fclose (f);
+			}
+			else
+				LogPrint (eLogError, "Can't open file ", filename);
+
+			X509_free (x509);		
+		}
+		else
+			LogPrint (eLogError, "Couldn't create RSA key for certificate");
+		EVP_PKEY_free (pkey);
 	}
 
 }

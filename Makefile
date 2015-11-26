@@ -1,5 +1,8 @@
 UNAME := $(shell uname -s)
 SHLIB := libi2pd.so
+ARLIB := libi2pd.a
+SHLIB_CLIENT := libi2pdclient.so
+ARLIB_CLIENT := libi2pdclient.a
 I2PD  := i2p
 GREP := fgrep
 DEPS := obj/make.dep
@@ -18,16 +21,18 @@ else ifeq ($(shell echo $(UNAME) | $(GREP) -c FreeBSD),1)
 else ifeq ($(UNAME),Linux)
 	DAEMON_SRC += DaemonLinux.cpp
 	include Makefile.linux
-else # win32
-	DAEMON_SRC += DaemonWin32.cpp
+else # win32 mingw
+	DAEMON_SRC += DaemonWin32.cpp Win32/Win32Service.cpp
+	include Makefile.mingw
 endif
 
-all: mk_build_dir $(SHLIB) $(I2PD)
+all: mk_build_dir $(ARLIB) $(ARLIB_CLIENT) $(I2PD)
 
 mk_build_dir:
 	mkdir -p obj
 
-api: $(SHLIB)
+api: mk_build_dir $(SHLIB) $(ARLIB)
+api_client: mk_build_dir $(SHLIB) $(ARLIB) $(SHLIB_CLIENT) $(ARLIB_CLIENT)
 
 ## NOTE: The NEEDED_CXXFLAGS are here so that CXXFLAGS can be specified at build time
 ## **without** overwriting the CXXFLAGS which we need in order to build.
@@ -48,7 +53,7 @@ obj/%.o : %.cpp
 # '-' is 'ignore if missing' on first run
 -include $(DEPS)
 
-$(I2PD):  $(patsubst %.cpp,obj/%.o,$(DAEMON_SRC))
+$(I2PD):  $(patsubst %.cpp,obj/%.o,$(DAEMON_SRC)) $(ARLIB) $(ARLIB_CLIENT)
 	$(CXX) -o $@ $^ $(LDLIBS) $(LDFLAGS)
 
 $(SHLIB): $(patsubst %.cpp,obj/%.o,$(LIB_SRC))
@@ -56,9 +61,18 @@ ifneq ($(USE_STATIC),yes)
 	$(CXX) $(LDFLAGS) $(LDLIBS) -shared -o $@ $^
 endif
 
+$(SHLIB_CLIENT): $(patsubst %.cpp,obj/%.o,$(LIB_CLIENT_SRC))
+	$(CXX) $(LDFLAGS) $(LDLIBS) -shared -o $@ $^
+
+$(ARLIB): $(patsubst %.cpp,obj/%.o,$(LIB_SRC))
+	ar -r $@ $^
+
+$(ARLIB_CLIENT): $(patsubst %.cpp,obj/%.o,$(LIB_CLIENT_SRC))
+	ar -r $@ $^
+
 clean:
 	rm -rf obj
-	$(RM) $(I2PD) $(SHLIB)
+	$(RM) $(I2PD) $(SHLIB) $(ARLIB) $(SHLIB_CLIENT) $(ARLIB_CLIENT)
 
 LATEST_TAG=$(shell git describe --tags --abbrev=0 master)
 dist:
@@ -70,4 +84,5 @@ dist:
 .PHONY: deps
 .PHONY: dist
 .PHONY: api
+.PHONY: api_client
 .PHONY: mk_build_dir
